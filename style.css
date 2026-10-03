@@ -619,3 +619,17 @@ body[data-screen="history"] .app-shell, body[data-screen="profile"] .app-shell {
 .btn-secondary.is-done { color: var(--accent); border-color: var(--accent); }
 .done-top .done-title { font-size: clamp(38px, 11vw, 72px); min-width: 0; }
 .done-top .ring-wrap { margin-bottom: 4px; }
+
+/* ── Library rows with Start ───────────────────────────────────────────────── */
+.lib-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+.cl-list .lib-row:last-child { border-bottom: none; }
+.lib-row .cl-row { border-bottom: none; flex: 1; min-width: 0; }
+.lib-row.is-locked .cl-row { opacity: .6; }
+.row-start {
+  flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  width: 60px; height: 56px; border: 1px solid var(--accent); border-radius: var(--radius-sm); color: var(--accent);
+  font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; transition: background .12s, color .12s;
+}
+.row-start i { font-size: 20px; }
+.row-start:hover, .row-start:active { background: var(--accent); color: var(--accent-ink); }
+.btn-inline-start { margin-top: 18px; }

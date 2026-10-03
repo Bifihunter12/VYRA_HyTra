@@ -15,6 +15,8 @@
 
 const APP_VERSION = "2026.10.03.3";
 const STORE_KEY = "vyra_v1";
+/* Beeps, spoken cues and vibration are switched off for now. Set to true to bring them back. */
+const CUES_ENABLED = false;
 
 /* ── 1. Workout data model ─────────────────────────────────────────────────────
    Workout   { id, templateId, name, params, rounds: Round[] }
@@ -396,6 +398,7 @@ const Cues = {
     } catch { /* speech unavailable */ }
   },
   tone(freq, dur, { type = "sine", gain = 0.28, delay = 0 } = {}) {
+    if (!CUES_ENABLED) return;
     if (!state.settings.sound || !this.ctx) return;
     try {
       const t = this.ctx.currentTime + delay;
@@ -416,6 +419,7 @@ const Cues = {
   segment()   { this.tone(1046, 0.12, { type: "triangle" }); this.tone(1046, 0.12, { type: "triangle", delay: 0.16 }); },
   complete()  { [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.35, { type: "triangle", gain: 0.25, delay: i * 0.16 })); },
   say(text, { interrupt = true } = {}) {
+    if (!CUES_ENABLED) return;
     if (!state.settings.voice || !text || !("speechSynthesis" in window)) return;
     try {
       if (interrupt) speechSynthesis.cancel();
@@ -426,6 +430,7 @@ const Cues = {
   },
   hush() { try { speechSynthesis.cancel(); } catch { /* ignore */ } },
   buzz(pattern) {
+    if (!CUES_ENABLED) return;
     if (state.settings.vibrate && navigator.vibrate) { try { navigator.vibrate(pattern); } catch { /* ignore */ } }
   },
 };
@@ -478,7 +483,7 @@ const ui = {
   screen: state.profile.onboarded ? "today" : "onboarding", tab: "today",
   templateId: state.lastTemplate || TEMPLATES[0].id, summary: null, viewingHistory: false,
   confirmEnd: false, confirm: null, go: false, calOffset: 0,
-  filters: { time: "all", type: "all", level: "all" }, fitsGear: true,
+  filters: { time: "all", type: "all", level: "all" }, fitsGear: false,
   ob: { goal: 3, level: "intermediate", equipment: [...ALL_EQUIPMENT] },
 };
 let engine = null;
@@ -664,6 +669,7 @@ const backButton = (act, label = "Back") =>
   `<button class="back-btn" data-go="${act}" aria-label="${label}"><i class="ti ti-chevron-left"></i><span>${label}</span></button>`;
 
 function soundButton() {
+  if (!CUES_ENABLED) return "";
   const on = state.settings.sound || state.settings.voice;
   return `<button class="icon-btn" data-act="toggle-audio" aria-label="${on ? "Mute audio cues" : "Turn audio cues on"}" title="Audio cues">
     <i class="ti ${on ? "ti-volume" : "ti-volume-off"}" aria-hidden="true"></i></button>`;
@@ -749,7 +755,7 @@ function renderToday() {
       </div>`
     : `
       <div class="pick">
-        <div class="pick-eyebrow"><i class="ti ti-sparkles"></i> Today's pick</div>
+        <div class="pick-eyebrow"><i class="ti ti-sparkles"></i> Suggestion</div>
         <button class="pick-main" data-template="${rec.pick.t.id}">
           <span class="pick-name">${esc(rec.pick.t.name)}</span>
           <span class="pick-meta">${rec.pick.minutes} min · ${cap(rec.pick.t.level)} · ${esc(rec.pick.t.tagline)}</span>
@@ -757,6 +763,7 @@ function renderToday() {
         </button>
         ${rec.note ? `<p class="hint">${esc(rec.note)}</p>` : ""}
         <button class="btn-primary" data-act="quick-start" data-id="${rec.pick.t.id}"><i class="ti ti-player-play"></i> Start ${esc(rec.pick.t.name)}</button>
+        <button class="btn-secondary" data-go="library"><i class="ti ti-books"></i> Choose from library</button>
         ${rec.alternatives.length ? `<div class="alt">Or try ${rec.alternatives.map(a => `<button class="alt-link" data-template="${a.t.id}">${esc(a.t.name)}</button>`).join(" · ")}</div>` : ""}
       </div>`;
 
@@ -783,7 +790,7 @@ function renderToday() {
   <div class="checkin">${CHECKINS.map(c => `
     <button class="check ${checkin === c.id ? "active" : ""}" data-checkin="${c.id}" aria-pressed="${checkin === c.id}"><i class="ti ${c.icon}"></i><span>${c.label}</span></button>`).join("")}
   </div>
-  ${checkin === "sore" ? `<p class="hint">Got it. Today's pick avoids heavy legs and impact.</p>` : ""}
+  ${checkin === "sore" ? `<p class="hint">Got it. The suggestion avoids heavy legs and impact.</p>` : ""}
 
   ${pickCard}
 
@@ -856,15 +863,17 @@ function libraryRow(m) {
   const best = m.t.focus.includes("benchmark") ? benchResults(m.t.id).reduce((a, h) => Math.max(a, h.bench.totalMi), 0) : 0;
   const swapped = Object.keys(m.gear.auto).length;
   return `
-    <button class="cl-row ${m.doable ? "" : "is-locked"}" data-template="${m.t.id}">
+    <div class="lib-row ${m.doable ? "" : "is-locked"}">
+    <button class="cl-row" data-template="${m.t.id}" aria-label="${esc(m.t.name)} details">
       <i class="ti ${CATEGORY_ICON[m.t.category]} cl-ic" aria-hidden="true"></i>
       <span class="cl-main">
         <span class="cl-name">${esc(m.t.name)}</span>
         <span class="cl-sub">${esc(m.t.tagline)}</span>
         <span class="cl-meta">${m.minutes} min · ${cap(m.t.level)}${best ? ` · <b>Best ${fmtMi(best)}</b>` : ""}${!m.doable ? ` · <b>Needs ${m.gear.missing.map(e => EQUIPMENT_LABEL[e] || e).join(", ")}</b>` : swapped ? " · Adjusted for your kit" : ""}</span>
       </span>
-      <i class="ti ti-chevron-right cl-go" aria-hidden="true"></i>
-    </button>`;
+    </button>
+    <button class="row-start" data-act="quick-start" data-id="${m.t.id}" aria-label="Start ${esc(m.t.name)}"><i class="ti ti-player-play"></i><span>Start</span></button>
+    </div>`;
 }
 
 /* ── Setup ────────────────────────────────────────────────────────────────── */
@@ -964,9 +973,11 @@ function renderSetup() {
     </div>
     <p class="about">${esc(t.about)}</p>
     <div class="tag-row">${tags.map(f => `<span class="tag">${esc(f)}</span>`).join("")}</div>
-    ${!gear.doable ? `<div class="gear-note gear-note--warn"><i class="ti ti-alert-triangle"></i> Needs ${gear.missing.map(e => EQUIPMENT_LABEL[e] || e).join(", ")}. Add it in Profile or pick a swap below.</div>`
+    ${!gear.doable ? `<div class="gear-note gear-note--warn"><i class="ti ti-alert-triangle"></i> Needs ${gear.missing.map(e => EQUIPMENT_LABEL[e] || e).join(", ")}. Pick a swap below, add it in Profile, or start anyway.</div>`
       : autoList.length ? `<div class="gear-note"><i class="ti ti-adjustments"></i> Adjusted for your equipment: ${autoList.map(([a, b]) => `${esc(EXERCISES[a].name)} → ${esc(EXERCISES[b].name)}`).join(", ")}</div>` : ""}
   </section>
+
+  <button class="btn-primary btn-inline-start" data-act="start"><i class="ti ti-player-play"></i> ${gear.doable ? "Start workout" : "Start anyway"}</button>
 
   ${benchBlock}
 
@@ -987,7 +998,7 @@ function renderSetup() {
   <ol class="round-list">${warmRow("warm", "Warm-up")}${roundRows}${warmRow("cool", "Cool-down")}</ol>
 
   <div class="start-dock">
-    <button class="btn-primary btn-start" data-act="start" ${gear.doable ? "" : "disabled"}><i class="ti ti-player-play"></i> Start workout</button>
+    <button class="btn-primary btn-start" data-act="start"><i class="ti ti-player-play"></i> ${gear.doable ? "Start workout" : "Start anyway"}</button>
   </div>`;
 }
 
@@ -1190,12 +1201,12 @@ function renderProfile() {
     ${switchRow('data-profile-toggle="cooldown"', p.cooldown, "Cool-down after every workout", "ti-yoga", "3:00 walk and stretch")}
   </div>
 
-  ${sectionLabel("Cues")}
+  ${CUES_ENABLED ? `${sectionLabel("Cues")}
   <div class="set-list">
     ${switchRow('data-setting="sound"', state.settings.sound, "Beeps", "ti-bell-ringing")}
     ${switchRow('data-setting="voice"', state.settings.voice, "Spoken cues", "ti-microphone-2")}
     ${switchRow('data-setting="vibrate"', state.settings.vibrate, "Vibration", "ti-device-mobile-vibration")}
-  </div>
+  </div>` : ""}
 
   ${sectionLabel("Data")}
   <div class="set-list">
@@ -1219,6 +1230,7 @@ function startWorkout(templateId = ui.templateId, custom = null) {
     const plan = planFor(templateId);
     ({ workout, timeline } = plan); swaps = plan.gear.swaps;
   }
+  ui.returnTo = ui.screen === "summary" ? ui.tab : ui.screen;
   session = { workout, timeline, swaps, startedAt: Date.now() };
   engine = new IntervalEngine(timeline, { countdown: 3 });
   wireCues(engine);
@@ -1252,6 +1264,8 @@ function finishWorkout(early) {
   clearInterval(driver); driver = null;
   WakeLock.release();
   const stats = engine.stats();
+  // Cancelled before anything happened: go back to where the athlete started.
+  if (early && stats.totalSec < 5) { engine = null; session = null; return go(ui.returnTo || "library"); }
   const t = TEMPLATES.find(x => x.id === session.workout.templateId);
   const before = new Set(badgeStatus(state.history, state.profile.goal).filter(b => b.earned).map(b => b.id));
   const rec = {
