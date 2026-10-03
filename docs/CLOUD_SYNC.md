@@ -35,7 +35,7 @@ values, sign-in is hidden and nothing leaves the device.
 
 **Authentication → URL Configuration**
 
-- **Site URL:** your live address, e.g. `https://merry-selkie-4ae2f1.netlify.app`
+- **Site URL:** your live address, e.g. `https://animated-babka-e7f528.netlify.app`
 - **Redirect URLs:** add the live address and, for local testing,
   `http://localhost:8777`
 
