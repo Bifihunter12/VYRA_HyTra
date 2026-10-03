@@ -3,251 +3,32 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="robots" content="index, follow">
-    <title>Privacy Policy — Endur</title>
-    <meta name="description" content="Endur privacy policy. What data we collect, how it's stored, and your rights.">
-    <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@500;700;900&display=swap" rel="stylesheet">
+    <title>Privacy — VYRA</title>
+    <meta name="theme-color" content="#0b0b0c">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
     <style>
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-      :root {
-        --bg:      #09080f;
-        --surface: #110f1e;
-        --border:  #1e1c33;
-        --text:    #f0eff8;
-        --text-dim:#9896b8;
-        --primary: #a855f7;
-        --gradient: linear-gradient(135deg, #b44fff 0%, #ff4fa3 100%);
-      }
-
-      body {
-        background: var(--bg);
-        color: var(--text);
-        font-family: 'Lato', system-ui, sans-serif;
-        font-size: 15px;
-        line-height: 1.7;
-        min-height: 100vh;
-      }
-
-      .page {
-        max-width: 680px;
-        margin: 0 auto;
-        padding: 48px 24px 80px;
-      }
-
-      /* Header */
-      .pp-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 48px;
-      }
-
-      .pp-logo {
-        font-size: 22px;
-        font-weight: 900;
-        letter-spacing: 0.04em;
-        background: var(--gradient);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        text-decoration: none;
-      }
-
-      .pp-back {
-        margin-left: auto;
-        font-size: 13px;
-        color: var(--text-dim);
-        text-decoration: none;
-        padding: 6px 12px;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        transition: color 0.15s;
-      }
-      .pp-back:hover { color: var(--text); }
-
-      /* Title */
-      h1 {
-        font-size: 28px;
-        font-weight: 900;
-        margin-bottom: 6px;
-      }
-
-      .pp-updated {
-        font-size: 13px;
-        color: var(--text-dim);
-        margin-bottom: 40px;
-      }
-
-      /* Sections */
-      section {
-        margin-bottom: 40px;
-      }
-
-      h2 {
-        font-size: 16px;
-        font-weight: 700;
-        color: var(--text);
-        margin-bottom: 10px;
-        padding-bottom: 8px;
-        border-bottom: 1px solid var(--border);
-      }
-
-      p {
-        color: var(--text-dim);
-        margin-bottom: 12px;
-      }
-
-      p:last-child { margin-bottom: 0; }
-
-      ul {
-        list-style: none;
-        padding: 0;
-        margin-bottom: 12px;
-      }
-
-      ul li {
-        color: var(--text-dim);
-        padding: 4px 0 4px 20px;
-        position: relative;
-      }
-
-      ul li::before {
-        content: "–";
-        position: absolute;
-        left: 0;
-        color: var(--primary);
-      }
-
-      strong {
-        color: var(--text);
-        font-weight: 700;
-      }
-
-      a {
-        color: var(--primary);
-        text-decoration: none;
-      }
-      a:hover { text-decoration: underline; }
-
-      .highlight-box {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 16px 20px;
-        margin-bottom: 12px;
-        color: var(--text-dim);
-        font-size: 14px;
-      }
-
-      .highlight-box strong { display: block; margin-bottom: 4px; font-size: 15px; }
-
-      /* Footer */
-      .pp-footer {
-        margin-top: 56px;
-        padding-top: 24px;
-        border-top: 1px solid var(--border);
-        font-size: 13px;
-        color: var(--text-dim);
-        text-align: center;
-      }
+      body { margin:0; background:#0b0b0c; color:#f0efed; font:500 15px/1.6 "Inter",system-ui,sans-serif; }
+      main { max-width:640px; margin:0 auto; padding:40px 16px 60px; }
+      a { color:#d97742; }
+      .logo { font-size:18px; font-weight:600; letter-spacing:5px; color:#f0efed; text-decoration:none; }
+      h1 { font-size:30px; font-weight:500; letter-spacing:-0.6px; margin:28px 0 4px; }
+      .meta { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#5a5a58; padding-bottom:16px; border-bottom:1px solid rgba(255,255,255,.09); }
+      h2 { font-size:11px; font-weight:500; letter-spacing:2px; text-transform:uppercase; color:#9a9a98; margin:28px 0 6px; }
+      p { color:#9a9a98; margin:0 0 10px; }
     </style>
   </head>
   <body>
-    <div class="page">
-
-      <header class="pp-header">
-        <a class="pp-logo" href="/">ENDUR</a>
-        <a class="pp-back" href="/">← Back to app</a>
-      </header>
-
-      <h1>Privacy Policy</h1>
-      <p class="pp-updated">Last updated: June 2026</p>
-
-      <div class="highlight-box">
-        <strong>The short version</strong>
-        Endur works offline and stores your data locally on your device by default.
-        If you create an account, only your email address and your challenge data are stored on our servers — nothing else.
-        No ads. No tracking. No selling data. Ever.
-      </div>
-
-      <section>
-        <h2>1. Who we are</h2>
-        <p>Endur is a endurance & expedition challenge tracker available at <a href="https://merry-selkie-4ae2f1.netlify.app">merry-selkie-4ae2f1.netlify.app</a>. Questions about this policy can be sent to <a href="mailto:privacy@endur.app">privacy@endur.app</a>.</p>
-      </section>
-
-      <section>
-        <h2>2. Data we collect</h2>
-
-        <p><strong>Without an account (offline mode)</strong></p>
-        <p>All data — your challenges, habits, streaks, body measurements, badges — is stored only in your browser's <code>localStorage</code>. It never leaves your device. We collect nothing.</p>
-
-        <p><strong>With a free account (cloud sync)</strong></p>
-        <p>When you create an account we store:</p>
-        <ul>
-          <li><strong>Your email address</strong> — used to identify your account</li>
-          <li><strong>A hashed password</strong> — your actual password is never stored; only a one-way SHA-256 hash</li>
-          <li><strong>Your app state</strong> — challenges, habits, streaks, badges and body data, so it can be restored on a new device</li>
-        </ul>
-        <p>We do <strong>not</strong> collect your name, location, device identifiers, IP address, or any behavioural analytics.</p>
-      </section>
-
-      <section>
-        <h2>3. How data is stored</h2>
-        <p>Account data is stored using <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a>, a managed PostgreSQL database service. Supabase's infrastructure is hosted in the United States. By creating an account you acknowledge that your data will be processed in the US.</p>
-        <p>Supabase's own privacy policy is available at <a href="https://supabase.com/privacy" target="_blank" rel="noopener">supabase.com/privacy</a>.</p>
-      </section>
-
-      <section>
-        <h2>4. Cookies &amp; tracking</h2>
-        <p>Endur uses <strong>no cookies</strong>, no analytics scripts, no advertising pixels, and no third-party tracking of any kind. The only browser storage used is <code>localStorage</code> for app state and session tokens.</p>
-      </section>
-
-      <section>
-        <h2>5. Data sharing</h2>
-        <p>We do not sell, rent, or share your data with any third party. The only sub-processor is Netlify (hosting and storage), as described in section 3.</p>
-      </section>
-
-      <section>
-        <h2>6. Your rights</h2>
-        <p>Regardless of where you are located, you have the right to:</p>
-        <ul>
-          <li><strong>Access</strong> — request a copy of all data we hold about you</li>
-          <li><strong>Deletion</strong> — request that your account and all associated data be permanently deleted</li>
-          <li><strong>Portability</strong> — export your data at any time using the Export backup button in Settings</li>
-          <li><strong>Correction</strong> — request that inaccurate data be corrected</li>
-        </ul>
-        <p>To exercise any of these rights, email <a href="mailto:privacy@endur.app">privacy@endur.app</a>. We will respond within 30 days.</p>
-        <p>You can also delete your own data at any time: use the Export/Restore section in Settings, or simply clear your browser storage. If you have an account and want it permanently removed, email us.</p>
-      </section>
-
-      <section>
-        <h2>7. Data retention</h2>
-        <p>Your data is retained for as long as your account is active. If you request deletion, all data is removed within 7 days. Offline-only data is never on our servers and can be deleted at any time by clearing your browser storage.</p>
-      </section>
-
-      <section>
-        <h2>8. Children</h2>
-        <p>Endur is not directed at children under 13. We do not knowingly collect data from anyone under 13. If you believe a child has provided us data, contact us and we will delete it immediately.</p>
-      </section>
-
-      <section>
-        <h2>9. Changes to this policy</h2>
-        <p>If we make material changes to this policy we will update the "Last updated" date at the top of this page. Continued use of the app after changes constitutes acceptance of the updated policy.</p>
-      </section>
-
-      <section>
-        <h2>10. Contact</h2>
-        <p>Questions or requests: <a href="mailto:privacy@endur.app">privacy@endur.app</a></p>
-      </section>
-
-      <footer class="pp-footer">
-        &copy; 2026 Endur &mdash; <a href="/">Back to app</a>
-      </footer>
-
-    </div>
+    <main>
+      <a class="logo" href="/">VYRA</a>
+      <h1>Privacy</h1>
+      <div class="meta">Last updated · 3 Oct 2026</div>
+      <h2>What VYRA stores</h2>
+      <p>Your workout settings (durations, treadmill speed, cue preferences) and any workouts you choose to save are kept only in your browser's <code>localStorage</code>. Nothing is sent to a server. There are no accounts, cookies, analytics or tracking.</p>
+      <h2>Audio, speech and vibration</h2>
+      <p>Beeps, spoken cues and vibration are generated on your device. Speech uses your browser's built-in voice; no audio is recorded.</p>
+      <h2>Deleting your data</h2>
+      <p>Delete saved workouts from the History screen, or clear your browser's site data to remove everything.</p>
+      <p><a href="/">Back to VYRA</a></p>
+    </main>
   </body>
 </html>

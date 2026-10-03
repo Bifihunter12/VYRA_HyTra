@@ -1,10 +1,12 @@
-const APP_VERSION = "2026.06.25.7";
-const CACHE_NAME = `endur-${APP_VERSION}`;
+const APP_VERSION = "2026.10.03.3";
+const CACHE_NAME = `vyra-${APP_VERSION}`;
 const APP_FILES = [
   "/",
   "/index.html",
   `/manifest.json?v=${APP_VERSION}`,
   `/style.css?v=${APP_VERSION}`,
+  `/workouts.js?v=${APP_VERSION}`,
+  `/progress.js?v=${APP_VERSION}`,
   `/app.js?v=${APP_VERSION}`,
   `/app-version.json?v=${APP_VERSION}`,
   "/sw.js",
@@ -23,7 +25,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) =>
-        Promise.all(keys.filter((k) => k !== CACHE_NAME && (k.startsWith("cruise-mode-") || k.startsWith("endur-"))).map((k) => caches.delete(k)))
+        Promise.all(keys.filter((k) => k !== CACHE_NAME && (k.startsWith("vyra-") || k.startsWith("endur-") || k.startsWith("cruise-mode-"))).map((k) => caches.delete(k)))
       )
       .then(() => self.clients.matchAll({ type: "window" }))
       .then((clients) => clients.forEach((client) => client.postMessage({ type: "APP_UPDATED", version: APP_VERSION })))

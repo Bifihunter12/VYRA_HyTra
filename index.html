@@ -6,50 +6,23 @@
     <meta name="theme-color" content="#0b0b0c">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Endur">
-
-    <!-- Primary meta -->
-    <title>Endur — Outlast Everything.</title>
-    <meta name="description" content="Endur turns everyday movement into an adventure. Take on distance missions and virtual expeditions — walk 100 km, cycle across a country, or trek the Camino and the Pacific Crest Trail. Log your distance, follow the route, and finish something that matters. Works offline. No account needed.">
-    <meta name="keywords" content="virtual expedition, distance challenge, walking challenge, running challenge, cycling challenge, Camino de Santiago, Pacific Crest Trail, endurance, adventure, route tracker, PWA, offline">
-
-    <!-- Open Graph (iMessage, Slack, Facebook, WhatsApp previews) -->
-    <meta property="og:type"        content="website">
-    <meta property="og:title"       content="Endur — Outlast Everything.">
-    <meta property="og:description" content="Turn everyday movement into an adventure. Distance missions and virtual expeditions — walk 100 km, cycle a country, trek the Camino. Follow the route to the finish. Works offline. No account.">
-    <meta property="og:image"       content="https://merry-selkie-4ae2f1.netlify.app/icons/og-image.png">
-    <meta property="og:image:width"  content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:url"         content="https://merry-selkie-4ae2f1.netlify.app">
-    <meta property="og:site_name"   content="Endur">
-
-    <!-- Twitter / X Card -->
-    <meta name="twitter:card"        content="summary_large_image">
-    <meta name="twitter:title"       content="Endur — Outlast Everything.">
-    <meta name="twitter:description" content="Turn everyday movement into an adventure. Distance missions and virtual expeditions — walk 100 km, cycle a country, trek the Camino. Follow the route to the finish. Works offline. No account.">
-    <meta name="twitter:image"       content="https://merry-selkie-4ae2f1.netlify.app/icons/og-image.png">
-
-    <link rel="manifest" href="manifest.json?v=2026.06.25.7">
-    <link rel="icon" href="icons/icon-192.svg?v=2026.06.25.7" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="icons/icon-192.svg?v=2026.06.25.7">
+    <meta name="apple-mobile-web-app-title" content="VYRA">
+    <title>VYRA — Hybrid Workout Player</title>
+    <meta name="description" content="VYRA guides you through hybrid run + strength workouts automatically: one screen, one timer, spoken cues. Press start and train.">
+    <link rel="manifest" href="manifest.json?v=2026.10.03.3">
+    <link rel="icon" href="icons/icon-192.svg?v=2026.10.03.3" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/icon-192.svg?v=2026.10.03.3">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
-    <link rel="stylesheet" href="style.css?v=2026.06.25.7">
-
-    <!-- Analytics (Plausible — no cookies, GDPR-compliant) -->
-    <script defer data-domain="merry-selkie-4ae2f1.netlify.app" src="https://plausible.io/js/script.outbound-links.js"></script>
-    <script>window.plausible=window.plausible||function(){(window.plausible.q=window.plausible.q||[]).push(arguments)}</script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons-300-outline.min.css">
+    <link rel="stylesheet" href="style.css?v=2026.10.03.3">
   </head>
   <body>
-    <div id="app" class="app-shell" aria-live="polite"></div>
+    <div id="app" class="app-shell"></div>
     <div id="toast-stack" class="toast-stack" aria-live="assertive" aria-atomic="true"></div>
-    <!-- Netlify Forms detection (hidden) -->
-    <form name="beta-waitlist" netlify data-netlify="true" hidden>
-      <input type="email" name="email">
-    </form>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="app.js?v=2026.06.25.7" defer></script>
+    <script src="workouts.js?v=2026.10.03.3" defer></script>
+    <script src="progress.js?v=2026.10.03.3" defer></script>
+    <script src="app.js?v=2026.10.03.3" defer></script>
   </body>
 </html>

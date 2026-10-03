@@ -1,24 +1,15 @@
 {
-  "name": "Endur",
-  "short_name": "Endur",
-  "description": "Outlast everything. Endurance & expedition challenge tracker.",
+  "name": "VYRA",
+  "short_name": "VYRA",
+  "description": "Hybrid workout player — run, strength and intervals in one guided screen.",
   "theme_color": "#0b0b0c",
   "background_color": "#0b0b0c",
   "display": "standalone",
+  "orientation": "any",
   "start_url": "/",
   "scope": "/",
   "icons": [
-    {
-      "src": "/icons/icon-192.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-512.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    { "src": "/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }
