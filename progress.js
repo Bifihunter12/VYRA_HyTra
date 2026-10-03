@@ -93,6 +93,7 @@ const BADGES = [
   { id: "explorer",icon: "ti-books",       name: "Explorer",        desc: "Try 5 different workouts",   value: c => c.variety, goal: 5 },
   { id: "bench",   icon: "ti-target",      name: "Benchmarked",     desc: "Log a Row → Bike → Run benchmark", value: c => c.benchmarks, goal: 1 },
   { id: "pb",      icon: "ti-trending-up", name: "Personal best",   desc: "Beat your own benchmark total", value: c => c.pbs, goal: 1 },
+  { id: "plan",    icon: "ti-calendar-event", name: "Plan finished", desc: "Complete a 4-week program", value: c => c.plans, goal: 1 },
   { id: "warm",    icon: "ti-shield-check",name: "Warmed up",       desc: "Finish 10 workouts with a warm-up", value: c => c.warmups, goal: 10 },
 ];
 
@@ -112,6 +113,7 @@ function badgeContext(history, goal) {
     variety: new Set(history.map(h => h.templateId)).size,
     benchmarks: history.filter(h => h.bench?.totalMi > 0).length,
     pbs, warmups: history.filter(h => h.stats.warmSec > 0).length,
+    plans: history.filter(h => h.programDone).length,
   };
 }
 
@@ -156,6 +158,8 @@ function recommend({ history, candidates, checkin, level, now = Date.now() }) {
     else if (since < 2) score -= 4;
     const gap = Math.abs((levelRank[c.t.level] ?? 1) - (levelRank[level] ?? 1));
     score -= gap * 1.5;
+    // Never suggest a session more than one level above the athlete.
+    if ((levelRank[c.t.level] ?? 1) - (levelRank[level] ?? 1) >= 2) score -= 100;
     if (soreish) {
       if (LOW_IMPACT_IDS.includes(c.t.id)) { score += 5; reasons.unshift(run >= 3 ? `${run} days in a row: keep today low impact` : "Low impact for sore legs"); }
       if (c.t.focus.includes("strength-heavy") || c.t.level === "advanced") score -= 4;

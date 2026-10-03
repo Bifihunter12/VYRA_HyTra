@@ -5,379 +5,16 @@
    athlete what to do, for how long, when to rest and what is coming next.
 
    Layers (top to bottom):
-     0. workouts.js          — exercise library (with swaps) + workout templates
-     1. Workout data model   — templates → workouts → rounds → blocks → exercises
-     2. Compiler             — workout + swaps → flat timeline of intervals
-     3. IntervalEngine       — generic, DOM-free timer that runs any timeline
-     4. Cues                 — beeps, speech, vibration driven by engine events
-     5. UI                   — library, setup, player, summary, history screens
+     workouts.js   — exercise library (with swaps) + workout templates + programs
+     core.js       — data model, compiler, IntervalEngine, equipment swaps, formatting
+     progress.js   — streaks, balance, badges, recommendations, SVG visuals
+     app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.03.3";
+const APP_VERSION = "2026.10.03.5";
 const STORE_KEY = "vyra_v1";
 /* Beeps, spoken cues and vibration are switched off for now. Set to true to bring them back. */
 const CUES_ENABLED = false;
-
-/* ── 1. Workout data model ─────────────────────────────────────────────────────
-   Workout   { id, templateId, name, params, rounds: Round[] }
-   Round     { label?, blocks: Block[] }
-   Block     one of
-     { type:"cardio",  id, duration, speed?, effort? }        id → EXERCISES (run, row, bike…)
-     { type:"rest",    duration, label? }
-     { type:"station", duration?, name?, cue?, instruction?, note?,
-                       exercises: [{ id, target? }], segments?: SegmentSpec }
-               duration null → open-ended rep station (counts up, athlete taps DONE)
-   Exercise refs point into EXERCISES (workouts.js). Each exercise lists its
-   allowed substitutions; the athlete's swaps are applied at compile time.
-     target:  { reps?: number | [min,max], approx?, perSide?, label?, distance?, unit? }
-   A station with >1 exercise is a multi-exercise station.
-   SegmentSpec { pattern: [{ label, tone:"hard"|"easy", duration? | share? }], repeat? }
-     duration = absolute seconds (Tabata 20/10); share = relative weight that
-     scales to the station duration (battle ropes HARD/EASY/HARD = 1/1/1).
-   ─────────────────────────────────────────────────────────────────────────── */
-
-const templateById = id => TEMPLATES.find(t => t.id === id) || TEMPLATES[0];
-
-function defaultParams(t) {
-  return Object.fromEntries(t.params.map(p => [p.key, p.default]));
-}
-
-function createWorkout(templateId, params) {
-  const t = templateById(templateId);
-  const p = { ...defaultParams(t), ...(params || {}) };
-  return { id: uid(), templateId: t.id, name: t.name, params: p, ...t.build(p) };
-}
-
-/* Every swappable exercise a workout uses, in order of first appearance. */
-function swappableIds(workout) {
-  const seen = [];
-  workout.rounds.forEach(r => r.blocks.forEach(b => {
-    const ids = b.type === "cardio" ? [b.id] : b.type === "station" ? b.exercises.map(e => e.id) : [];
-    ids.forEach(id => { if (EXERCISES[id]?.subs?.length && !seen.includes(id)) seen.push(id); });
-  }));
-  return seen;
-}
-
-/* ── 2. Compiler: workout + swaps → timeline ──────────────────────────────────
-   Interval { type:"CARDIO"|"REST"|"WORK", state, round, rounds, part, parts,
-              duration (s|null), estimate, title, icon, instruction, note,
-              target, speed, effort, exercises, segments, say, roundStart }
-   ─────────────────────────────────────────────────────────────────────────── */
-
-function resolveExercise(ref, swaps) {
-  const want = swaps?.[ref.id];
-  const id = want && want !== ref.id && EXERCISES[ref.id]?.subs?.includes(want) ? want : ref.id;
-  const def = EXERCISES[id] || { name: id, instruction: "", equipment: [] };
-  return { ...def, id, baseId: ref.id, swapped: id !== ref.id, target: ref.target };
-}
-
-function exerciseIcon(e) {
-  if (e.cardio) return { run: "ti-run", row: "ti-ripple", bike: "ti-bike", "incline-walk": "ti-walk", "step-ups": "ti-stairs-up" }[e.id] || "ti-heartbeat";
-  if (/rope|punch|boxing|sprint/.test(e.id)) return "ti-wave-sine";
-  if (/carry|march/.test(e.id)) return "ti-weight";
-  if (/lunge|step/.test(e.id)) return "ti-stairs";
-  return "ti-barbell";
-}
-
-function resolveSegments(spec, duration) {
-  if (!spec || !spec.pattern?.length) return { segments: [], duration };
-  const repeat = spec.repeat || 1;
-  const list = [];
-  for (let r = 0; r < repeat; r++) spec.pattern.forEach(p => list.push({ ...p, set: r + 1, sets: repeat }));
-  const absolute = list.every(s => s.duration != null);
-  let t = 0;
-  if (absolute) {
-    list.forEach(s => { s.start = t; t += s.duration; s.end = t; });
-    return { segments: list, duration: duration ?? t };
-  }
-  const total = list.reduce((a, s) => a + (s.share || 1), 0);
-  let cum = 0;
-  list.forEach(s => {
-    s.start = Math.round((duration * cum) / total);
-    cum += s.share || 1;
-    s.end = Math.round((duration * cum) / total);
-  });
-  return { segments: list, duration };
-}
-
-function targetText(target) {
-  if (!target) return "";
-  if (target.reps != null) {
-    const n = Array.isArray(target.reps) ? `${target.reps[0]}–${target.reps[1]}` : target.reps;
-    const label = target.label || "reps";
-    return `${target.approx ? "~" : ""}${n} ${label}${target.perSide ? "/side" : ""}`;
-  }
-  if (target.distance != null) return `${target.distance} ${target.unit || "m"}`;
-  return "";
-}
-
-function spokenTarget(target) {
-  if (!target) return "";
-  if (target.reps != null) {
-    const n = Array.isArray(target.reps) ? `${target.reps[0]} to ${target.reps[1]}` : target.reps;
-    return `${target.approx ? "about " : ""}${n} ${target.label && target.label !== "total" ? target.label : "reps"}${target.perSide ? " per side" : ""}`;
-  }
-  if (target.distance != null) return `${target.distance} ${target.unit || "meters"}`;
-  return "";
-}
-
-const OPEN_ENDED_ESTIMATE = 60;   // seconds assumed for rep-only stations when planning
-
-function compile(workout, swaps = {}, opts = {}) {
-  const timeline = [];
-  const rounds = workout.rounds.length;
-  const easy = (list, kind) => list.forEach(([id, sec], i) => {
-    const e = EXERCISES[id];
-    timeline.push({ type: "WARM", state: kind === "warm" ? "WARM-UP" : "COOL-DOWN", phase: kind, round: kind === "warm" ? 0 : rounds + 1,
-      rounds, roundStart: false, duration: sec, title: e.name, cue: i === 0 ? e.cue : e.cue || e.name, icon: "ti-stretching",
-      instruction: e.instruction, exercises: [], segments: [], exId: id });
-  });
-  if (opts.warmup) easy(WARMUP, "warm");
-  workout.rounds.forEach((round, ri) => {
-    round.blocks.forEach((b, bi) => {
-      const base = { round: ri + 1, rounds, roundStart: bi === 0 };
-      if (b.type === "cardio") {
-        const e = resolveExercise({ id: b.id }, swaps);
-        const speed = e.speed ? b.speed : null;
-        timeline.push({ ...base, type: "CARDIO", state: e.state || "CARDIO", exId: e.id, duration: b.duration,
-          title: e.name, cue: e.cue || e.name, icon: exerciseIcon(e), speed, speedUnit: "mph",
-          effort: b.effort || e.effort || "", exercises: [], segments: [],
-          instruction: speed ? `Treadmill at ${fmtSpeed(speed)} MPH. ${e.instruction}` : e.instruction });
-      } else if (b.type === "rest") {
-        timeline.push({ ...base, type: "REST", state: "REST", duration: b.duration, title: b.label || "Rest / Transition",
-          icon: "ti-clock-pause", instruction: "", exercises: [], segments: [] });
-      } else {
-        const exs = b.exercises.map(r => resolveExercise(r, swaps));
-        const single = exs.length === 1 ? exs[0] : null;
-        const anySwap = exs.some(e => e.swapped);
-        const title = single && (single.swapped || !b.name) ? single.name : (b.name || exs.map(e => e.name).join(" + "));
-        const cue = single && (single.swapped || !b.cue) ? (single.cue || single.name) : (b.cue || title);
-        const instruction = (!anySwap && b.instruction) || (single ? single.instruction : b.instruction || "");
-        const { segments, duration } = resolveSegments(b.segments, b.duration ?? null);
-        timeline.push({ ...base, type: "WORK", state: "WORK", duration, estimate: duration ?? OPEN_ENDED_ESTIMATE,
-          title, cue, icon: exerciseIcon(single || exs[0]), instruction, note: b.note || "",
-          exercises: exs, target: exs.map(e => targetText(e.target)).filter(Boolean).join(" + "),
-          hasTarget: exs.some(e => e.target), openEnded: duration == null, segments });
-      }
-    });
-  });
-  if (opts.cooldown) easy(COOLDOWN, "cool");
-  // Single-round workouts (mini triathlons) count parts instead of rounds.
-  const parts = timeline.filter(iv => iv.type !== "REST" && iv.type !== "WARM");
-  parts.forEach((iv, i) => { iv.part = i + 1; });
-  timeline.forEach(iv => { iv.parts = parts.length; });
-
-  // Spoken cues depend on neighbours, so they are written after the timeline exists.
-  timeline.forEach((iv, i) => {
-    const next = timeline[i + 1];
-    const lead = iv.rounds > 1 && iv.roundStart ? (iv.round === 1 ? "Round 1. " : `Next round. Round ${iv.round}. `) : "";
-    if (iv.type === "CARDIO") {
-      const pace = iv.speed ? ` ${Number(Number(iv.speed).toFixed(1))} miles per hour.` : "";
-      iv.say = `${lead}${iv.cue}.${pace}`;
-    } else if (iv.type === "WARM") {
-      iv.say = `${iv.cue}.`;
-      if (iv.phase === "cool" && timeline[i - 1]?.type !== "WARM") iv.say = `Main workout done. ${iv.cue}.`;
-    } else if (iv.type === "REST") {
-      const upNext = !next ? "" : next.roundStart && next.rounds > 1 ? " Next round coming up." : ` Up next, ${next.cue || next.title}.`;
-      iv.say = `${spokenDuration(iv.duration)} rest.${upNext}`;
-    } else {
-      const firstSeg = iv.segments[0]?.label;
-      const tgt = (iv.exercises.length === 1 && spokenTarget(iv.exercises[0].target)) || "";
-      iv.say = `${lead}${iv.cue}.${tgt ? ` Target ${tgt}.` : ""}${iv.openEnded ? " Tap done when finished." : ""}${firstSeg ? ` ${cap(firstSeg)}.` : ""}`;
-    }
-  });
-  return timeline;
-}
-
-const planSec = iv => iv.duration ?? iv.estimate ?? 0;
-
-/* ── 3. IntervalEngine ─────────────────────────────────────────────────────────
-   Generic and DOM-free. Wall-clock based, so it stays accurate when ticks are
-   throttled (background tab) — it catches up through as many intervals as needed.
-   Events: phase, countdown(n), go, interval({reason}), second({remaining}),
-           segment({segment}), extend, pause, resume, tick, complete({early})
-   ─────────────────────────────────────────────────────────────────────────── */
-
-class IntervalEngine {
-  constructor(timeline, opts = {}) {
-    this.timeline = timeline;
-    this.countdownSec = opts.countdown ?? 3;
-    this.now = opts.now || (() => performance.now());
-    this.listeners = {};
-    this.phase = "idle";            // idle | countdown | running | complete
-    this.paused = false;
-    this.index = 0;
-    this.acc = 0;                   // ms accumulated in current interval (or countdown)
-    this.since = null;              // timestamp of last resume, null when paused
-    this.extra = 0;                 // ms added to current interval (+10 sec)
-    this.lastSecond = null;
-    this.segIndex = -1;
-    this.visits = [];               // { index, type, round, ms, outcome }
-  }
-  on(evt, fn) { (this.listeners[evt] ||= []).push(fn); return this; }
-  emit(evt, data) { (this.listeners[evt] || []).forEach(fn => fn(data || {}, this)); }
-
-  get current() { return this.timeline[this.index]; }
-  elapsedMs() { return this.acc + (this.since != null ? this.now() - this.since : 0); }
-  durationMs() {
-    const d = this.current?.duration;
-    return d == null ? null : d * 1000 + this.extra;
-  }
-  remainingMs() { const d = this.durationMs(); return d == null ? null : Math.max(0, d - this.elapsedMs()); }
-  segmentAt(ms) {
-    const segs = this.current?.segments || [];
-    let idx = -1;
-    for (let i = 0; i < segs.length; i++) if (ms >= segs[i].start * 1000) idx = i;
-    return idx;
-  }
-  get segment() { return this.current?.segments?.[this.segIndex] || null; }
-
-  start() {
-    if (this.phase !== "idle") return;
-    this.phase = "countdown";
-    this.acc = 0; this.since = this.now(); this.lastSecond = null;
-    this.emit("phase");
-    this.tick();
-  }
-  pause() {
-    if (this.paused || this.phase === "idle" || this.phase === "complete") return;
-    this.acc = this.elapsedMs(); this.since = null; this.paused = true;
-    this.emit("pause");
-  }
-  resume() {
-    if (!this.paused) return;
-    this.since = this.now(); this.paused = false;
-    this.emit("resume");
-    this.tick();
-  }
-  toggle() { this.paused ? this.resume() : this.pause(); }
-
-  next(outcome = "skipped") {
-    if (this.phase === "countdown") { this.emit("go"); this._enter(0, 0, "skip"); return; }
-    if (this.phase !== "running") return;
-    this._leave(outcome);
-    if (this.index + 1 >= this.timeline.length) return this._finish(false);
-    this._enter(this.index + 1, 0, outcome === "done" ? "done" : "skip");
-  }
-  done() { this.next("done"); }
-  prev() {
-    if (this.phase !== "running") return;
-    this._leave("back");
-    this._enter(Math.max(0, this.index - 1), 0, "prev");
-  }
-  extend(sec = 10) {
-    if (this.phase !== "running" || this.current.duration == null) return;
-    this.extra += sec * 1000;
-    this.lastSecond = null;
-    this.emit("extend", { sec });
-    this.tick();
-  }
-  end() {
-    if (this.phase === "complete") return;
-    if (this.phase === "running") this._leave("ended");
-    this._finish(true);
-  }
-
-  tick() {
-    if (this.paused) return;
-    if (this.phase === "countdown") {
-      const cd = this.countdownSec * 1000, el = this.elapsedMs();
-      if (el >= cd) { this.emit("go"); this._enter(0, el - cd, "start"); }
-      else {
-        const left = Math.ceil((cd - el) / 1000);
-        if (left !== this.lastSecond) { this.lastSecond = left; this.emit("countdown", { n: left }); }
-        this.emit("tick");
-        return;
-      }
-    }
-    if (this.phase !== "running") return;
-    for (let guard = 0; guard < 10000 && this.phase === "running"; guard++) {
-      const dur = this.durationMs(), el = this.elapsedMs();
-      if (dur != null && el >= dur) {
-        this._leave("complete", dur);
-        if (this.index + 1 >= this.timeline.length) return this._finish(false);
-        this._enter(this.index + 1, el - dur, "auto");
-        continue;
-      }
-      const si = this.segmentAt(el);
-      if (si !== this.segIndex) {
-        this.segIndex = si;
-        if (si > 0) this.emit("segment", { segment: this.segment, index: si });
-      }
-      if (dur != null) {
-        const rem = Math.ceil((dur - el) / 1000);
-        if (rem !== this.lastSecond) { this.lastSecond = rem; this.emit("second", { remaining: rem }); }
-      }
-      break;
-    }
-    this.emit("tick");
-  }
-
-  _enter(i, overMs, reason) {
-    this.phase = "running";
-    this.index = i;
-    this.acc = overMs || 0;
-    this.since = this.paused ? null : this.now();
-    this.extra = 0;
-    this.lastSecond = null;
-    this.segIndex = this.segmentAt(this.acc);
-    this.emit("interval", { reason, interval: this.current, index: i });
-  }
-  _leave(outcome, capMs) {
-    const iv = this.current;
-    const ms = capMs != null ? capMs : this.elapsedMs();
-    this.visits.push({ index: this.index, type: iv.type, round: iv.round, ms, outcome });
-    this.acc = 0; this.since = null;
-  }
-  _finish(early) {
-    this.phase = "complete"; this.paused = false; this.since = null;
-    this.emit("complete", { early });
-  }
-
-  /* Progress through the planned workout, 0..1 */
-  progress() {
-    const total = this.timeline.reduce((a, iv) => a + planSec(iv), 0) || 1;
-    if (this.phase === "complete") return 1;
-    if (this.phase !== "running") return 0;
-    let done = 0;
-    for (let i = 0; i < this.index; i++) done += planSec(this.timeline[i]);
-    const d = this.current.duration;
-    if (d) done += d * Math.min(1, this.elapsedMs() / this.durationMs());
-    return Math.min(1, done / total);
-  }
-
-  stats() {
-    const sum = f => this.visits.filter(f).reduce((a, v) => a + v.ms, 0);
-    const finished = v => v.outcome === "complete" || v.outcome === "done";
-    let distance = 0;
-    this.visits.forEach(v => { const iv = this.timeline[v.index]; if (iv.speed) distance += (v.ms / 3600000) * iv.speed; });
-    const stationIdx = new Set(this.visits.filter(v => v.type === "WORK" && finished(v)).map(v => v.index));
-    // A round counts when every non-rest interval in it was finished (timer ran out or DONE).
-    const rounds = this.timeline[0]?.rounds || 0;
-    const unit = rounds > 1 ? "round" : "part";
-    const groups = rounds > 1
-      ? Array.from({ length: rounds }, (_, r) => this.timeline.map((iv, i) => ({ iv, i })).filter(({ iv }) => iv.round === r + 1 && iv.type !== "REST"))
-      : this.timeline.map((iv, i) => ({ iv, i })).filter(({ iv }) => iv.type !== "REST" && iv.type !== "WARM").map(x => [x]);
-    const done = groups.filter(g => g.length && g.every(({ i }) => this.visits.some(v => v.index === i && finished(v)))).length;
-    return {
-      totalSec: Math.round(sum(() => true) / 1000),
-      cardioSec: Math.round(sum(v => v.type === "CARDIO") / 1000),
-      runSec: Math.round(sum(v => !!this.timeline[v.index].speed) / 1000),
-      workSec: Math.round(sum(v => v.type === "WORK") / 1000),
-      restSec: Math.round(sum(v => v.type === "REST") / 1000),
-      warmSec: Math.round(sum(v => v.type === "WARM") / 1000),
-      intervalsDone: new Set(this.visits.filter(v => v.type !== "REST" && v.type !== "WARM" && finished(v)).map(v => v.index)).size,
-      intervalsTotal: this.timeline.filter(iv => iv.type !== "REST" && iv.type !== "WARM").length,
-      distance: Math.round(distance * 100) / 100,
-      distanceUnit: "mi",
-      stations: stationIdx.size,
-      stationsTotal: this.timeline.filter(iv => iv.type === "WORK").length,
-      rounds: done,
-      roundsTotal: groups.length,
-      unit,
-    };
-  }
-}
 
 /* ── 4. Cues: sound, speech, vibration ──────────────────────────────────────── */
 
@@ -484,6 +121,7 @@ const ui = {
   templateId: state.lastTemplate || TEMPLATES[0].id, summary: null, viewingHistory: false,
   confirmEnd: false, confirm: null, go: false, calOffset: 0,
   filters: { time: "all", type: "all", level: "all" }, fitsGear: false,
+  auth: { email: "", code: "", sent: false, busy: false, msg: "", error: false },
   ob: { goal: 3, level: "intermediate", equipment: [...ALL_EQUIPMENT] },
 };
 let engine = null;
@@ -494,7 +132,8 @@ function loadState() {
   const fresh = {
     settings: { sound: true, voice: true, vibrate: true },
     profile: { onboarded: false, goal: 3, level: "intermediate", equipment: [...ALL_EQUIPMENT], warmup: true, cooldown: true },
-    params: {}, swaps: {}, history: [], checkin: null, lastTemplate: null,
+    params: {}, swaps: {}, history: [], checkin: null, lastTemplate: null, program: null,
+    deleted: {}, sync: defaultSyncState(), profileUpdatedAt: 0, profileSig: null,
   };
   try {
     const raw = localStorage.getItem(STORE_KEY);
@@ -504,7 +143,19 @@ function loadState() {
       profile: { ...fresh.profile, ...(s.profile || {}), onboarded: s.profile?.onboarded ?? (s.history?.length > 0) } };
   } catch { return fresh; }
 }
-function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch { /* storage unavailable */ } }
+/* Persist locally. Unless silent (the sync engine's own writes), stamp what changed and queue a cloud sync. */
+function save({ silent = false } = {}) {
+  if (!silent) {
+    let changed = stampChanges(state.history);
+    const sig = JSON.stringify(profileBlob(state));
+    if (sig !== state.profileSig) { state.profileSig = sig; state.profileUpdatedAt = Date.now(); changed++; }
+    // New deletions also need to reach the cloud.
+    const deletions = Object.keys(state.deleted || {}).length;
+    if (deletions !== state.deletedCount) { state.deletedCount = deletions; changed++; }
+    if (changed) Sync.schedule();
+  }
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch { /* storage unavailable */ }
+}
 
 function paramsFor(templateId) {
   const t = templateById(templateId);
@@ -512,118 +163,36 @@ function paramsFor(templateId) {
 }
 function swapsFor(templateId) { return state.swaps[templateId] || {}; }
 
-/* ── Equipment: auto-swap anything the athlete doesn't own ─────────────────── */
+/* ── Equipment (athlete's profile) ─────────────────────────────────────────── */
 
-function hasGear(e) {
-  const have = state.profile.equipment;
-  return (e.equipment || []).every(q => q.split("|").some(x => have.includes(x)));
-}
-function allExerciseIds(workout) {
-  const ids = [];
-  workout.rounds.forEach(r => r.blocks.forEach(b => {
-    (b.type === "cardio" ? [b.id] : b.type === "station" ? b.exercises.map(e => e.id) : []).forEach(id => { if (!ids.includes(id)) ids.push(id); });
-  }));
-  return ids;
-}
-function gearPlan(templateId, workout) {
-  const manual = swapsFor(templateId);
-  const auto = {};
-  const missing = new Set();
-  const need = e => (e.equipment || []).forEach(q => { if (!q.split("|").some(x => state.profile.equipment.includes(x))) missing.add(q.split("|")[0]); });
-  allExerciseIds(workout).forEach(id => {
-    const base = EXERCISES[id];
-    const chosen = manual[id] && (manual[id] === id || base.subs?.includes(manual[id])) ? manual[id] : null;
-    if (chosen) { need(EXERCISES[chosen]); return; }
-    if (hasGear(base)) return;
-    const sub = (base.subs || []).find(s => hasGear(EXERCISES[s]));
-    if (sub) auto[id] = sub; else need(base);
-  });
-  return { swaps: { ...auto, ...manual }, auto, missing: [...missing], doable: missing.size === 0 };
-}
+const ownsGear = e => hasGear(e, state.profile.equipment);
+const gearPlanFor = (templateId, workout) => gearPlan(workout, swapsFor(templateId), state.profile.equipment);
 
 /* Planned workout for a template with the athlete's settings, gear and warm-up choice. */
-function planFor(templateId) {
-  const workout = createWorkout(templateId, paramsFor(templateId));
-  const gear = gearPlan(templateId, workout);
+function planFor(templateId, params = paramsFor(templateId)) {
+  const workout = createWorkout(templateId, params);
+  const gear = gearPlanFor(templateId, workout);
   const timeline = compile(workout, gear.swaps, { warmup: state.profile.warmup, cooldown: state.profile.cooldown });
   return { workout, timeline, gear, totals: planTotals(timeline) };
 }
 
-/* ── Formatting helpers ────────────────────────────────────────────────────── */
+/* ── Active program ─────────────────────────────────────────────────────────── */
 
-function uid() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
-function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
-function cap(s) { s = String(s || "").toLowerCase(); return s.charAt(0).toUpperCase() + s.slice(1); }
-function pad(n) { return String(n).padStart(2, "0"); }
-function fmtClock(sec) {
-  sec = Math.max(0, Math.round(sec));
-  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
-  return h ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+const activeProgram = () => programStatus(state.program);
+/* The plan session behind a key, with its adjusted settings — only if it belongs to the active program. */
+function programSession(key) {
+  const st = activeProgram();
+  const s = st && key ? st.sessions.find(x => x.key === key) : null;
+  if (!s) return null;
+  const t = templateById(s.t);
+  return { ...s, template: t, params: programParams(t, paramsFor(t.id), s.adj), status: st };
 }
-function fmtShort(sec) { const m = Math.floor(sec / 60), s = sec % 60; return `${m}:${pad(s)}`; }
-function fmtHours(sec) { const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60); return h ? `${h}h ${pad(m)}m` : `${m} min`; }
-function fmtSpeed(v) { return Number(v).toFixed(1); }
-function fmtMi(v) { return `${Number(v).toFixed(2)} mi`; }
-function spokenDuration(sec) {
-  const m = Math.floor(sec / 60), s = sec % 60;
-  if (!m) return `${s} seconds`;
-  return `${m} minute${m > 1 ? "s" : ""}${s ? ` ${s}` : ""}`;
-}
-function fmtParam(p, v) { return p.kind === "time" ? fmtShort(v) : p.kind === "speed" ? fmtSpeed(v) : String(v); }
-function fmtDate(ts) { return new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }); }
-function fmtDay(ts) { return new Date(ts).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }); }
-function planTotals(timeline) {
-  const sum = f => timeline.filter(f).reduce((a, iv) => a + planSec(iv), 0);
-  const dist = timeline.filter(iv => iv.speed).reduce((a, iv) => a + (iv.duration / 3600) * iv.speed, 0);
-  return {
-    total: sum(() => true), main: sum(iv => iv.type !== "WARM"), warm: sum(iv => iv.type === "WARM"),
-    cardio: sum(iv => iv.type === "CARDIO"), run: sum(iv => !!iv.speed), work: sum(iv => iv.type === "WORK"),
-    dist, openEnded: timeline.some(iv => iv.openEnded),
-  };
-}
-function timeBucket(sec) { const min = sec / 60; return min <= 25 ? "20" : min <= 40 ? "30" : "45"; }
-const BUCKET_LABEL = { 20: "20 min", 30: "30 min", 45: "45+ min" };
-function timelinePatterns(timeline) {
-  const set = new Set();
-  timeline.forEach(iv => {
-    if (iv.type === "CARDIO") set.add("cardio");
-    iv.exercises.forEach(e => e.pattern && set.add(e.pattern));
-  });
-  return set;
-}
-/* Seconds per movement pattern actually trained (from engine visits). */
-function visitPatterns(timeline, visits) {
-  const out = {};
-  visits.forEach(v => {
-    const iv = timeline[v.index];
-    const sec = v.ms / 1000;
-    if (iv.type === "CARDIO") out.cardio = (out.cardio || 0) + sec;
-    else if (iv.type === "WORK" && iv.exercises.length) {
-      iv.exercises.forEach(e => { if (e.pattern) out[e.pattern] = (out[e.pattern] || 0) + sec / iv.exercises.length; });
-    }
-  });
-  Object.keys(out).forEach(k => { out[k] = Math.round(out[k]); });
-  return out;
+function adjText(adj) {
+  const words = { rounds: "round", speed: " mph", workSec: "s work", carrySec: "s carry", cardioSec: "s cardio" };
+  return Object.entries(adj || {}).map(([k, v]) => k === "rounds" ? `${v > 0 ? "+" : ""}${v} round${Math.abs(v) === 1 ? "" : "s"}`
+    : `${v > 0 ? "+" : ""}${v}${words[k] || ` ${k}`}`).join(", ");
 }
 
-/* ── Benchmarks (Row → Bike → Run) ─────────────────────────────────────────── */
-
-const METERS_PER_MILE = 1609.344;
-const legUnit = exId => (exId === "row" ? "m" : "mi");
-
-function benchmarkLegs(timeline) {
-  const legs = [];
-  timeline.filter(iv => iv.type === "CARDIO").forEach(iv => {
-    let leg = legs.find(l => l.id === iv.exId);
-    if (!leg) legs.push(leg = { id: iv.exId, name: iv.title, unit: legUnit(iv.exId), sec: 0, estimate: 0 });
-    leg.sec += iv.duration;
-    if (iv.speed) leg.estimate += (iv.duration / 3600) * iv.speed;
-  });
-  return legs;
-}
-function benchTotalMi(bench) {
-  return bench.legs.reduce((a, l) => a + (Number(l.value) || 0) / (l.unit === "m" ? METERS_PER_MILE : 1), 0);
-}
 function benchResults(templateId) {
   return state.history.filter(h => h.templateId === templateId && h.bench?.totalMi > 0);
 }
@@ -637,6 +206,7 @@ function render() {
   document.body.dataset.screen = ui.screen;
   if (ui.screen === "player") return renderPlayer();
   const views = {
+    program: renderProgram,
     onboarding: renderOnboarding, today: renderToday, library: renderLibrary, progress: renderProgress,
     history: renderHistory, profile: renderProfile, setup: renderSetup, summary: renderSummary,
   };
@@ -706,8 +276,8 @@ function renderOnboarding() {
   return `
   ${topbar()}
   <section class="ob">
-    <h1 class="ob-title">Workouts that run themselves.</h1>
-    <p class="about">Press start and VYRA tells you what to do, when to rest and what's next. Three quick questions so we can pick the right sessions for you.</p>
+    <h1 class="ob-title">Your guided hybrid workout player.</h1>
+    <p class="about">Treadmill, rower, bike and strength circuits in one guided timer. No whiteboard, no stopwatch juggling, no wondering what's next. Three quick questions so we can pick the right sessions for you.</p>
     <div class="ob-q">
       <div class="ob-label"><span>01</span> Workouts per week</div>
       ${chips("data-ob-goal", [2, 3, 4, 5].map(n => [n, `${n} × week`]), o.goal)}
@@ -722,8 +292,15 @@ function renderOnboarding() {
       ${chips("data-ob-equip", ALL_EQUIPMENT.map(e => [e, EQUIPMENT_LABEL[e]]), o.equipment, true)}
       <p class="hint ${noWeights ? "hint--warn" : ""}">${noWeights ? "Most workouts need at least one dumbbell or kettlebell." : "Missing something? VYRA swaps in an alternative automatically."}</p>
     </div>
+    <div class="ob-q">
+      <div class="ob-label"><span>04</span> Before you start</div>
+      <button class="ack ${o.ack ? "on" : ""}" data-act="ob-ack" role="checkbox" aria-checked="${!!o.ack}">
+        <span class="ack-box">${o.ack ? '<i class="ti ti-check"></i>' : ""}</span>
+        <span>${HEALTH_NOTE}</span>
+      </button>
+    </div>
   </section>
-  <div class="start-dock"><button class="btn-primary btn-start" data-act="ob-done">Start training <i class="ti ti-arrow-right"></i></button></div>`;
+  <div class="start-dock"><button class="btn-primary btn-start" data-act="ob-done" ${o.ack ? "" : "disabled"}>Start training <i class="ti ti-arrow-right"></i></button></div>`;
 }
 
 /* ── Today ────────────────────────────────────────────────────────────────── */
@@ -737,7 +314,10 @@ function renderToday() {
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const checkin = state.checkin?.day === dayKey(now) ? state.checkin.value : null;
-  const metas = TEMPLATES.map(templateMeta);
+  // With a plan running, the suggestion is an off-plan alternative, never the plan's own next session.
+  const plan = activeProgram();
+  const onPlan = plan && !plan.complete;
+  const metas = TEMPLATES.map(templateMeta).filter(m => !onPlan || m.t.id !== plan.next.t);
   const rec = recommend({ history: h, candidates: metas, checkin, level: state.profile.level, now });
   const trainedDays = new Set(week.map(x => (new Date(x.date).getDay() + 6) % 7));
   const dots = ["M", "T", "W", "T", "F", "S", "S"].map((d, i) => {
@@ -758,7 +338,7 @@ function renderToday() {
       </div>`
     : `
       <div class="pick">
-        <div class="pick-eyebrow"><i class="ti ti-sparkles"></i> Suggestion</div>
+        <div class="pick-eyebrow"><i class="ti ti-sparkles"></i> ${onPlan ? "Off-plan option" : "Suggestion"}</div>
         <button class="pick-main" data-template="${rec.pick.t.id}">
           <span class="pick-name">${esc(rec.pick.t.name)}</span>
           <span class="pick-meta">${rec.pick.minutes} min · ${cap(rec.pick.t.level)} · ${esc(rec.pick.t.tagline)}</span>
@@ -795,6 +375,9 @@ function renderToday() {
   </div>
   ${checkin === "sore" ? `<p class="hint">Got it. The suggestion avoids heavy legs and impact.</p>` : ""}
 
+  ${state.profile.healthAck ? "" : `<div class="pick plan"><div class="pick-eyebrow"><i class="ti ti-shield-check"></i> Before you train</div>
+    <p class="pick-reason">${HEALTH_NOTE}</p><button class="btn-secondary" data-act="health-ack"><i class="ti ti-check"></i> I understand</button></div>`}
+  ${programCard()}
   ${pickCard}
 
   ${sectionLabel("Short on time?")}
@@ -809,6 +392,118 @@ function renderToday() {
   </button>` : ""}
 
   ${last ? `${sectionLabel("Last workout")}<div class="cl-list">${historyRow(last)}</div>` : ""}`;
+}
+
+/* ── Health & safety ──────────────────────────────────────────────────────── */
+const HEALTH_NOTE = "VYRA is a workout guide, not medical advice or physical therapy. I'm healthy enough to exercise, or a doctor has cleared me, and I'll scale or stop anything that doesn't feel right.";
+const FAST_SPEED_MPH = 9;
+
+/* Warnings shown on a workout before it starts. */
+function safetyNotes(t, params) {
+  const notes = [];
+  const levels = { beginner: 0, intermediate: 1, advanced: 2 };
+  if (levels[t.level] > levels[state.profile.level]) {
+    notes.push(`This is an ${t.level} session and your profile says ${state.profile.level}. Try fewer rounds or a slower speed the first time.`);
+  }
+  if (params.speed >= FAST_SPEED_MPH) {
+    notes.push(`${fmtSpeed(params.speed)} mph is a fast pace. Only use it if you regularly run at this speed; otherwise lower it.`);
+  }
+  return notes.map(n => `<div class="gear-note gear-note--warn"><i class="ti ti-alert-triangle"></i> ${esc(n)}</div>`).join("");
+}
+
+/* ── Programs ─────────────────────────────────────────────────────────────── */
+function programCard() {
+  const st = activeProgram();
+  if (!st) return "";
+  if (st.complete) return `
+    <div class="pick plan">
+      <div class="pick-eyebrow"><i class="ti ti-trophy"></i> Plan complete</div>
+      <div class="pick-name">${esc(st.prog.name)}</div>
+      <p class="pick-reason">All ${st.total} sessions done. Pick your next plan or keep going with single workouts.</p>
+      <button class="btn-secondary" data-program="${st.prog.id}"><i class="ti ti-calendar-event"></i> View plan</button>
+    </div>`;
+  const n = st.next;
+  const t = templateById(n.t);
+  const ps = programSession(n.key);
+  const minutes = Math.round(planFor(t.id, ps.params).totals.main / 60);
+  return `
+    <div class="pick plan">
+      <div class="pick-eyebrow"><i class="ti ti-calendar-event"></i> ${esc(st.prog.name)} · week ${n.week} of ${st.prog.weeks.length}</div>
+      <button class="pick-main" data-session="${n.key}">
+        <span class="pick-name">${esc(t.name)}</span>
+        <span class="pick-meta">Session ${n.index} of ${n.perWeek} this week · ${minutes} min${n.adj ? ` · ${esc(adjText(n.adj))}` : ""}</span>
+      </button>
+      <div class="plan-track" aria-label="${st.doneCount} of ${st.total} sessions done">
+        ${st.sessions.map(s => `<span class="${st.done[s.key] ? "done" : s.key === n.key ? "now" : ""} ${s.index === 1 && s.week > 1 ? "wk" : ""}"></span>`).join("")}
+      </div>
+      <div class="cl-meta">${st.doneCount} of ${st.total} sessions done</div>
+      <button class="btn-primary" data-act="plan-start" data-id="${t.id}" data-key="${n.key}"><i class="ti ti-player-play"></i> Start ${esc(t.name)}</button>
+    </div>`;
+}
+
+function programRow(p) {
+  const st = activeProgram();
+  const active = st && st.prog.id === p.id;
+  const total = p.weeks.reduce((a, w) => a + w.length, 0);
+  return `
+    <button class="cl-row" data-program="${p.id}">
+      <i class="ti ti-calendar-event cl-ic" aria-hidden="true"></i>
+      <span class="cl-main">
+        <span class="cl-name">${esc(p.name)}${active ? ` <span class="tag tag--live">${st.complete ? "Done" : "Active"}</span>` : ""}</span>
+        <span class="cl-sub">${esc(p.tagline)}</span>
+        <span class="cl-meta">${p.weeks.length} weeks · ${total} sessions · ${cap(p.level)}${active && !st.complete ? ` · <b>${st.doneCount}/${st.total} done</b>` : ""}</span>
+      </span>
+      <i class="ti ti-chevron-right cl-go" aria-hidden="true"></i>
+    </button>`;
+}
+
+function renderProgram() {
+  const p = programById(ui.programId) || PROGRAMS[0];
+  const st = activeProgram();
+  const active = st && st.prog.id === p.id ? st : null;
+  const sessions = programSessions(p);
+  const totalMin = sessions.reduce((a, s) => a + planFor(s.t, programParams(templateById(s.t), paramsFor(s.t), s.adj)).totals.main, 0) / 60;
+  const kit = [...new Set(sessions.flatMap(s => templateById(s.t).equipment))];
+  const weeks = p.weeks.map((week, wi) => `
+    <div class="cl-cat"><span class="cl-cat-name">Week ${wi + 1}${wi === p.weeks.length - 1 ? " · lighter" : ""}</span>
+      <span class="cl-cat-count">${week.length} sessions</span></div>
+    <div class="cl-list">${week.map((s, si) => {
+      const key = `${wi + 1}-${si + 1}`;
+      const t = templateById(s.t);
+      const done = active?.done[key];
+      const isNext = active?.next?.key === key;
+      const icon = done ? "ti-circle-check" : isNext ? "ti-player-play" : "ti-circle";
+      const inner = `
+        <i class="ti ${icon} cl-ic ${done ? "is-done" : isNext ? "is-next" : ""}" aria-hidden="true"></i>
+        <span class="cl-main"><span class="cl-name">${esc(t.name)}</span>
+          <span class="cl-meta">${esc(t.tagline)}${s.adj ? ` · ${esc(adjText(s.adj))}` : ""}${done ? " · done" : isNext ? " · up next" : ""}</span></span>`;
+      return active ? `<button class="cl-row" data-session="${key}">${inner}<i class="ti ti-chevron-right cl-go" aria-hidden="true"></i></button>`
+        : `<button class="cl-row" data-template="${t.id}">${inner}<i class="ti ti-chevron-right cl-go" aria-hidden="true"></i></button>`;
+    }).join("")}</div>`).join("");
+
+  const switching = st && !st.complete && !active;
+  return `
+  ${topbar("", backButton(ui.tab === "today" ? "today" : "library", ui.tab === "today" ? "Today" : "Library"))}
+  <section class="hero">
+    <div class="hero-daycount">${p.weeks.length}-week program · ${cap(p.level)}</div>
+    <div class="hero-titlebar"><i class="ti ti-calendar-event hero-ic" aria-hidden="true"></i><h1 class="hero-name">${esc(p.name)}</h1></div>
+    <p class="about">${esc(p.about)}</p>
+    <div class="tag-row"><span class="tag">${sessions.length} sessions</span><span class="tag">~${Math.round(totalMin / sessions.length)} min each</span>
+      ${kit.map(e => `<span class="tag tag--equip">${esc(EQUIPMENT_LABEL[e])}</span>`).join("")}</div>
+  </section>
+  ${active ? `
+    <div class="plan-summary">
+      <div class="ring-wrap ring-wrap--sm">
+        ${ringSVG(active.doneCount / active.total, { size: 84, stroke: 7, label: `${active.doneCount} of ${active.total} sessions` })}
+        <div class="ring-center"><b>${active.doneCount}<small>/${active.total}</small></b></div>
+      </div>
+      <div><div class="cl-name">${active.complete ? "Plan complete" : `Week ${active.week} of ${p.weeks.length}`}</div>
+        <div class="cl-meta">Self-paced: train when it suits you. Sessions count once at least half is done.</div></div>
+    </div>
+    ${active.next ? `<button class="btn-primary btn-inline-start" data-act="plan-start" data-id="${active.next.t}" data-key="${active.next.key}"><i class="ti ti-player-play"></i> Start next: ${esc(templateById(active.next.t).name)}</button>` : ""}`
+    : `<button class="btn-primary btn-inline-start" data-act="program-join" data-id="${p.id}"><i class="ti ti-calendar-plus"></i> ${switching && ui.confirm === "switch" ? `Tap again to replace ${esc(st.prog.name)}` : switching ? "Switch to this plan" : "Start this plan"}</button>`}
+  ${weeks}
+  ${active ? `<button class="text-btn text-btn--center" data-act="program-leave">${ui.confirm === "leave" ? "Tap again to end this plan" : "End this plan"}</button>` : ""}`;
 }
 
 /* ── Library ──────────────────────────────────────────────────────────────── */
@@ -847,6 +542,9 @@ function renderLibrary() {
     <div class="hero-daycount">${metas.length} of ${TEMPLATES.length} workouts fit your equipment</div>
     <div class="hero-titlebar"><h1 class="hero-name">Library</h1></div>
   </section>
+  ${sectionLabel("4-week programs", `<span class="cl-cat-count">${PROGRAMS.length} plans</span>`)}
+  <div class="cl-list">${PROGRAMS.map(programRow).join("")}</div>
+  ${sectionLabel("Single workouts")}
   <section class="filters" aria-label="Filters">
     <div class="filter-group"><span class="filter-label">Time</span>${chips("data-f-time", [["all", "Any"], ["20", "20 min"], ["30", "30 min"], ["45", "45+ min"]], ui.filters.time)}</div>
     <div class="filter-group"><span class="filter-label">Type</span>${chips("data-f-type", TYPE_FILTERS, ui.filters.type)}</div>
@@ -882,9 +580,11 @@ function libraryRow(m) {
 /* ── Setup ────────────────────────────────────────────────────────────────── */
 function renderSetup() {
   const t = templateById(ui.templateId);
-  const params = paramsFor(t.id);
+  const ps = programSession(ui.programKey);
+  const inPlan = ps && ps.t === t.id ? ps : null;
+  const params = inPlan ? inPlan.params : paramsFor(t.id);
   const manual = swapsFor(t.id);
-  const { workout, timeline, totals, gear } = planFor(t.id);
+  const { workout, timeline, totals, gear } = planFor(t.id, params);
   const isBench = t.focus.includes("benchmark");
 
   const cardioKeys = { rowSec: "row", bikeSec: "bike", runSec: "run" };
@@ -917,7 +617,7 @@ function renderSetup() {
           ${current !== id ? `<span class="swap-now"><i class="ti ti-arrows-exchange"></i> ${esc(EXERCISES[current].name)}${isAuto ? " · auto" : ""}</span>` : ""}
         </div>
         <div class="cl-filters">${[id, ...base.subs].map(o => `
-          <button class="cl-chip ${o === current ? "active" : ""} ${hasGear(EXERCISES[o]) ? "" : "cl-chip--off"}" data-swap="${id}" data-to="${o}" aria-pressed="${o === current}">${o === id ? "Original" : esc(EXERCISES[o].name)}</button>`).join("")}
+          <button class="cl-chip ${o === current ? "active" : ""} ${ownsGear(EXERCISES[o]) ? "" : "cl-chip--off"}" data-swap="${id}" data-to="${o}" aria-pressed="${o === current}">${o === id ? "Original" : esc(EXERCISES[o].name)}</button>`).join("")}
         </div>
       </div>`;
   }).join("");
@@ -976,11 +676,13 @@ function renderSetup() {
     </div>
     <p class="about">${esc(t.about)}</p>
     <div class="tag-row">${tags.map(f => `<span class="tag">${esc(f)}</span>`).join("")}</div>
+    ${inPlan ? `<div class="gear-note"><i class="ti ti-calendar-event"></i> ${esc(inPlan.status.prog.name)} · week ${inPlan.week}, session ${inPlan.index} of ${inPlan.perWeek}${inPlan.adj ? ` · ${esc(adjText(inPlan.adj))} vs your usual settings` : ""}</div>` : ""}
+    ${safetyNotes(t, params)}
     ${!gear.doable ? `<div class="gear-note gear-note--warn"><i class="ti ti-alert-triangle"></i> Needs ${gear.missing.map(e => EQUIPMENT_LABEL[e] || e).join(", ")}. Pick a swap below, add it in Profile, or start anyway.</div>`
       : autoList.length ? `<div class="gear-note"><i class="ti ti-adjustments"></i> Adjusted for your equipment: ${autoList.map(([a, b]) => `${esc(EXERCISES[a].name)} → ${esc(EXERCISES[b].name)}`).join(", ")}</div>` : ""}
   </section>
 
-  <button class="btn-primary btn-inline-start" data-act="start"><i class="ti ti-player-play"></i> ${gear.doable ? "Start workout" : "Start anyway"}</button>
+  <button class="btn-primary btn-inline-start" data-act="start" ${inPlan ? `data-key="${inPlan.key}"` : ""}><i class="ti ti-player-play"></i> ${gear.doable ? "Start workout" : "Start anyway"}</button>
 
   ${benchBlock}
 
@@ -1001,7 +703,7 @@ function renderSetup() {
   <ol class="round-list">${warmRow("warm", "Warm-up")}${roundRows}${warmRow("cool", "Cool-down")}</ol>
 
   <div class="start-dock">
-    <button class="btn-primary btn-start" data-act="start"><i class="ti ti-player-play"></i> ${gear.doable ? "Start workout" : "Start anyway"}</button>
+    <button class="btn-primary btn-start" data-act="start" ${inPlan ? `data-key="${inPlan.key}"` : ""}><i class="ti ti-player-play"></i> ${gear.doable ? "Start workout" : "Start anyway"}</button>
   </div>`;
 }
 
@@ -1218,23 +920,90 @@ function renderProfile() {
       <span class="set-unit">${hasSample ? "keeps your real workouts" : "6 weeks of example workouts to preview Progress"}</span></span></button>
     <button class="set-row set-row--danger" data-act="erase">
       <i class="ti ti-trash set-ic"></i><span class="set-label">${ui.confirm === "erase" ? "Tap again to erase everything" : "Erase all data"}
-      <span class="set-unit">history, settings and benchmarks on this device</span></span></button>
+      <span class="set-unit">history, settings and benchmarks on this device${Sync.user ? " · you'll be signed out; your cloud copy stays" : ""}</span></span></button>
   </div>
-  <p class="hint"><a href="privacy.html">Privacy</a> · Everything stays on this device. VYRA ${APP_VERSION}</p>`;
+  ${renderAccount()}
+
+  ${sectionLabel("Health & safety")}
+  <p class="hint hint--block">${HEALTH_NOTE} Stop if you feel chest pain, dizziness, or sharp or worsening pain.</p>
+  <p class="hint"><a href="privacy.html">Privacy & safety</a> · ${Sync.user ? "Synced to your account" : "Everything stays on this device"}. VYRA ${APP_VERSION}</p>`;
+}
+
+/* ── Account & cloud sync ─────────────────────────────────────────────────── */
+function syncStatusText() {
+  const ago = ts => {
+    if (!ts) return "not yet";
+    const min = Math.round((Date.now() - ts) / 60000);
+    return min < 1 ? "just now" : min < 60 ? `${min} min ago` : fmtDay(ts);
+  };
+  return {
+    syncing: "Syncing…",
+    idle: `Synced ${ago(state.sync.lastSyncedAt)}`,
+    offline: "Offline. Changes sync when you're back online.",
+    error: `Couldn't sync: ${Sync.error}`,
+  }[Sync.status] || "";
+}
+
+function renderAccount() {
+  if (!Sync.configured()) return "";
+  const a = ui.auth;
+  if (Sync.user) {
+    return `
+    ${sectionLabel("Account & sync")}
+    <div class="set-list">
+      <div class="set-row">
+        <i class="ti ${Sync.status === "error" ? "ti-cloud-off" : "ti-cloud-check"} set-ic" aria-hidden="true"></i>
+        <span class="set-label">${esc(Sync.user.email || "Signed in")}<span class="set-unit" data-bind="sync-status">${esc(syncStatusText())}</span></span>
+      </div>
+      <button class="set-row" data-act="sync-now" ${Sync.status === "syncing" ? "disabled" : ""}><i class="ti ti-refresh set-ic"></i><span class="set-label">Sync now</span></button>
+      <button class="set-row" data-act="sync-signout"><i class="ti ti-logout set-ic"></i><span class="set-label">Sign out<span class="set-unit">Workouts stay on this device</span></span></button>
+      <button class="set-row set-row--danger" data-act="sync-delete"><i class="ti ti-user-x set-ic"></i>
+        <span class="set-label">${ui.confirm === "account" ? "Tap again to delete your account" : "Delete account"}<span class="set-unit">Removes your cloud copy for good. This device keeps its workouts.</span></span></button>
+    </div>`;
+  }
+  return `
+  ${sectionLabel("Account & sync")}
+  <div class="account">
+    <p class="account-lead"><i class="ti ti-cloud"></i> Optional. Back up your workouts and use VYRA on more than one device. Without an account, everything stays on this device.</p>
+    <button class="btn-secondary" data-act="sync-google" ${a.busy ? "disabled" : ""}><i class="ti ti-brand-google"></i> Continue with Google</button>
+    <div class="or"><span>or</span></div>
+    ${a.sent ? `
+      <p class="account-lead">We sent a sign-in email to <b>${esc(a.email)}</b>. Tap the link in it, or type the 6-digit code here:</p>
+      <div class="field-row">
+        <input class="text-input" id="sync-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" value="${esc(a.code)}" aria-label="6-digit code">
+        <button class="btn-primary btn-sm" data-act="sync-verify" ${a.busy ? "disabled" : ""}>Sign in</button>
+      </div>
+      <button class="text-btn" data-act="sync-reset">Use a different email</button>`
+    : `
+      <div class="field-row">
+        <input class="text-input" id="sync-email" type="email" autocomplete="email" placeholder="you@example.com" value="${esc(a.email)}" aria-label="Email address">
+        <button class="btn-primary btn-sm" data-act="sync-email" ${a.busy ? "disabled" : ""}><i class="ti ti-mail"></i> Send link</button>
+      </div>`}
+    ${a.msg ? `<p class="hint ${a.error ? "hint--warn" : ""}">${esc(a.msg)}</p>` : ""}
+  </div>`;
+}
+
+async function authAction(fn, okMsg = "") {
+  ui.auth.busy = true; ui.auth.msg = ""; ui.auth.error = false; rerender();
+  try { await fn(); ui.auth.msg = okMsg; }
+  catch (e) { ui.auth.msg = e?.message || "Something went wrong. Try again."; ui.auth.error = true; }
+  ui.auth.busy = false; rerender();
 }
 
 /* ── Player ───────────────────────────────────────────────────────────────── */
-function startWorkout(templateId = ui.templateId, custom = null) {
+function startWorkout(templateId = ui.templateId, custom = null, programKey = null) {
   Cues.unlock();
   ui.templateId = templateId;
+  const ps = programSession(programKey);
+  const inPlan = ps && ps.t === templateId ? ps : null;
   let workout, timeline, swaps;
   if (custom) ({ workout, timeline, swaps } = custom);
   else {
-    const plan = planFor(templateId);
+    const plan = planFor(templateId, inPlan ? inPlan.params : paramsFor(templateId));
     ({ workout, timeline } = plan); swaps = plan.gear.swaps;
   }
   ui.returnTo = ui.screen === "summary" ? ui.tab : ui.screen;
-  session = { workout, timeline, swaps, startedAt: Date.now() };
+  session = { workout, timeline, swaps, startedAt: Date.now(), programKey: inPlan ? inPlan.key : null };
   engine = new IntervalEngine(timeline, { countdown: 3 });
   wireCues(engine);
   engine
@@ -1284,6 +1053,13 @@ function finishWorkout(early) {
   if (rec.bench) rec.bench.totalMi = benchTotalMi(rec.bench);
   // Anything shorter than a minute is a mis-tap, not a workout.
   rec.saved = stats.totalSec >= 60;
+  // A plan session counts once at least half of it is done.
+  if (rec.saved && session.programKey && state.program && stats.intervalsTotal && stats.intervalsDone / stats.intervalsTotal >= 0.5) {
+    state.program.done = { ...(state.program.done || {}), [session.programKey]: rec.id };
+    rec.programKey = session.programKey;
+    rec.programName = programById(state.program.id)?.name;
+    if (activeProgram()?.complete && !state.program.completedAt) { state.program.completedAt = Date.now(); rec.programDone = true; }
+  }
   if (rec.saved) { state.history.unshift(rec); state.history = state.history.slice(0, 500); save(); }
   rec.newBadges = rec.saved ? badgeStatus(state.history, state.profile.goal).filter(b => b.earned && !before.has(b.id)).map(b => b.id) : [];
   ui.summary = rec;
@@ -1549,6 +1325,7 @@ function renderSummary() {
     ${!s.saved && !fromHistory ? `<p class="hint">Less than a minute, so this one wasn't saved.</p>` : ""}
   </section>
 
+  ${s.programKey && !fromHistory ? (() => { const st = activeProgram(); return st ? `<div class="gear-note"><i class="ti ti-calendar-event"></i> ${s.programDone ? `${esc(st.prog.name)} complete. Well done.` : `${esc(st.prog.name)} · ${st.doneCount} of ${st.total} sessions done`}</div>` : ""; })() : ""}
   ${newBadges.length ? `<div class="new-badges">${newBadges.map(b => `
     <div class="new-badge"><i class="ti ${b.icon}"></i><span><b>Badge unlocked · ${b.name}</b><span class="cl-meta">${b.desc}</span></span></div>`).join("")}</div>` : ""}
 
@@ -1618,6 +1395,8 @@ function sampleHistory() {
 /* ── Events ────────────────────────────────────────────────────────────────── */
 
 app.addEventListener("input", ev => {
+  if (ev.target.id === "sync-email") { ui.auth.email = ev.target.value.trim(); return; }
+  if (ev.target.id === "sync-code") { ui.auth.code = ev.target.value.replace(/\D/g, ""); return; }
   const s = ui.summary;
   if (!s?.bench) return;
   const el = ev.target;
@@ -1630,11 +1409,11 @@ app.addEventListener("input", ev => {
   if (out) out.textContent = `${s.bench.totalMi.toFixed(2)} mi`;
 });
 
-app.addEventListener("click", ev => {
-  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level]");
+app.addEventListener("click", async ev => {
+  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session]");
   if (!el) return;
   const d = el.dataset;
-  if (d.act !== "erase" && d.act !== "delete-history") ui.confirm = null;
+  if (!["erase", "delete-history", "program-join", "program-leave", "sync-delete"].includes(d.act)) ui.confirm = null;
 
   if (d.go) return go(d.go);
   if (d.step) return stepParam(d.step, Number(d.dir));
@@ -1671,7 +1450,14 @@ app.addEventListener("click", ev => {
     state.swaps[ui.templateId] = sw; save();
     return rerender();
   }
+  if (d.program) { ui.programId = d.program; ui.screen = "program"; return render(); }
+  if (d.session) {
+    const ps = programSession(d.session);
+    if (ps) { ui.templateId = ps.t; ui.programKey = ps.key; ui.screen = "setup"; render(); }
+    return;
+  }
   if (d.template) {
+    ui.programKey = null;
     ui.templateId = d.template; state.lastTemplate = ui.templateId; save();
     ui.screen = "setup"; return render();
   }
@@ -1682,7 +1468,32 @@ app.addEventListener("click", ev => {
   }
 
   switch (d.act) {
-    case "start": return startWorkout();
+    case "start": return startWorkout(ui.templateId, null, d.key || null);
+    case "plan-start": return startWorkout(d.id, null, d.key);
+    case "program-join":
+      if (state.program && state.program.id !== d.id && !state.program.completedAt && ui.confirm !== "switch") { ui.confirm = "switch"; return rerender(); }
+      state.program = { id: d.id, startedAt: Date.now(), done: {} }; ui.confirm = null; save();
+      toast(`${programById(d.id).name} started`); return rerender();
+    case "program-leave":
+      if (ui.confirm !== "leave") { ui.confirm = "leave"; return rerender(); }
+      state.program = null; ui.confirm = null; save(); toast("Plan ended"); return rerender();
+    case "ob-ack": ui.ob.ack = !ui.ob.ack; return rerender();
+    case "sync-email":
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ui.auth.email)) { ui.auth.msg = "Enter a valid email address."; ui.auth.error = true; return rerender(); }
+      return authAction(async () => { await Sync.sendEmail(ui.auth.email); ui.auth.sent = true; });
+    case "sync-verify":
+      if (ui.auth.code.length !== 6) { ui.auth.msg = "Enter the 6-digit code from the email."; ui.auth.error = true; return rerender(); }
+      return authAction(async () => { await Sync.verifyCode(ui.auth.email, ui.auth.code); ui.auth = { email: "", code: "", sent: false, busy: false, msg: "", error: false }; });
+    case "sync-reset": ui.auth = { email: ui.auth.email, code: "", sent: false, busy: false, msg: "", error: false }; return rerender();
+    case "sync-google": return authAction(() => Sync.google());
+    case "sync-now": Sync.run(); return rerender();
+    case "sync-signout": await Sync.signOut(); toast("Signed out"); return rerender();
+    case "sync-delete":
+      if (ui.confirm !== "account") { ui.confirm = "account"; return rerender(); }
+      ui.confirm = null;
+      try { await Sync.deleteAccount(); toast("Account deleted"); } catch (e) { toast(`Couldn't delete: ${e.message}`); }
+      return rerender();
+    case "health-ack": state.profile.healthAck = Date.now(); save(); return rerender();
     case "quick-start": return startWorkout(d.id);
     case "start-recovery": return startWorkout("recovery", recoveryWorkout());
     case "pause": return engine?.toggle();
@@ -1722,11 +1533,15 @@ app.addEventListener("click", ev => {
     }
     case "delete-history":
       if (ui.confirm !== "delete") { ui.confirm = "delete"; return rerender(); }
-      state.history = state.history.filter(h => h.id !== ui.summary.id); save();
+      state.history = state.history.filter(h => h.id !== ui.summary.id);
+      if (!ui.summary.demo) state.deleted = { ...state.deleted, [ui.summary.id]: deletionStamp(ui.summary) };
+      save();
       ui.confirm = null;
       return go(ui.viewingHistory ? "history" : "today");
     case "erase":
       if (ui.confirm !== "erase") { ui.confirm = "erase"; return rerender(); }
+      // Erases this device only; the cloud copy stays and returns on the next sign-in.
+      if (Sync.user) await Sync.signOut().catch(() => {});
       try { localStorage.removeItem(STORE_KEY); } catch { /* ignore */ }
       Object.assign(state, loadState());
       ui.confirm = null; ui.ob = { goal: 3, level: "intermediate", equipment: [...ALL_EQUIPMENT] };
@@ -1737,7 +1552,8 @@ app.addEventListener("click", ev => {
     case "sample-off":
       state.history = state.history.filter(h => !h.demo); save(); toast("Sample data removed"); return rerender();
     case "ob-done":
-      Object.assign(state.profile, { goal: ui.ob.goal, level: ui.ob.level, equipment: [...ui.ob.equipment], onboarded: true });
+      if (!ui.ob.ack) return;
+      Object.assign(state.profile, { goal: ui.ob.goal, level: ui.ob.level, equipment: [...ui.ob.equipment], onboarded: true, healthAck: Date.now() });
       save(); return go("today");
     case "fits-gear": ui.fitsGear = !ui.fitsGear; return rerender();
     case "reset-params": delete state.params[ui.templateId]; save(); return rerender();
@@ -1800,3 +1616,7 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
 window.VYRA = { TEMPLATES, EXERCISES, IntervalEngine, compile, createWorkout, resolveSegments, swappableIds, planTotals, planFor, recommend, version: APP_VERSION };
 
 render();
+Sync.init(changed => {
+  if (ui.screen === "player" || document.activeElement?.matches?.("input")) return;
+  if (changed || ui.screen === "profile") rerender();
+});

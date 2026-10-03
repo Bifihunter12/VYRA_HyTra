@@ -1,7 +1,7 @@
 {
   "name": "VYRA",
   "short_name": "VYRA",
-  "description": "Hybrid workout player — run, strength and intervals in one guided screen.",
+  "description": "Guided hybrid workout player: treadmill, rower, bike and strength circuits on one timer.",
   "theme_color": "#0b0b0c",
   "background_color": "#0b0b0c",
   "display": "standalone",
