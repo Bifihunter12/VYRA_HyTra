@@ -633,3 +633,181 @@ body[data-screen="history"] .app-shell, body[data-screen="profile"] .app-shell {
 .row-start i { font-size: 20px; }
 .row-start:hover, .row-start:active { background: var(--accent); color: var(--accent-ink); }
 .btn-inline-start { margin-top: 18px; }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   VYRA · Soft — a calmer, rounder layer over Field.
+   Same palette and layout; softer shapes, sentence-case labels, thinner icons
+   sitting in tinted badges, and gentle motion.
+   ════════════════════════════════════════════════════════════════════════════ */
+:root {
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --pill: 999px;
+  --tint: rgba(217, 119, 66, 0.12);
+  --tint-strong: rgba(217, 119, 66, 0.2);
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}
+.ti { font-family: "tabler-icons-300-outline", "tabler-icons" !important; }
+
+/* Labels: sentence case instead of tracked capitals */
+.hero-daycount, .section-label, .cl-meta, .cl-cat-name, .cl-cat-count, .set-unit, .stat-label, .round-meta,
+.pick-eyebrow, .pick-meta, .week-meta, .filter-label, .tag, .hint, .pl-k, .pl-note, .pl-tags, .pl-clock,
+.seg-meta, .cal-title, .cal-legend, .ob-label, .badge-desc, .ring-center span, .tile .stat-label, .swap-now,
+.text-btn, .back-btn, .cd-next, .no-match, .bench-total-row .set-label, .brand-sub {
+  text-transform: none; letter-spacing: 0;
+}
+.hero-daycount { font-size: 13.5px; color: var(--text-dim); }
+.section-label { font-size: 15px; color: var(--text); border-bottom: none; padding: 30px 2px 6px; font-weight: 500; }
+.section-label .cl-cat-count, .section-label .text-btn { font-size: 13px; }
+.cl-meta, .round-meta, .week-meta, .pick-meta { font-size: 13px; color: var(--text-faint); }
+.cl-cat { border-bottom: none; padding-top: 28px; }
+.cl-cat-name { font-size: 15px; color: var(--text); }
+.set-unit { font-size: 12.5px; }
+.stat-label { font-size: 12.5px; }
+.pick-eyebrow { font-size: 13px; font-weight: 500; }
+.filter-label { font-size: 13px; color: var(--text-dim); padding-top: 8px; }
+.brand-sub { font-size: 12.5px; color: var(--text-faint); }
+.text-btn { font-size: 13.5px; }
+.back-btn { font-size: 14px; color: var(--text-dim); }
+.hero-name { font-weight: 600; letter-spacing: -0.8px; }
+
+/* Lists: rows breathe on soft surfaces instead of hard rules */
+.cl-list, .set-list, .swap-list, .round-list {
+  background: var(--surface); border-radius: var(--radius-md); padding: 4px 14px; margin-top: 6px;
+}
+.cl-row, .set-row, .swap-row, .round-row, .bench-row, .lib-row { border-bottom-color: rgba(255,255,255,0.05); }
+.lib-row .cl-row { padding-left: 0; }
+.set-list--tight { border: none; margin-top: 16px; }
+.cl-row:hover { background: transparent; }
+.cl-row:active, .set-row.set-toggle:active { opacity: .75; }
+
+/* Icons sit in round tinted badges */
+.cl-ic, .set-ic, .swap-head .set-ic, .badge-next > i, .new-badge > i {
+  width: 38px; height: 38px; flex: none; display: grid; place-items: center;
+  border-radius: 50%; background: var(--surface-2); color: var(--text-dim); font-size: 19px;
+  transition: background .2s var(--ease), color .2s var(--ease);
+}
+.cl-row:hover .cl-ic, .set-toggle:hover .set-ic { background: var(--tint); color: var(--accent); }
+.badge-next > i, .new-badge > i { background: var(--tint); color: var(--accent); }
+.swap-row .cl-filters { padding-left: 52px; }
+.hero-ic { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: var(--tint); color: var(--accent); font-size: 24px; }
+
+/* Chips & tags become pills */
+.cl-chip, .tag {
+  border-radius: var(--pill); text-transform: none; letter-spacing: 0; font-size: 13px; padding: 7px 14px;
+  background: var(--surface); border-color: transparent;
+}
+.cl-chip:hover { border-color: var(--border-active); }
+.cl-chip.active { background: var(--tint-strong); border-color: transparent; color: var(--secondary); }
+.cl-chip--off { border: 1px dashed var(--border-active); background: transparent; }
+.tag { font-size: 12px; padding: 5px 11px; color: var(--text-dim); }
+.tag--equip { background: transparent; border: 1px dashed var(--border); }
+.ob .cl-chip { padding: 10px 16px; font-size: 14px; }
+
+/* Buttons */
+.btn-primary, .btn-secondary {
+  border-radius: var(--radius-md); text-transform: none; letter-spacing: 0; font-size: 16px; font-weight: 600; min-height: 54px;
+  transition: transform .15s var(--ease), filter .15s, background .15s, border-color .15s, color .15s;
+}
+.btn-secondary { background: var(--surface); border-color: transparent; }
+.btn-primary:active, .btn-secondary:active, .row-start:active, .check:active, .time-btn:active, .ctl:active, .tab:active { transform: scale(.97); }
+.start-dock .btn-start { min-height: 58px; font-size: 16.5px; border-radius: var(--radius-lg); box-shadow: 0 10px 30px rgba(217,119,66,.25); }
+.btn-sm { font-size: 14px; min-height: 40px; }
+.row-start {
+  width: 48px; height: 48px; border-radius: 50%; border: none; background: var(--tint); color: var(--accent);
+  font-size: 0; gap: 0;
+}
+.row-start i { font-size: 21px; margin-left: 2px; }
+.row-start span { display: none; }
+.row-start:hover { background: var(--accent); color: var(--accent-ink); }
+.icon-btn { border-radius: 50%; border-color: transparent; background: var(--surface); }
+
+/* Toggles & steppers */
+.switch { width: 46px; height: 28px; border-radius: var(--pill); border: none; background: var(--surface-3); }
+.switch span { top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--text-dim); box-shadow: 0 1px 3px rgba(0,0,0,.4); transition: transform .25s var(--ease), background .2s; }
+.switch.on { background: var(--accent); }
+.switch.on span { transform: translateX(18px); background: #fff; }
+.stepper { border: none; background: var(--surface-2); border-radius: var(--pill); }
+.step-btn { width: 40px; height: 40px; border-radius: 50%; }
+.step-val { border: none; min-width: 56px; }
+.num-input { border-radius: var(--radius-sm); background: var(--surface-2); border-color: transparent; }
+
+/* Cards */
+.pick { border-radius: var(--radius-lg); border-color: rgba(217,119,66,.25); background:
+  radial-gradient(120% 90% at 100% 0%, rgba(217,119,66,.10), transparent 60%), var(--surface); }
+.pick--rest { background: var(--surface); }
+.pick-name { font-weight: 600; letter-spacing: -0.8px; }
+.week-card { border: none; background: var(--surface); border-radius: var(--radius-lg); padding: 18px; }
+.check, .time-btn { border-radius: var(--radius-md); border-color: transparent; background: var(--surface); text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+.check.active { background: var(--tint-strong); color: var(--secondary); border-color: transparent; }
+.check i { font-size: 22px; }
+.time-btn span { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.day { border-radius: 50%; border-color: transparent; background: var(--surface-2); text-transform: none; }
+.day.today { box-shadow: inset 0 0 0 1.5px var(--text-dim); }
+.badge-next { background: var(--surface); border-radius: var(--radius-md); padding: 14px; border: none; margin-top: 6px; }
+.gear-note, .advice { border-left: none; border-radius: var(--radius-md); background: var(--tint); }
+.no-match { border-radius: var(--radius-md); border-style: solid; border-color: transparent; background: var(--surface); }
+.empty-card { border-radius: var(--radius-lg); border-style: solid; border-color: transparent; background: var(--surface); }
+.new-badge { border-radius: var(--radius-md); border-color: transparent; background: var(--tint); }
+
+/* Progress */
+.tiles, .bench-best { border: none; background: var(--surface); border-radius: var(--radius-md); padding: 0 14px; }
+.tile + .tile { border-left-color: rgba(255,255,255,.05); }
+.stat-grid { border-top: none; background: var(--surface); border-radius: var(--radius-md); padding: 0 14px; }
+.stat { border-bottom-color: rgba(255,255,255,.05); }
+.stat:nth-child(even) { border-left-color: rgba(255,255,255,.05); }
+.stat:nth-last-child(-n+2) { border-bottom: none; }
+.chart-wrap, .spark-wrap, .bench-card, .balance, .felt, .goal-row { background: var(--surface); border-radius: var(--radius-md); padding: 14px; margin-top: 8px; }
+.bench-card { border-bottom: none; }
+.cal { gap: 5px; }
+.cal-cell { border-radius: 9px; }
+.cal-legend .cal-cell { border-radius: 3px; }
+.bal-track, .mini-track { border-radius: var(--pill); }
+.bal-track span { border-radius: var(--pill); }
+.badge { border-radius: var(--radius-md); border-color: transparent; background: var(--surface); }
+.badge i { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-2); }
+.badge.earned { border-color: transparent; background: radial-gradient(120% 100% at 0% 0%, rgba(217,119,66,.14), transparent 65%), var(--surface); }
+.badge.earned i { background: var(--tint); }
+.split-bar { border-radius: var(--pill); }
+
+/* Tab bar */
+.tabbar { background: rgba(14, 14, 15, 0.9); border-top-color: rgba(255,255,255,.05); }
+.tab { text-transform: none; letter-spacing: 0; font-size: 11px; gap: 4px; }
+.tab i { width: 52px; height: 30px; display: grid; place-items: center; border-radius: var(--pill); font-size: 22px; transition: background .2s var(--ease), color .2s; }
+.tab.active i { background: var(--tint-strong); }
+
+/* Player */
+.pl-state { border-radius: var(--radius-lg); padding: 12px 18px; }
+.ctl { border-radius: var(--radius-lg); border-color: transparent; background: var(--surface); text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+.ctl-main { background: var(--accent); }
+.ctl-hot { background: var(--tint); color: var(--accent); }
+.pl-controls--sub .ctl { font-size: 13px; }
+.pl-info { border-top: none; background: var(--surface); border-radius: var(--radius-md); padding: 2px 14px; margin-top: 16px; }
+.pl-row { border-bottom-color: rgba(255,255,255,.05); }
+.pl-row:last-child { border-bottom: none; }
+.pl-row--up { border-left: none; background: var(--tint); margin: 6px -8px; padding-left: 10px; padding-right: 10px; border-radius: var(--radius-sm); }
+.pl-k { font-size: 12.5px; }
+.pl-progress, .seg-pips .pip { border-radius: var(--pill); }
+.pl-round { letter-spacing: 1px; }
+.sheet { border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-top: none; }
+.toast { border-radius: var(--pill); text-transform: none; letter-spacing: 0; font-size: 13.5px; padding: 10px 18px; border-color: transparent; background: var(--surface-3); }
+
+/* Summary */
+.done-title { font-weight: 600; text-transform: none; letter-spacing: -1.5px; }
+
+/* Gentle entrance when moving between screens */
+@keyframes vyra-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+#app.enter > :not(.tabbar):not(.start-dock) { animation: vyra-enter .38s var(--ease) both; }
+#app.enter > :nth-child(2) { animation-delay: .03s; }
+#app.enter > :nth-child(3) { animation-delay: .06s; }
+#app.enter > :nth-child(4) { animation-delay: .09s; }
+#app.enter > :nth-child(n+5) { animation-delay: .12s; }
+.ring-fill { animation: ring-draw .9s var(--ease) both; }
+@keyframes ring-draw { from { stroke-dasharray: 0 999; } }
+@media (prefers-reduced-motion: reduce) {
+  #app.enter > *, .ring-fill { animation: none !important; }
+}
+.tile b { white-space: nowrap; font-size: clamp(20px, 6.2vw, 26px); }
+.pick .btn-secondary { background: var(--surface-2); }
+.pick .btn-secondary:hover { background: var(--surface-3); color: var(--text); }

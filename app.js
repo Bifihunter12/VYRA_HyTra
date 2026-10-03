@@ -570,7 +570,7 @@ function spokenDuration(sec) {
   return `${m} minute${m > 1 ? "s" : ""}${s ? ` ${s}` : ""}`;
 }
 function fmtParam(p, v) { return p.kind === "time" ? fmtShort(v) : p.kind === "speed" ? fmtSpeed(v) : String(v); }
-function fmtDate(ts) { return new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }).toUpperCase(); }
+function fmtDate(ts) { return new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }); }
 function fmtDay(ts) { return new Date(ts).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }); }
 function planTotals(timeline) {
   const sum = f => timeline.filter(f).reduce((a, iv) => a + planSec(iv), 0);
@@ -641,9 +641,12 @@ function render() {
     history: renderHistory, profile: renderProfile, setup: renderSetup, summary: renderSummary,
   };
   app.innerHTML = (views[ui.screen] || renderToday)() + (TAB_SCREENS.includes(ui.screen) ? renderNav() : "");
+  // Animate only real navigation, not in-place updates (toggles, chips, steppers).
+  app.classList.remove("enter");
+  if (!ui.quiet) { void app.offsetWidth; app.classList.add("enter"); }
   window.scrollTo(0, 0);
 }
-function rerender() { const y = window.scrollY; render(); window.scrollTo(0, y); }
+function rerender() { const y = window.scrollY; ui.quiet = true; render(); ui.quiet = false; window.scrollTo(0, y); }
 function go(screen) {
   if (TAB_SCREENS.includes(screen)) ui.tab = screen;
   ui.screen = screen; ui.confirm = null;

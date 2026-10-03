@@ -241,7 +241,7 @@ function weeklyBarsSVG(weeks, goal) {
       </g>`;
     }).join("")}
     <line x1="${padL}" x2="${W}" y1="${y(goal)}" y2="${y(goal)}" class="goal-line"/>
-    <text x="${W}" y="${y(goal) - 4}" class="axis axis--goal" text-anchor="end">Goal ${goal}</text>
+    <text x="${padL + 4}" y="${y(goal) - 5}" class="axis axis--goal">Goal ${goal}</text>
     <text x="${padL}" y="${H - 6}" class="axis">${fmtWk(weeks[0].start)}</text>
     <text x="${W}" y="${H - 6}" class="axis" text-anchor="end">This week</text>
   </svg>`;
