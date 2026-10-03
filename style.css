@@ -331,3 +331,72 @@ body[data-screen="player"] .app-shell {
 @media (prefers-reduced-motion: reduce) {
   .pl-timer.is-final, .cd-num { animation: none; }
 }
+
+/* ── Library ───────────────────────────────────────────────────────────────── */
+.back-btn {
+  display: inline-flex; align-items: center; gap: 4px; height: 38px; padding: 0 10px 0 4px;
+  font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--text-dim);
+}
+.back-btn i { font-size: 18px; }
+.back-btn:hover { color: var(--accent); }
+
+.filters { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.filter-group { display: grid; grid-template-columns: 76px 1fr; gap: 10px; align-items: start; }
+.filter-label { font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--text-faint); padding-top: 8px; }
+.cl-filters { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.cl-chip {
+  background: transparent; color: var(--text-dim); border: 1px solid var(--border); border-radius: 3px;
+  font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; padding: 6px 10px;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.cl-chip:hover { border-color: var(--border-active); color: var(--text); }
+.cl-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(217, 119, 66, 0.09); }
+
+.cl-cat { display: flex; align-items: center; justify-content: space-between; padding: 26px 2px 8px; border-bottom: 1px solid var(--border); }
+.cl-cat-name { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); }
+.cl-cat-count { font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.cl-sub { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+.cl-meta b { font-weight: 500; color: var(--accent); }
+
+/* ── Setup extras ──────────────────────────────────────────────────────────── */
+.about { font-size: 14px; line-height: 1.55; color: var(--text-dim); margin-top: 14px; max-width: 62ch; }
+.tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.tag {
+  font-size: 10.5px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-dim);
+  border: 1px solid var(--border); border-radius: 3px; padding: 4px 8px;
+}
+.tag--equip { color: var(--text-faint); border-style: dashed; }
+
+.swap-list { display: flex; flex-direction: column; }
+.swap-row { padding: 12px 2px 14px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+.swap-row:last-child { border-bottom: none; }
+.swap-head { display: flex; align-items: center; gap: 14px; }
+.swap-name { font-size: 15px; letter-spacing: -0.2px; }
+.swap-now { margin-left: auto; font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--accent); }
+.swap-row .cl-filters { padding-left: 36px; }
+
+.round-time { font-size: 12px; color: var(--text-faint); font-variant-numeric: tabular-nums; flex: none; }
+
+.bench-best { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 14px 2px; border-bottom: 1px solid var(--border); }
+.bench-best .stat-value { font-size: 26px; }
+.stat-value--dim { color: var(--text-dim); }
+.bench-row { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: baseline; padding: 11px 2px; border-bottom: 1px solid var(--border); }
+.bench-row:last-child { border-bottom: none; }
+.bench-legs { font-size: 12.5px; color: var(--text-dim); min-width: 0; }
+.bench-total { font-size: 14px; font-variant-numeric: tabular-nums; }
+.bench-total.is-best { color: var(--accent); }
+
+.num-input {
+  width: 116px; height: 42px; padding: 0 12px; text-align: right;
+  background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 17px; font-variant-numeric: tabular-nums;
+}
+.num-input:focus { outline: none; border-color: var(--accent); }
+.num-input:disabled { color: var(--text-dim); border-style: dashed; }
+.bench-total-row .set-label { font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--text-dim); }
+.bench-sum { font-size: 24px; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 380px) {
+  .filter-group { grid-template-columns: 1fr; gap: 6px; }
+  .filter-label { padding-top: 0; }
+}

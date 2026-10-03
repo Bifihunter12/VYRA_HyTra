@@ -5,173 +5,34 @@
    athlete what to do, for how long, when to rest and what is coming next.
 
    Layers (top to bottom):
+     0. workouts.js          — exercise library (with swaps) + workout templates
      1. Workout data model   — templates → workouts → rounds → blocks → exercises
-     2. Compiler             — workout → flat timeline of intervals (+ sub-intervals)
+     2. Compiler             — workout + swaps → flat timeline of intervals
      3. IntervalEngine       — generic, DOM-free timer that runs any timeline
      4. Cues                 — beeps, speech, vibration driven by engine events
-     5. UI                   — setup, player, summary, history screens
+     5. UI                   — library, setup, player, summary, history screens
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.03.1";
+const APP_VERSION = "2026.10.03.2";
 const STORE_KEY = "vyra_v1";
 
 /* ── 1. Workout data model ─────────────────────────────────────────────────────
-   Workout   { id, name, templateId, params, rounds: Round[] }
+   Workout   { id, templateId, name, params, rounds: Round[] }
    Round     { label?, blocks: Block[] }
    Block     one of
-     { type:"run",     duration, speed, speedUnit }
+     { type:"cardio",  id, duration, speed?, effort? }        id → EXERCISES (run, row, bike…)
      { type:"rest",    duration, label? }
-     { type:"station", duration?, name, cue?, instruction?, note?,
-                       exercises: Exercise[], segments?: SegmentSpec }
-               duration null/omitted + no segments → open-ended (counts up, athlete taps DONE)
-   Exercise  { name, cue?, measure, target? }
-     measure: "time"      timed exercise (work the whole interval)
-              "reps"      rep-based exercise (no clock target)
-              "distance"  distance exercise
-              "time+reps" timed exercise with a rep target
+     { type:"station", duration?, name?, cue?, instruction?, note?,
+                       exercises: [{ id, target? }], segments?: SegmentSpec }
+               duration null → open-ended rep station (counts up, athlete taps DONE)
+   Exercise refs point into EXERCISES (workouts.js). Each exercise lists its
+   allowed substitutions; the athlete's swaps are applied at compile time.
      target:  { reps?: number | [min,max], approx?, perSide?, label?, distance?, unit? }
    A station with >1 exercise is a multi-exercise station.
-   SegmentSpec { pattern: [{ label, tone:"hard"|"easy"|"work"|"rest", duration? | share? }], repeat? }
-     duration = absolute seconds (e.g. Tabata 20/10); share = relative weight that
-     scales to the station duration (e.g. battle ropes HARD/EASY/HARD = 1/1/1).
+   SegmentSpec { pattern: [{ label, tone:"hard"|"easy", duration? | share? }], repeat? }
+     duration = absolute seconds (Tabata 20/10); share = relative weight that
+     scales to the station duration (battle ropes HARD/EASY/HARD = 1/1/1).
    ─────────────────────────────────────────────────────────────────────────── */
-
-const HYBRID_STATIONS = [
-  {
-    name: "Battle Ropes", cue: "Battle ropes", icon: "ti-wave-sine",
-    instruction: "Fast alternating waves on HARD. Slow, steady waves on EASY — keep the ropes moving.",
-    exercises: [{ name: "Battle ropes", measure: "time" }],
-    segments: { pattern: [
-      { label: "HARD", tone: "hard", share: 1 },
-      { label: "EASY", tone: "easy", share: 1 },
-      { label: "HARD", tone: "hard", share: 1 },
-    ] },
-  },
-  {
-    name: "Heavy Goblet Squats", cue: "Goblet squats", icon: "ti-barbell",
-    instruction: "Hold one heavy dumbbell at your chest. Sit deep, chest up, drive through your heels.",
-    note: "Stop when the reps are done, or keep going until the timer ends.",
-    exercises: [{ name: "Goblet squat", measure: "time+reps", target: { reps: 20, approx: true } }],
-  },
-  {
-    name: "Farmer Carry", cue: "Farmer carry", icon: "ti-weight",
-    instruction: "Heavy dumbbells or kettlebells. Stand tall, shoulders down, short quick steps.",
-    exercises: [{ name: "Farmer carry", measure: "time" }],
-  },
-  {
-    name: "Upper Body", cue: "Upper body. Floor press and rows", icon: "ti-barbell",
-    instruction: "Dumbbell floor press, then one-arm dumbbell rows.",
-    note: "Or keep working for the full interval.",
-    exercises: [
-      { name: "DB floor press", measure: "time+reps", target: { reps: 15, label: "presses" } },
-      { name: "One-arm DB row", measure: "time+reps", target: { reps: 12, perSide: true, label: "rows" } },
-    ],
-  },
-  {
-    name: "Reverse Lunges", cue: "Reverse lunges", icon: "ti-stairs",
-    instruction: "Step back, lower the back knee toward the floor, alternate legs.",
-    exercises: [{ name: "Reverse lunge", measure: "time+reps", target: { reps: 20, approx: true, label: "total" } }],
-  },
-  {
-    name: "RDL + Shoulder Press", cue: "R D L and shoulder press", icon: "ti-barbell",
-    instruction: "Romanian deadlifts first — hinge, flat back. Then strict shoulder presses.",
-    exercises: [
-      { name: "Romanian deadlift", measure: "time+reps", target: { reps: 15, label: "RDLs" } },
-      { name: "Shoulder press", measure: "time+reps", target: { reps: [10, 12], label: "presses" } },
-    ],
-  },
-  {
-    name: "Suitcase Carry + Core", cue: "Suitcase carry and core", icon: "ti-briefcase",
-    instruction: "One heavy weight at your side, alternate sides. Then transition into standing knee drives or dead bugs.",
-    exercises: [
-      { name: "Suitcase carry", measure: "time" },
-      { name: "Knee drives / dead bugs", measure: "time" },
-    ],
-  },
-  {
-    name: "Final Full-Body Station", cue: "Final full body station", icon: "ti-flame",
-    instruction: "Goblet squats → DB rows → DB presses → battle ropes. Keep moving until the timer ends.",
-    exercises: [
-      { name: "Goblet squats", measure: "time" },
-      { name: "DB rows", measure: "time" },
-      { name: "DB presses", measure: "time" },
-      { name: "Battle ropes", measure: "time" },
-    ],
-  },
-];
-
-const TEMPLATES = [
-  {
-    id: "hybrid-8",
-    name: "Hybrid Engine",
-    meta: "Run · Strength · 8 rounds",
-    icon: "ti-run",
-    params: [
-      { key: "runSec",     label: "Run",              icon: "ti-run",       kind: "time",  min: 15, max: 600, step: 15, default: 60 },
-      { key: "speed",      label: "Treadmill speed",  icon: "ti-gauge",     kind: "speed", min: 2,  max: 15,  step: 0.1, default: 7.0 },
-      { key: "restSec",    label: "Rest / transition",icon: "ti-clock-pause", kind: "time", min: 0, max: 180, step: 5,  default: 30 },
-      { key: "stationSec", label: "Strength station", icon: "ti-barbell",   kind: "time",  min: 15, max: 300, step: 15, default: 60 },
-    ],
-    build(p) {
-      return {
-        name: this.name,
-        rounds: HYBRID_STATIONS.map((st, i) => {
-          const last = i === HYBRID_STATIONS.length - 1;
-          return {
-            label: st.name,
-            icon: st.icon,
-            blocks: [
-              { type: "run", duration: p.runSec, speed: p.speed, speedUnit: "mph" },
-              p.restSec > 0 && { type: "rest", duration: p.restSec },
-              { type: "station", duration: p.stationSec, ...st },
-              !last && p.restSec > 0 && { type: "rest", duration: p.restSec },
-            ].filter(Boolean),
-          };
-        }),
-      };
-    },
-  },
-  {
-    id: "tabata",
-    name: "Tabata",
-    meta: "20 / 10 intervals",
-    icon: "ti-bolt",
-    params: [
-      { key: "workSec",   label: "Work",              icon: "ti-bolt",        kind: "time",  min: 5,  max: 120, step: 5,  default: 20 },
-      { key: "restSec",   label: "Rest",              icon: "ti-clock-pause", kind: "time",  min: 5,  max: 120, step: 5,  default: 10 },
-      { key: "sets",      label: "Sets per block",    icon: "ti-repeat",      kind: "count", min: 1,  max: 20,  step: 1,  default: 8 },
-      { key: "blocks",    label: "Blocks",            icon: "ti-stack-2",     kind: "count", min: 1,  max: 10,  step: 1,  default: 4 },
-      { key: "blockRest", label: "Rest between blocks", icon: "ti-clock",     kind: "time",  min: 0,  max: 300, step: 15, default: 60 },
-    ],
-    build(p) {
-      const moves = [
-        { name: "Burpees", cue: "Burpees", instruction: "Chest to floor, jump and clap overhead." },
-        { name: "Squat Jumps", cue: "Squat jumps", instruction: "Sit back, explode up, land soft." },
-        { name: "Mountain Climbers", cue: "Mountain climbers", instruction: "Hips level, drive knees fast." },
-        { name: "Push-ups", cue: "Push-ups", instruction: "Body in one line. Drop to knees on REST if needed." },
-      ];
-      return {
-        name: this.name,
-        rounds: Array.from({ length: p.blocks }, (_, i) => {
-          const m = moves[i % moves.length];
-          return {
-            label: m.name,
-            icon: "ti-bolt",
-            blocks: [
-              { type: "station", name: m.name, cue: m.cue, instruction: m.instruction,
-                exercises: [{ name: m.name, measure: "time" }],
-                segments: { repeat: p.sets, pattern: [
-                  { label: "WORK", tone: "hard", duration: p.workSec },
-                  { label: "REST", tone: "easy", duration: p.restSec },
-                ] } },
-              i < p.blocks - 1 && p.blockRest > 0 && { type: "rest", duration: p.blockRest },
-            ].filter(Boolean),
-          };
-        }),
-      };
-    },
-  },
-];
 
 const templateById = id => TEMPLATES.find(t => t.id === id) || TEMPLATES[0];
 
@@ -182,14 +43,39 @@ function defaultParams(t) {
 function createWorkout(templateId, params) {
   const t = templateById(templateId);
   const p = { ...defaultParams(t), ...(params || {}) };
-  return { id: uid(), templateId: t.id, params: p, ...t.build(p) };
+  return { id: uid(), templateId: t.id, name: t.name, params: p, ...t.build(p) };
 }
 
-/* ── 2. Compiler: workout → timeline ──────────────────────────────────────────
-   Interval { type:"RUN"|"REST"|"WORK", round, rounds, duration (s|null), title,
-              icon, instruction, note, target, speed, speedUnit, exercises,
-              segments:[{label,tone,start,end,set,sets}], say, roundStart }
+/* Every swappable exercise a workout uses, in order of first appearance. */
+function swappableIds(workout) {
+  const seen = [];
+  workout.rounds.forEach(r => r.blocks.forEach(b => {
+    const ids = b.type === "cardio" ? [b.id] : b.type === "station" ? b.exercises.map(e => e.id) : [];
+    ids.forEach(id => { if (EXERCISES[id]?.subs?.length && !seen.includes(id)) seen.push(id); });
+  }));
+  return seen;
+}
+
+/* ── 2. Compiler: workout + swaps → timeline ──────────────────────────────────
+   Interval { type:"CARDIO"|"REST"|"WORK", state, round, rounds, part, parts,
+              duration (s|null), estimate, title, icon, instruction, note,
+              target, speed, effort, exercises, segments, say, roundStart }
    ─────────────────────────────────────────────────────────────────────────── */
+
+function resolveExercise(ref, swaps) {
+  const want = swaps?.[ref.id];
+  const id = want && EXERCISES[ref.id]?.subs?.includes(want) ? want : ref.id;
+  const def = EXERCISES[id] || { name: id, instruction: "", equipment: [] };
+  return { ...def, id, baseId: ref.id, swapped: id !== ref.id, target: ref.target };
+}
+
+function exerciseIcon(e) {
+  if (e.cardio) return { run: "ti-run", row: "ti-ripple", bike: "ti-bike", "incline-walk": "ti-walk", "step-ups": "ti-stairs-up" }[e.id] || "ti-heartbeat";
+  if (/rope|punch|boxing|sprint/.test(e.id)) return "ti-wave-sine";
+  if (/carry|march/.test(e.id)) return "ti-weight";
+  if (/lunge|step/.test(e.id)) return "ti-stairs";
+  return "ti-barbell";
+}
 
 function resolveSegments(spec, duration) {
   if (!spec || !spec.pattern?.length) return { segments: [], duration };
@@ -233,54 +119,64 @@ function spokenTarget(target) {
   return "";
 }
 
-function stationTarget(block) {
-  const parts = (block.exercises || []).map(e => targetText(e.target)).filter(Boolean);
-  return parts.join(" + ");
-}
+const OPEN_ENDED_ESTIMATE = 60;   // seconds assumed for rep-only stations when planning
 
-function compile(workout) {
+function compile(workout, swaps = {}) {
   const timeline = [];
   const rounds = workout.rounds.length;
   workout.rounds.forEach((round, ri) => {
     round.blocks.forEach((b, bi) => {
-      const base = { round: ri + 1, rounds, roundStart: bi === 0, roundLabel: round.label };
-      if (b.type === "run") {
-        timeline.push({ ...base, type: "RUN", duration: b.duration, title: "Run", icon: "ti-run",
-          speed: b.speed, speedUnit: b.speedUnit || "mph",
-          instruction: `Treadmill at ${fmtSpeed(b.speed)} ${(b.speedUnit || "mph").toUpperCase()}. Steady, controlled pace.`,
-          segments: [] });
+      const base = { round: ri + 1, rounds, roundStart: bi === 0 };
+      if (b.type === "cardio") {
+        const e = resolveExercise({ id: b.id }, swaps);
+        const speed = e.speed ? b.speed : null;
+        timeline.push({ ...base, type: "CARDIO", state: e.state || "CARDIO", exId: e.id, duration: b.duration,
+          title: e.name, cue: e.cue || e.name, icon: exerciseIcon(e), speed, speedUnit: "mph",
+          effort: b.effort || e.effort || "", exercises: [], segments: [],
+          instruction: speed ? `Treadmill at ${fmtSpeed(speed)} MPH. ${e.instruction}` : e.instruction });
       } else if (b.type === "rest") {
-        timeline.push({ ...base, type: "REST", duration: b.duration, title: b.label || "Rest / Transition",
-          icon: "ti-clock-pause", instruction: "", segments: [] });
+        timeline.push({ ...base, type: "REST", state: "REST", duration: b.duration, title: b.label || "Rest / Transition",
+          icon: "ti-clock-pause", instruction: "", exercises: [], segments: [] });
       } else {
+        const exs = b.exercises.map(r => resolveExercise(r, swaps));
+        const single = exs.length === 1 ? exs[0] : null;
+        const anySwap = exs.some(e => e.swapped);
+        const title = single && (single.swapped || !b.name) ? single.name : (b.name || exs.map(e => e.name).join(" + "));
+        const cue = single && (single.swapped || !b.cue) ? (single.cue || single.name) : (b.cue || title);
+        const instruction = (!anySwap && b.instruction) || (single ? single.instruction : b.instruction || "");
         const { segments, duration } = resolveSegments(b.segments, b.duration ?? null);
-        const reps = (b.exercises || []).find(e => e.target)?.target;
-        timeline.push({ ...base, type: "WORK", duration, title: b.name, icon: b.icon || round.icon || "ti-barbell",
-          cue: b.cue || b.name, instruction: b.instruction || "", note: b.note || "",
-          exercises: b.exercises || [], target: stationTarget(b), hasTarget: !!reps,
-          openEnded: duration == null, segments });
+        timeline.push({ ...base, type: "WORK", state: "WORK", duration, estimate: duration ?? OPEN_ENDED_ESTIMATE,
+          title, cue, icon: exerciseIcon(single || exs[0]), instruction, note: b.note || "",
+          exercises: exs, target: exs.map(e => targetText(e.target)).filter(Boolean).join(" + "),
+          hasTarget: exs.some(e => e.target), openEnded: duration == null, segments });
       }
     });
   });
+  // Single-round workouts (mini triathlons) count parts instead of rounds.
+  const parts = timeline.filter(iv => iv.type !== "REST");
+  parts.forEach((iv, i) => { iv.part = i + 1; });
+  timeline.forEach(iv => { iv.parts = parts.length; });
+
   // Spoken cues depend on neighbours, so they are written after the timeline exists.
   timeline.forEach((iv, i) => {
     const next = timeline[i + 1];
-    if (iv.type === "RUN") {
-      const pace = `${Number(Number(iv.speed).toFixed(1))} ${iv.speedUnit === "mph" ? "miles per hour" : iv.speedUnit}`;
-      iv.say = iv.round === 1 && iv.roundStart ? `Round 1. Run. ${pace}.`
-        : iv.roundStart ? `Next round. Round ${iv.round}. Run.` : `Run. ${pace}.`;
+    const lead = iv.rounds > 1 && iv.roundStart ? (iv.round === 1 ? "Round 1. " : `Next round. Round ${iv.round}. `) : "";
+    if (iv.type === "CARDIO") {
+      const pace = iv.speed ? ` ${Number(Number(iv.speed).toFixed(1))} miles per hour.` : "";
+      iv.say = `${lead}${iv.cue}.${pace}`;
     } else if (iv.type === "REST") {
-      const upNext = !next ? "" : next.type === "WORK" ? ` Up next, ${next.cue}.`
-        : next.roundStart ? " Next round coming up." : ` Up next, ${next.title}.`;
+      const upNext = !next ? "" : next.roundStart && next.rounds > 1 ? " Next round coming up." : ` Up next, ${next.cue || next.title}.`;
       iv.say = `${spokenDuration(iv.duration)} rest.${upNext}`;
     } else {
       const firstSeg = iv.segments[0]?.label;
       const tgt = (iv.exercises.length === 1 && spokenTarget(iv.exercises[0].target)) || "";
-      iv.say = `${iv.roundStart && iv.round > 1 ? "Next round. " : ""}${iv.cue}.${tgt ? ` Target ${tgt}.` : ""}${firstSeg ? ` ${cap(firstSeg)}.` : ""}`;
+      iv.say = `${lead}${iv.cue}.${tgt ? ` Target ${tgt}.` : ""}${iv.openEnded ? " Tap done when finished." : ""}${firstSeg ? ` ${cap(firstSeg)}.` : ""}`;
     }
   });
   return timeline;
 }
+
+const planSec = iv => iv.duration ?? iv.estimate ?? 0;
 
 /* ── 3. IntervalEngine ─────────────────────────────────────────────────────────
    Generic and DOM-free. Wall-clock based, so it stays accurate when ticks are
@@ -427,42 +323,42 @@ class IntervalEngine {
 
   /* Progress through the planned workout, 0..1 */
   progress() {
-    const total = this.timeline.reduce((a, iv) => a + (iv.duration || 0), 0) || 1;
+    const total = this.timeline.reduce((a, iv) => a + planSec(iv), 0) || 1;
     if (this.phase === "complete") return 1;
     if (this.phase !== "running") return 0;
     let done = 0;
-    for (let i = 0; i < this.index; i++) done += this.timeline[i].duration || 0;
+    for (let i = 0; i < this.index; i++) done += planSec(this.timeline[i]);
     const d = this.current.duration;
     if (d) done += d * Math.min(1, this.elapsedMs() / this.durationMs());
     return Math.min(1, done / total);
   }
 
   stats() {
-    const sum = type => this.visits.filter(v => !type || v.type === type).reduce((a, v) => a + v.ms, 0);
+    const sum = f => this.visits.filter(f).reduce((a, v) => a + v.ms, 0);
     const finished = v => v.outcome === "complete" || v.outcome === "done";
-    const runMs = sum("RUN");
     let distance = 0;
-    this.visits.filter(v => v.type === "RUN").forEach(v => {
-      distance += (v.ms / 3600000) * (this.timeline[v.index].speed || 0);
-    });
+    this.visits.forEach(v => { const iv = this.timeline[v.index]; if (iv.speed) distance += (v.ms / 3600000) * iv.speed; });
     const stationIdx = new Set(this.visits.filter(v => v.type === "WORK" && finished(v)).map(v => v.index));
+    // A round counts when every non-rest interval in it was finished (timer ran out or DONE).
     const rounds = this.timeline[0]?.rounds || 0;
-    let roundsDone = 0;
-    for (let r = 1; r <= rounds; r++) {
-      const needed = this.timeline.map((iv, i) => ({ iv, i })).filter(({ iv }) => iv.round === r && iv.type !== "REST");
-      if (needed.length && needed.every(({ i }) => this.visits.some(v => v.index === i && finished(v)))) roundsDone++;
-    }
+    const unit = rounds > 1 ? "round" : "part";
+    const groups = rounds > 1
+      ? Array.from({ length: rounds }, (_, r) => this.timeline.map((iv, i) => ({ iv, i })).filter(({ iv }) => iv.round === r + 1 && iv.type !== "REST"))
+      : this.timeline.map((iv, i) => ({ iv, i })).filter(({ iv }) => iv.type !== "REST").map(x => [x]);
+    const done = groups.filter(g => g.length && g.every(({ i }) => this.visits.some(v => v.index === i && finished(v)))).length;
     return {
-      totalSec: Math.round(sum() / 1000),
-      runSec: Math.round(runMs / 1000),
-      workSec: Math.round(sum("WORK") / 1000),
-      restSec: Math.round(sum("REST") / 1000),
+      totalSec: Math.round(sum(() => true) / 1000),
+      cardioSec: Math.round(sum(v => v.type === "CARDIO") / 1000),
+      runSec: Math.round(sum(v => !!this.timeline[v.index].speed) / 1000),
+      workSec: Math.round(sum(v => v.type === "WORK") / 1000),
+      restSec: Math.round(sum(v => v.type === "REST") / 1000),
       distance: Math.round(distance * 100) / 100,
       distanceUnit: "mi",
       stations: stationIdx.size,
       stationsTotal: this.timeline.filter(iv => iv.type === "WORK").length,
-      rounds: roundsDone,
-      roundsTotal: rounds,
+      rounds: done,
+      roundsTotal: groups.length,
+      unit,
     };
   }
 }
@@ -556,18 +452,21 @@ const WakeLock = {
 /* ── State & persistence ───────────────────────────────────────────────────── */
 
 const state = loadState();
-const ui = { screen: "home", templateId: state.lastTemplate || TEMPLATES[0].id, summary: null, confirmEnd: false, go: false };
+const ui = {
+  screen: "library", templateId: state.lastTemplate || TEMPLATES[0].id, summary: null, viewingHistory: false,
+  confirmEnd: false, go: false, filters: { time: "all", level: "all", focus: "all", equip: "all" },
+};
 let engine = null;
-let session = null;  // { workout, timeline, startedAt }
+let session = null;  // { workout, timeline, swaps, startedAt }
 let driver = null;
 
 function loadState() {
-  const fresh = { settings: { sound: true, voice: true, vibrate: true }, params: {}, history: [], lastTemplate: null };
+  const fresh = { settings: { sound: true, voice: true, vibrate: true }, params: {}, swaps: {}, history: [], lastTemplate: null };
   try {
     const raw = localStorage.getItem(STORE_KEY);
     if (!raw) return fresh;
     const s = JSON.parse(raw);
-    return { ...fresh, ...s, settings: { ...fresh.settings, ...(s.settings || {}) } };
+    return { ...fresh, ...s, swaps: s.swaps || {}, settings: { ...fresh.settings, ...(s.settings || {}) } };
   } catch { return fresh; }
 }
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch { /* storage unavailable */ } }
@@ -575,6 +474,14 @@ function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); 
 function paramsFor(templateId) {
   const t = templateById(templateId);
   return { ...defaultParams(t), ...(state.params[templateId] || {}) };
+}
+function swapsFor(templateId) { return state.swaps[templateId] || {}; }
+
+/* Planned workout for a template with the athlete's current settings. */
+function planFor(templateId) {
+  const workout = createWorkout(templateId, paramsFor(templateId));
+  const timeline = compile(workout, swapsFor(templateId));
+  return { workout, timeline, totals: planTotals(timeline) };
 }
 
 /* ── Formatting helpers ────────────────────────────────────────────────────── */
@@ -593,6 +500,7 @@ function fmtShort(sec) {
   return `${m}:${pad(s)}`;
 }
 function fmtSpeed(v) { return Number(v).toFixed(1); }
+function fmtMi(v) { return `${Number(v).toFixed(2)} mi`; }
 function spokenDuration(sec) {
   const m = Math.floor(sec / 60), s = sec % 60;
   if (!m) return `${s} seconds`;
@@ -607,9 +515,39 @@ function fmtDate(ts) {
   return new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }).toUpperCase();
 }
 function planTotals(timeline) {
-  const sum = t => timeline.filter(iv => !t || iv.type === t).reduce((a, iv) => a + (iv.duration || 0), 0);
-  const dist = timeline.filter(iv => iv.type === "RUN").reduce((a, iv) => a + (iv.duration / 3600) * iv.speed, 0);
-  return { total: sum(), run: sum("RUN"), work: sum("WORK"), dist };
+  const sum = f => timeline.filter(f).reduce((a, iv) => a + planSec(iv), 0);
+  const dist = timeline.filter(iv => iv.speed).reduce((a, iv) => a + (iv.duration / 3600) * iv.speed, 0);
+  return {
+    total: sum(() => true), cardio: sum(iv => iv.type === "CARDIO"), run: sum(iv => !!iv.speed), work: sum(iv => iv.type === "WORK"),
+    dist, openEnded: timeline.some(iv => iv.openEnded),
+  };
+}
+function timeBucket(sec) {
+  const min = sec / 60;
+  return min <= 25 ? "20" : min <= 40 ? "30" : "45";
+}
+const BUCKET_LABEL = { 20: "20 min", 30: "30 min", 45: "45+ min" };
+
+/* ── Benchmarks (Row → Bike → Run) ─────────────────────────────────────────── */
+
+const METERS_PER_MILE = 1609.344;
+const legUnit = exId => (exId === "row" ? "m" : "mi");
+
+function benchmarkLegs(timeline) {
+  const legs = [];
+  timeline.filter(iv => iv.type === "CARDIO").forEach(iv => {
+    let leg = legs.find(l => l.id === iv.exId);
+    if (!leg) legs.push(leg = { id: iv.exId, name: iv.title, unit: legUnit(iv.exId), sec: 0, estimate: 0 });
+    leg.sec += iv.duration;
+    if (iv.speed) leg.estimate += (iv.duration / 3600) * iv.speed;
+  });
+  return legs;
+}
+function benchTotalMi(bench) {
+  return bench.legs.reduce((a, l) => a + (Number(l.value) || 0) / (l.unit === "m" ? METERS_PER_MILE : 1), 0);
+}
+function benchResults(templateId) {
+  return state.history.filter(h => h.templateId === templateId && h.bench?.totalMi > 0);
 }
 
 /* ── 5. UI ─────────────────────────────────────────────────────────────────── */
@@ -621,17 +559,20 @@ function render() {
   if (ui.screen === "player") return renderPlayer();
   if (ui.screen === "summary") app.innerHTML = renderSummary();
   else if (ui.screen === "history") app.innerHTML = renderHistory();
-  else app.innerHTML = renderHome();
+  else if (ui.screen === "setup") app.innerHTML = renderSetup();
+  else app.innerHTML = renderLibrary();
   window.scrollTo(0, 0);
 }
 
-function topbar(right = "") {
+function topbar(right = "", left = "") {
   return `
   <header class="topbar">
-    <div class="brand"><span class="brand-mark">VYRA</span><span class="brand-sub">Hybrid Training</span></div>
+    ${left || `<div class="brand"><span class="brand-mark">VYRA</span><span class="brand-sub">Hybrid Training</span></div>`}
     <div class="topbar-actions">${right}</div>
   </header>`;
 }
+const backButton = (act, label = "Back") =>
+  `<button class="back-btn" data-act="${act}" aria-label="${label}"><i class="ti ti-chevron-left"></i><span>${label}</span></button>`;
 
 function soundButton() {
   const on = state.settings.sound || state.settings.voice;
@@ -639,19 +580,102 @@ function soundButton() {
     <i class="ti ${on ? "ti-volume" : "ti-volume-off"}" aria-hidden="true"></i></button>`;
 }
 
-/* Home / setup */
-function renderHome() {
+const EQUIP_SHORT = { treadmill: "Treadmill", rower: "Rower", bike: "Bike", kettlebell: "KB", dumbbell: "DB", "battle-ropes": "Ropes" };
+const CATEGORY_ICON = { hybrid: "ti-run", "kb-db": "ti-barbell", benchmark: "ti-trophy" };
+
+/* Library */
+function templateMeta(t) {
+  const { totals } = planFor(t.id);
+  const bucket = timeBucket(totals.total);
+  const machine = t.equipment.some(e => MACHINES.includes(e));
+  return { t, totals, bucket, machine, minutes: Math.round(totals.total / 60) };
+}
+
+function passesFilters(m) {
+  const f = ui.filters;
+  if (f.time !== "all" && m.bucket !== f.time) return false;
+  if (f.level !== "all" && m.t.level !== f.level) return false;
+  if (f.focus !== "all" && !m.t.focus.includes(f.focus)) return false;
+  if (f.equip === "no-machines" && m.machine) return false;
+  if (f.equip === "machine" && !m.machine) return false;
+  if (!["all", "no-machines", "machine"].includes(f.equip) && !m.t.equipment.includes(f.equip)) return false;
+  return true;
+}
+
+function renderLibrary() {
+  const metas = TEMPLATES.map(templateMeta);
+  const shown = metas.filter(passesFilters);
+  const chipGroup = (key, label, options) => `
+    <div class="filter-group">
+      <span class="filter-label">${label}</span>
+      <div class="cl-filters">${options.map(([v, l]) => `
+        <button class="cl-chip ${ui.filters[key] === v ? "active" : ""}" data-filter="${key}" data-value="${v}" aria-pressed="${ui.filters[key] === v}">${l}</button>`).join("")}
+      </div>
+    </div>`;
+  const anyFilter = Object.values(ui.filters).some(v => v !== "all");
+
+  const row = m => {
+    const best = m.t.focus.includes("benchmark") ? benchResults(m.t.id).reduce((a, h) => Math.max(a, h.bench.totalMi), 0) : 0;
+    const equip = m.t.equipment.map(e => EQUIP_SHORT[e]).join(" · ");
+    return `
+    <button class="cl-row" data-template="${m.t.id}">
+      <i class="ti ${CATEGORY_ICON[m.t.category]} cl-ic" aria-hidden="true"></i>
+      <span class="cl-main">
+        <span class="cl-name">${esc(m.t.name)}</span>
+        <span class="cl-sub">${esc(m.t.tagline)}</span>
+        <span class="cl-meta">${m.minutes} min · ${cap(m.t.level)} · ${esc(equip)}${best ? ` · <b>Best ${fmtMi(best)}</b>` : ""}</span>
+      </span>
+      <i class="ti ti-chevron-right cl-go" aria-hidden="true"></i>
+    </button>`;
+  };
+
+  const groups = CATEGORIES.map(c => {
+    const items = shown.filter(m => m.t.category === c.id);
+    if (!items.length) return "";
+    return `
+      <div class="cl-cat"><span class="cl-cat-name">${c.label}</span><span class="cl-cat-count">${items.length}</span></div>
+      <div class="cl-list">${items.map(row).join("")}</div>`;
+  }).join("");
+
+  return `
+  ${topbar(`<button class="icon-btn" data-act="history" aria-label="History"><i class="ti ti-history"></i></button>`)}
+  <section class="hero">
+    <div class="hero-daycount">${TEMPLATES.length} workouts · ${Object.keys(EXERCISES).length} movements</div>
+    <div class="hero-titlebar"><h1 class="hero-name">Workout library</h1></div>
+  </section>
+  <section class="filters" aria-label="Filters">
+    ${chipGroup("time", "Time", [["all", "All"], ["20", "20 min"], ["30", "30 min"], ["45", "45+ min"]])}
+    ${chipGroup("level", "Level", [["all", "All"], ...LEVELS.map(l => [l, cap(l)])])}
+    ${chipGroup("focus", "Focus", [["all", "All"], ...Object.entries(FOCUS_LABEL)])}
+    ${chipGroup("equip", "Equipment", [["all", "All"], ["no-machines", "No machines"], ["machine", "Machine"], ...Object.entries(EQUIPMENT_LABEL)])}
+    ${anyFilter ? `<button class="text-btn" data-act="clear-filters"><i class="ti ti-x"></i> Clear filters</button>` : ""}
+  </section>
+  ${groups || `<p class="empty">No workouts match these filters.</p>`}`;
+}
+
+/* Setup */
+function renderSetup() {
   const t = templateById(ui.templateId);
   const params = paramsFor(t.id);
-  const workout = createWorkout(t.id, params);
-  const timeline = compile(workout);
-  const plan = planTotals(timeline);
-  const hasRun = plan.run > 0;
+  const swaps = swapsFor(t.id);
+  const { workout, timeline, totals } = planFor(t.id);
+  const isBench = t.focus.includes("benchmark");
 
-  const paramRow = p => `
+  const cardioKeys = { rowSec: "row", bikeSec: "bike", runSec: "run" };
+  const paramLabel = p => {
+    const base = cardioKeys[p.key];
+    const to = base && swaps[base] && EXERCISES[base].subs.includes(swaps[base]) ? EXERCISES[swaps[base]] : null;
+    return to ? to.name.replace("Treadmill ", "") : p.label;
+  };
+  const paramRow = p => p.kind === "bool" ? `
+    <button class="set-row set-toggle" data-param-toggle="${p.key}" role="switch" aria-checked="${!!params[p.key]}">
+      <i class="ti ${p.icon} set-ic" aria-hidden="true"></i>
+      <span class="set-label">${esc(p.label)}</span>
+      <span class="switch ${params[p.key] ? "on" : ""}" aria-hidden="true"><span></span></span>
+    </button>` : `
     <div class="set-row">
       <i class="ti ${p.icon} set-ic" aria-hidden="true"></i>
-      <label class="set-label" for="param-${p.key}">${esc(p.label)}
+      <label class="set-label" for="param-${p.key}">${esc(paramLabel(p))}
         <span class="set-unit">${p.kind === "time" ? "min:sec" : p.kind === "speed" ? "mph" : "count"}</span></label>
       <div class="stepper">
         <button class="step-btn" data-step="${p.key}" data-dir="-1" aria-label="Decrease ${esc(p.label)}"><i class="ti ti-minus"></i></button>
@@ -667,49 +691,89 @@ function renderHome() {
       <span class="switch ${state.settings[key] ? "on" : ""}" aria-hidden="true"><span></span></span>
     </button>`;
 
-  const roundRows = workout.rounds.map((r, i) => {
-    const parts = r.blocks.map(b => b.type === "run" ? `Run ${fmtShort(b.duration)}`
-      : b.type === "rest" ? `Rest ${fmtShort(b.duration)}`
-      : `Work ${fmtShort(b.duration ?? resolveSegments(b.segments, null).duration ?? 0)}`).join(" · ");
-    const station = r.blocks.find(b => b.type === "station");
-    const tgt = station ? stationTarget(station) : "";
+  // Swaps: one row per swappable movement, choices as chips.
+  const swapRows = swappableIds(workout).map(id => {
+    const base = EXERCISES[id];
+    const current = swaps[id] && base.subs.includes(swaps[id]) ? swaps[id] : id;
+    const opts = [id, ...base.subs];
+    return `
+      <div class="swap-row">
+        <div class="swap-head">
+          <i class="ti ${exerciseIcon({ ...base, id })} set-ic" aria-hidden="true"></i>
+          <span class="swap-name">${esc(base.name)}</span>
+          ${current !== id ? `<span class="swap-now"><i class="ti ti-arrows-exchange"></i> ${esc(EXERCISES[current].name)}</span>` : ""}
+        </div>
+        <div class="cl-filters">${opts.map(o => `
+          <button class="cl-chip ${o === current ? "active" : ""}" data-swap="${id}" data-to="${o}" aria-pressed="${o === current}">${o === id ? "Original" : esc(EXERCISES[o].name)}</button>`).join("")}
+        </div>
+      </div>`;
+  }).join("");
+
+  // Rounds, summarised from the compiled timeline.
+  const roundRows = workout.rounds.map((_, i) => {
+    const ivs = timeline.filter(iv => iv.round === i + 1);
+    const moves = ivs.filter(iv => iv.type !== "REST");
+    const total = ivs.reduce((a, iv) => a + planSec(iv), 0);
+    const title = moves.length <= 3 ? moves.map(iv => iv.title).join(" → ") : `${moves.length} stations`;
+    const detail = moves.length <= 3
+      ? ivs.map(iv => `${iv.type === "REST" ? "Rest" : iv.type === "CARDIO" ? iv.state === "CARDIO" ? "Cardio" : cap(iv.state) : "Work"} ${iv.openEnded ? "reps" : fmtShort(iv.duration)}`).join(" · ")
+      : moves.map(iv => iv.title).join(" · ");
+    const targets = moves.map(iv => iv.target).filter(Boolean).join(" · ");
     return `
       <li class="round-row">
         <span class="round-no">${pad(i + 1)}</span>
         <div class="round-main">
-          <div class="round-name">${esc(r.label)}</div>
-          <div class="round-meta">${esc(parts)}${tgt ? ` · ${esc(tgt)}` : ""}</div>
+          <div class="round-name">${esc(title)}</div>
+          <div class="round-meta">${esc(detail)}${targets ? ` · ${esc(targets)}` : ""}</div>
         </div>
-        <i class="ti ${r.icon || "ti-barbell"} round-ic" aria-hidden="true"></i>
+        <span class="round-time">${fmtShort(total)}</span>
       </li>`;
   }).join("");
 
-  const others = TEMPLATES.filter(x => x.id !== t.id).map(x => `
-    <button class="cl-row" data-template="${x.id}">
-      <i class="ti ${x.icon} cl-ic" aria-hidden="true"></i>
-      <span class="cl-main"><span class="cl-name">${esc(x.name)}</span><span class="cl-meta">${esc(x.meta)}</span></span>
-      <i class="ti ti-chevron-right cl-go" aria-hidden="true"></i>
-    </button>`).join("");
+  const bench = isBench ? benchResults(t.id) : [];
+  const best = bench.reduce((a, h) => (h.bench.totalMi > (a?.bench.totalMi || 0) ? h : a), null);
+  const benchBlock = isBench ? `
+    <div class="section-label">Benchmark</div>
+    ${bench.length ? `
+      <div class="bench-best">
+        <div><div class="stat-label"><i class="ti ti-trophy"></i> Best total</div><div class="stat-value">${best.bench.totalMi.toFixed(2)}<small> mi</small></div></div>
+        <div><div class="stat-label">Last</div><div class="stat-value stat-value--dim">${bench[0].bench.totalMi.toFixed(2)}<small> mi</small></div></div>
+        <div><div class="stat-label">Attempts</div><div class="stat-value stat-value--dim">${bench.length}</div></div>
+      </div>
+      <div class="cl-list">${bench.slice(0, 5).map(h => `
+        <div class="bench-row"><span class="cl-meta">${fmtDate(h.date)}</span>
+          <span class="bench-legs">${h.bench.legs.map(l => `${esc(l.name.replace("Treadmill ", ""))} ${l.value || "—"}${l.value ? ` ${l.unit}` : ""}`).join(" · ")}</span>
+          <span class="bench-total ${h === best ? "is-best" : ""}">${h.bench.totalMi.toFixed(2)} mi</span></div>`).join("")}
+      </div>` : `<p class="empty">Finish this workout and log your distances. Your best total shows here so you can beat it next time.</p>`}` : "";
 
-  const recent = state.history.slice(0, 3).map(historyRow).join("");
+  const focus = [cap(t.level), BUCKET_LABEL[timeBucket(totals.total)], ...t.focus.map(f => FOCUS_LABEL[f]),
+    t.equipment.some(e => MACHINES.includes(e)) ? "Machine required" : null].filter(Boolean);
 
   return `
-  ${topbar(`<button class="icon-btn" data-act="history" aria-label="History"><i class="ti ti-history"></i></button>`)}
+  ${topbar(`<button class="icon-btn" data-act="history" aria-label="History"><i class="ti ti-history"></i></button>`, backButton("library", "Library"))}
   <section class="hero">
-    <div class="hero-daycount">${workout.rounds.length} rounds · ${timeline.length} intervals</div>
-    <div class="hero-titlebar"><i class="ti ${t.icon} hero-ic" aria-hidden="true"></i><h1 class="hero-name">${esc(t.name)}</h1></div>
+    <div class="hero-daycount">${esc(t.tagline)}</div>
+    <div class="hero-titlebar"><i class="ti ${CATEGORY_ICON[t.category]} hero-ic" aria-hidden="true"></i><h1 class="hero-name">${esc(t.name)}</h1></div>
     <div class="journey-track"><div class="journey-fill" style="width:100%"></div></div>
     <div class="hero-stats">
-      <span><i class="ti ti-clock"></i> ${fmtClock(plan.total)} total</span>
-      ${hasRun ? `<span class="hero-stat-dot">·</span><span><i class="ti ti-run"></i> ${fmtClock(plan.run)} run</span>
-      <span class="hero-stat-dot">·</span><span>~${plan.dist.toFixed(2)} mi</span>` : ""}
-      <span class="hero-stat-dot">·</span><span><i class="ti ti-barbell"></i> ${fmtClock(plan.work)} work</span>
+      <span><i class="ti ti-clock"></i> ${fmtClock(totals.total)}${totals.openEnded ? "+" : ""} total</span>
+      ${totals.cardio ? `<span class="hero-stat-dot">·</span><span><i class="ti ti-heartbeat"></i> ${fmtClock(totals.cardio)} cardio</span>` : ""}
+      ${totals.dist ? `<span class="hero-stat-dot">·</span><span>~${totals.dist.toFixed(2)} mi run</span>` : ""}
+      ${totals.work ? `<span class="hero-stat-dot">·</span><span><i class="ti ti-barbell"></i> ${fmtClock(totals.work)} work</span>` : ""}
     </div>
+    <p class="about">${esc(t.about)}</p>
+    <div class="tag-row">${focus.map(f => `<span class="tag">${esc(f)}</span>`).join("")}
+      ${t.equipment.map(e => `<span class="tag tag--equip">${esc(EQUIPMENT_LABEL[e])}</span>`).join("")}</div>
   </section>
+
+  ${benchBlock}
 
   <div class="section-label">Setup</div>
   <div class="set-list">${t.params.map(paramRow).join("")}</div>
   ${Object.keys(state.params[t.id] || {}).length ? `<button class="text-btn" data-act="reset-params"><i class="ti ti-restore"></i> Reset to defaults</button>` : ""}
+
+  ${swapRows ? `<div class="section-label section-label--row"><span>Swaps</span>${Object.keys(swaps).length ? `<button class="text-btn" data-act="reset-swaps">Reset</button>` : ""}</div>
+  <div class="swap-list">${swapRows}</div>` : ""}
 
   <div class="section-label">Cues</div>
   <div class="set-list">
@@ -718,11 +782,8 @@ function renderHome() {
     ${toggle("vibrate", "Vibration", "ti-device-mobile-vibration")}
   </div>
 
-  <div class="section-label">Session</div>
+  <div class="section-label section-label--row"><span>Session</span><span class="cl-cat-count">${timeline.length} intervals</span></div>
   <ol class="round-list">${roundRows}</ol>
-
-  ${others ? `<div class="section-label">Other workouts</div><div class="cl-list">${others}</div>` : ""}
-  ${recent ? `<div class="section-label section-label--row"><span>Recent</span><button class="text-btn" data-act="history">All <i class="ti ti-chevron-right"></i></button></div><div class="cl-list">${recent}</div>` : ""}
 
   <div class="start-dock">
     <button class="btn-primary btn-start" data-act="start"><i class="ti ti-player-play"></i> Start workout</button>
@@ -732,9 +793,9 @@ function renderHome() {
 function historyRow(h) {
   return `
     <button class="cl-row" data-history="${h.id}">
-      <i class="ti ${h.stats.rounds === h.stats.roundsTotal ? "ti-check" : "ti-flag"} cl-ic" aria-hidden="true"></i>
+      <i class="ti ${h.bench ? "ti-trophy" : h.stats.rounds === h.stats.roundsTotal ? "ti-check" : "ti-flag"} cl-ic" aria-hidden="true"></i>
       <span class="cl-main"><span class="cl-name">${esc(h.name)}</span>
-        <span class="cl-meta">${fmtDate(h.date)} · ${fmtClock(h.stats.totalSec)} · ${h.stats.rounds}/${h.stats.roundsTotal} rounds${h.stats.distance ? ` · ${h.stats.distance.toFixed(2)} mi` : ""}</span></span>
+        <span class="cl-meta">${fmtDate(h.date)} · ${fmtClock(h.stats.totalSec)} · ${h.bench ? `${h.bench.totalMi.toFixed(2)} mi total` : `${h.stats.rounds}/${h.stats.roundsTotal} rounds${h.stats.distance ? ` · ${h.stats.distance.toFixed(2)} mi` : ""}`}</span></span>
       <i class="ti ti-chevron-right cl-go" aria-hidden="true"></i>
     </button>`;
 }
@@ -742,7 +803,7 @@ function historyRow(h) {
 function renderHistory() {
   const rows = state.history.map(historyRow).join("");
   return `
-  ${topbar(`<button class="icon-btn" data-act="home" aria-label="Back"><i class="ti ti-x"></i></button>`)}
+  ${topbar("", backButton("library", "Library"))}
   <section class="hero">
     <div class="hero-daycount">${state.history.length} saved</div>
     <div class="hero-titlebar"><i class="ti ti-history hero-ic"></i><h1 class="hero-name">History</h1></div>
@@ -753,10 +814,10 @@ function renderHistory() {
 /* Player */
 function startWorkout() {
   Cues.unlock();
-  const params = paramsFor(ui.templateId);
-  const workout = createWorkout(ui.templateId, params);
-  const timeline = compile(workout);
-  session = { workout, timeline, startedAt: Date.now(), saved: false };
+  const swaps = { ...swapsFor(ui.templateId) };
+  const workout = createWorkout(ui.templateId, paramsFor(ui.templateId));
+  const timeline = compile(workout, swaps);
+  session = { workout, timeline, swaps, startedAt: Date.now() };
   engine = new IntervalEngine(timeline, { countdown: 3 });
   wireCues(engine);
   engine
@@ -782,25 +843,43 @@ function finishWorkout(early) {
   clearInterval(driver); driver = null;
   WakeLock.release();
   const stats = engine.stats();
+  const t = templateById(session.workout.templateId);
   ui.summary = {
-    id: uid(), date: session.startedAt, name: session.workout.name, templateId: session.workout.templateId,
-    params: session.workout.params, stats, early, saved: false,
+    id: uid(), date: session.startedAt, name: session.workout.name, templateId: t.id,
+    params: session.workout.params, swaps: session.swaps, stats, early, saved: false,
+    bench: t.focus.includes("benchmark") ? {
+      legs: benchmarkLegs(session.timeline).map(l => ({ id: l.id, name: l.name, unit: l.unit,
+        value: l.estimate && !early ? (l.unit === "m" ? Math.round(l.estimate * METERS_PER_MILE) : Number(l.estimate.toFixed(2))) : "" })),
+      bikeCal: "", totalMi: 0,
+    } : null,
   };
+  if (ui.summary.bench) ui.summary.bench.totalMi = benchTotalMi(ui.summary.bench);
   ui.screen = "summary";
   ui.viewingHistory = false;
   ui.confirmEnd = false;
   render();
 }
 
-function stateWord(iv) {
-  return iv.type === "WORK" ? "WORK" : iv.type;
-}
-
 function toneFor(iv, seg) {
-  if (iv.type === "RUN") return "run";
+  if (iv.type === "CARDIO") return "run";
   if (iv.type === "REST") return "rest";
   if (seg && (seg.tone === "easy" || seg.tone === "rest")) return "easy";
   return "work";
+}
+
+function counterText(iv) {
+  if (iv.rounds > 1) return `Round ${iv.round} of ${iv.rounds}`;
+  const word = templateById(session.workout.templateId).roundWord || "Part";
+  const part = iv.part || (engine.timeline.slice(engine.index).find(x => x.part)?.part ?? iv.parts);
+  return `${word} ${part} of ${iv.parts}`;
+}
+
+function machineWord(iv) {
+  return { run: "treadmill", "incline-walk": "treadmill", row: "rower", bike: "bike" }[iv.exId] || "";
+}
+
+function exList(exs) {
+  return `<ol class="ex-list">${exs.map(x => `<li><span>${esc(x.name)}</span>${x.target ? `<em>${esc(targetText(x.target))}</em>` : ""}</li>`).join("")}</ol>`;
 }
 
 function renderPlayer() {
@@ -836,9 +915,9 @@ function renderPlayer() {
 
   // Big metric line under the timer
   let metric = "";
-  if (iv.type === "RUN") metric = `${fmtSpeed(iv.speed)} ${iv.speedUnit.toUpperCase()}`;
+  if (iv.type === "CARDIO") metric = iv.speed ? `${fmtSpeed(iv.speed)} ${iv.speedUnit.toUpperCase()}` : iv.effort;
   else if (iv.type === "WORK" && iv.target) metric = `Target ${iv.target}`;
-  else if (iv.type === "REST" && upcoming) metric = `Next · ${upcoming.type === "RUN" ? "Run" : upcoming.title}`;
+  else if (iv.type === "REST" && upcoming) metric = `Next · ${upcoming.title}`;
 
   // Sub-interval strip (HARD / EASY, Tabata WORK / REST)
   const segStrip = iv.segments.length ? `
@@ -848,20 +927,19 @@ function renderPlayer() {
       <div class="seg-pips">${iv.segments.map((s, i) => `<span class="pip pip-${s.tone} ${i < e.segIndex ? "done" : i === e.segIndex ? "now" : ""}" style="flex:${s.end - s.start}"></span>`).join("")}</div>
     </div>` : "";
 
-  const exerciseList = iv.type === "WORK" && iv.exercises.length > 1 ? `
-    <ol class="ex-list">${iv.exercises.map(x => `<li><span>${esc(x.name)}</span>${x.target ? `<em>${esc(targetText(x.target))}</em>` : ""}</li>`).join("")}</ol>` : "";
-
   const nowBlock = iv.type === "REST"
     ? `<div class="pl-row">
         <span class="pl-k">Now</span>
-        <div class="pl-v"><div class="pl-name">Rest / Transition</div>
-          <div class="pl-instr">${upcoming ? (upcoming.type === "WORK" ? "Get to the station and set up." : "Get back on the treadmill.") : "Recover."}</div></div>
+        <div class="pl-v"><div class="pl-name">${esc(iv.title)}</div>
+          <div class="pl-instr">${!upcoming ? "Recover." : upcoming.type === "WORK" ? "Get to the station and set up."
+            : machineWord(upcoming) ? `Get on the ${machineWord(upcoming)}.` : "Get ready."}</div></div>
       </div>`
     : `<div class="pl-row">
         <span class="pl-k">Now</span>
         <div class="pl-v"><div class="pl-name">${esc(iv.title)}</div>
           ${iv.instruction ? `<div class="pl-instr">${esc(iv.instruction)}</div>` : ""}
-          ${exerciseList}
+          ${iv.exercises.length > 1 ? exList(iv.exercises) : ""}
+          ${iv.openEnded ? `<div class="pl-note">For reps, not speed. Tap DONE when the set is finished.</div>` : ""}
           ${iv.note ? `<div class="pl-note">${esc(iv.note)}</div>` : ""}</div>
       </div>`;
 
@@ -870,10 +948,10 @@ function renderPlayer() {
       <div class="pl-row pl-row--up">
         <span class="pl-k">Up next</span>
         <div class="pl-v">
-          <div class="pl-name pl-name--up"><i class="ti ${upcoming.icon}"></i> ${esc(upcoming.type === "RUN" ? `Run · Round ${upcoming.round}` : upcoming.title)}</div>
+          <div class="pl-name pl-name--up"><i class="ti ${upcoming.icon}"></i> ${esc(upcoming.title)}</div>
           <div class="pl-instr">${esc(upcoming.instruction)}</div>
-          ${upcoming.type === "WORK" && upcoming.exercises.length > 1 ? `<ol class="ex-list">${upcoming.exercises.map(x => `<li><span>${esc(x.name)}</span>${x.target ? `<em>${esc(targetText(x.target))}</em>` : ""}</li>`).join("")}</ol>` : ""}
-          <div class="pl-tags">${fmtShort(upcoming.duration || 0)}${upcoming.target ? ` · Target ${esc(upcoming.target)}` : ""}${upcoming.speed ? ` · ${fmtSpeed(upcoming.speed)} MPH` : ""}${upcoming.segments.length ? ` · ${esc(upcoming.segments.map(s => s.label).slice(0, 3).join(" / "))}${upcoming.segments.length > 3 ? "…" : ""}` : ""}</div>
+          ${upcoming.exercises.length > 1 ? exList(upcoming.exercises) : ""}
+          <div class="pl-tags">${upcoming.openEnded ? "For reps" : fmtShort(upcoming.duration || 0)}${upcoming.target ? ` · Target ${esc(upcoming.target)}` : ""}${upcoming.speed ? ` · ${fmtSpeed(upcoming.speed)} MPH` : ""}${upcoming.segments.length ? ` · ${esc(upcoming.segments.map(s => s.label).slice(0, 3).join(" / "))}${upcoming.segments.length > 3 ? "…" : ""}` : ""}</div>
         </div>
       </div>`
     : `<div class="pl-row">
@@ -882,23 +960,23 @@ function renderPlayer() {
       </div>`;
 
   const showDone = iv.type === "WORK" && (iv.hasTarget || iv.openEnded);
-  const roundTicks = tl.map((x, i) => (x.roundStart && i > 0 ? i : null)).filter(i => i != null);
-  const total = tl.reduce((a, x) => a + (x.duration || 0), 0) || 1;
-  const tickPos = i => (tl.slice(0, i).reduce((a, x) => a + (x.duration || 0), 0) / total) * 100;
+  const total = tl.reduce((a, x) => a + planSec(x), 0) || 1;
+  const tickPos = i => (tl.slice(0, i).reduce((a, x) => a + planSec(x), 0) / total) * 100;
+  const ticks = tl.map((x, i) => (i > 0 && (x.rounds > 1 ? x.roundStart : x.type !== "REST") ? i : null)).filter(i => i != null);
 
   app.innerHTML = `
   <div class="player tone-${tone} ${e.paused ? "is-paused" : ""}">
     <div class="pl-top">
-      <span class="pl-round">Round ${iv.round} of ${iv.rounds}</span>
+      <span class="pl-round">${counterText(iv)}</span>
       <span class="pl-clock" data-bind="clock"></span>
       ${soundButton()}
     </div>
     <div class="pl-progress" aria-label="Workout progress">
       <div class="pl-progress-fill" data-bind="progress"></div>
-      ${roundTicks.map(i => `<span class="pl-tick" style="left:${tickPos(i)}%"></span>`).join("")}
+      ${ticks.map(i => `<span class="pl-tick" style="left:${tickPos(i)}%"></span>`).join("")}
     </div>
 
-    <div class="pl-state"><span>${e.paused ? "PAUSED" : stateWord(iv)}</span>${iv.type === "WORK" ? `<i class="ti ${iv.icon}"></i>` : iv.type === "RUN" ? `<i class="ti ti-run"></i>` : `<i class="ti ti-clock-pause"></i>`}</div>
+    <div class="pl-state"><span>${e.paused ? "PAUSED" : iv.state}</span><i class="ti ${iv.icon}"></i></div>
     ${segStrip}
     <div class="pl-timer" data-bind="timer">${timerText()}</div>
     ${metric ? `<div class="pl-metric">${esc(metric)}</div>` : ""}
@@ -912,7 +990,7 @@ function renderPlayer() {
     </div>
     <div class="pl-controls pl-controls--sub">
       ${iv.duration != null ? `<button class="ctl ctl-wide ${iv.type === "REST" ? "ctl-hot" : ""}" data-act="extend"><i class="ti ti-clock-plus"></i><span>+10 sec</span></button>` : ""}
-      ${showDone ? `<button class="ctl ctl-wide" data-act="done"><i class="ti ti-check"></i><span>${iv.openEnded ? "Done" : "Reps done"}</span></button>` : ""}
+      ${showDone ? `<button class="ctl ctl-wide ${iv.openEnded ? "ctl-hot" : ""}" data-act="done"><i class="ti ti-check"></i><span>${iv.openEnded ? "Done" : "Reps done"}</span></button>` : ""}
       <button class="ctl ctl-wide ctl-ghost" data-act="end"><i class="ti ti-square"></i><span>End</span></button>
     </div>
     ${ui.confirmEnd ? `
@@ -928,9 +1006,9 @@ function renderPlayer() {
 }
 
 function nextLabel(n) {
-  if (n.type === "RUN") return `Run · ${fmtShort(n.duration)} @ ${fmtSpeed(n.speed)} MPH${n.roundStart ? ` · Round ${n.round}` : ""}`;
-  if (n.type === "REST") return `Rest · ${fmtShort(n.duration)}`;
-  return `${n.title}${n.duration ? ` · ${fmtShort(n.duration)}` : ""}`;
+  if (n.type === "CARDIO") return `${n.title} · ${fmtShort(n.duration)}${n.speed ? ` @ ${fmtSpeed(n.speed)} MPH` : ""}${n.roundStart && n.rounds > 1 ? ` · Round ${n.round}` : ""}`;
+  if (n.type === "REST") return `${n.title === "Rest / Transition" ? "Rest" : n.title} · ${fmtShort(n.duration)}`;
+  return `${n.title}${n.duration ? ` · ${fmtShort(n.duration)}` : " · for reps"}`;
 }
 
 function segMeta(iv, si) {
@@ -974,7 +1052,7 @@ function updatePlayer() {
   const clock = app.querySelector('[data-bind="clock"]');
   if (clock) {
     const doneSec = e.visits.reduce((a, v) => a + v.ms, 0) / 1000 + e.elapsedMs() / 1000;
-    const total = e.timeline.reduce((a, x) => a + (x.duration || 0), 0);
+    const total = e.timeline.reduce((a, x) => a + planSec(x), 0);
     const left = Math.max(0, total - total * e.progress());
     clock.textContent = `${fmtClock(doneSec)} · ${fmtClock(left)} left`;
   }
@@ -987,8 +1065,36 @@ function renderSummary() {
   const cell = (label, value, icon) => `
     <div class="stat"><div class="stat-label"><i class="ti ${icon}"></i> ${label}</div><div class="stat-value">${value}</div></div>`;
   const fromHistory = ui.viewingHistory;
+  const onlyRun = st.cardioSec > 0 && st.cardioSec === st.runSec;
+
+  let benchBlock = "";
+  if (s.bench) {
+    const prev = benchResults(s.templateId).filter(h => h.id !== s.id);
+    const best = prev.reduce((a, h) => Math.max(a, h.bench.totalMi), 0);
+    const total = s.bench.totalMi;
+    const delta = best && total ? total - best : 0;
+    benchBlock = `
+    <div class="section-label section-label--row"><span>Distances</span>${total ? `<span class="cl-cat-count">${best ? (delta > 0 ? `New best · +${delta.toFixed(2)} mi` : `Best ${best.toFixed(2)} mi`) : "First attempt"}</span>` : ""}</div>
+    <div class="set-list">
+      ${s.bench.legs.map((l, i) => `
+        <div class="set-row">
+          <i class="ti ${exerciseIcon({ id: l.id, cardio: true })} set-ic" aria-hidden="true"></i>
+          <label class="set-label" for="bench-${i}">${esc(l.name)}<span class="set-unit">${l.unit === "m" ? "meters" : "miles"}</span></label>
+          <input class="num-input" id="bench-${i}" data-bench="${i}" type="number" inputmode="decimal" min="0" step="${l.unit === "m" ? 10 : 0.01}"
+            value="${esc(l.value)}" placeholder="0" ${fromHistory ? "disabled" : ""}>
+        </div>`).join("")}
+      ${s.bench.legs.some(l => l.id === "bike") ? `
+        <div class="set-row">
+          <i class="ti ti-flame set-ic" aria-hidden="true"></i>
+          <label class="set-label" for="bench-cal">Bike calories<span class="set-unit">optional · not in total</span></label>
+          <input class="num-input" id="bench-cal" data-bench-cal type="number" inputmode="numeric" min="0" step="1" value="${esc(s.bench.bikeCal)}" placeholder="0" ${fromHistory ? "disabled" : ""}>
+        </div>` : ""}
+      <div class="set-row bench-total-row"><span class="set-label">Total distance</span><span class="bench-sum" data-bind="bench-total">${total.toFixed(2)} mi</span></div>
+    </div>`;
+  }
+
   return `
-  ${topbar(fromHistory ? `<button class="icon-btn" data-act="history" aria-label="Back"><i class="ti ti-x"></i></button>` : "")}
+  ${topbar(fromHistory ? backButton("history", "History") : "")}
   <section class="done-hero">
     <div class="hero-daycount">${esc(s.name)} · ${fmtDate(s.date)}</div>
     <h1 class="done-title">${s.early ? "Workout<br>ended" : "Workout<br>complete"}</h1>
@@ -996,38 +1102,66 @@ function renderSummary() {
   </section>
   <div class="stat-grid">
     ${cell("Total time", fmtClock(st.totalSec), "ti-clock")}
-    ${st.runSec || st.distance ? cell("Run time", fmtClock(st.runSec), "ti-run") : ""}
-    ${st.runSec || st.distance ? cell("Est. distance", `${st.distance.toFixed(2)}<small> mi</small>`, "ti-route") : ""}
-    ${cell("Work time", fmtClock(st.workSec), "ti-barbell")}
-    ${cell("Stations", `${st.stations}<small> / ${st.stationsTotal}</small>`, "ti-target")}
-    ${cell("Rounds", `${st.rounds}<small> / ${st.roundsTotal}</small>`, "ti-repeat")}
+    ${st.cardioSec ? cell(onlyRun ? "Run time" : "Cardio time", fmtClock(st.cardioSec), onlyRun ? "ti-run" : "ti-heartbeat") : ""}
+    ${st.runSec ? cell("Est. run distance", `${st.distance.toFixed(2)}<small> mi</small>`, "ti-route") : ""}
+    ${st.workSec || !st.cardioSec ? cell("Work time", fmtClock(st.workSec), "ti-barbell") : ""}
+    ${st.stationsTotal ? cell("Stations", `${st.stations}<small> / ${st.stationsTotal}</small>`, "ti-target") : ""}
+    ${cell(st.unit === "round" ? "Rounds" : `${templateById(s.templateId).roundWord || "Part"}s`, `${st.rounds}<small> / ${st.roundsTotal}</small>`, "ti-repeat")}
   </div>
+  ${benchBlock}
   <div class="summary-actions">
     ${fromHistory
       ? `<button class="btn-primary" data-act="repeat"><i class="ti ti-repeat"></i> Repeat workout</button>
          <button class="btn-secondary" data-act="delete-history"><i class="ti ti-trash"></i> Delete</button>`
       : `<button class="btn-primary ${s.saved ? "is-saved" : ""}" data-act="save" ${s.saved ? "disabled" : ""}><i class="ti ${s.saved ? "ti-check" : "ti-device-floppy"}"></i> ${s.saved ? "Saved" : "Save workout"}</button>
          <button class="btn-secondary" data-act="repeat"><i class="ti ti-repeat"></i> Repeat workout</button>
-         <button class="text-btn text-btn--center" data-act="home">Done</button>`}
+         <button class="text-btn text-btn--center" data-act="setup">Done</button>`}
   </div>`;
 }
 
 /* ── Events ────────────────────────────────────────────────────────────────── */
 
+app.addEventListener("input", ev => {
+  const s = ui.summary;
+  if (!s?.bench || s.saved) return;
+  const el = ev.target;
+  if (el.dataset.bench != null) s.bench.legs[Number(el.dataset.bench)].value = el.value === "" ? "" : Number(el.value);
+  else if (el.dataset.benchCal != null) s.bench.bikeCal = el.value === "" ? "" : Number(el.value);
+  else return;
+  s.bench.totalMi = benchTotalMi(s.bench);
+  const out = app.querySelector('[data-bind="bench-total"]');
+  if (out) out.textContent = `${s.bench.totalMi.toFixed(2)} mi`;
+});
+
 app.addEventListener("click", ev => {
-  const el = ev.target.closest("[data-act],[data-step],[data-setting],[data-template],[data-history]");
+  const el = ev.target.closest("[data-act],[data-step],[data-setting],[data-template],[data-history],[data-filter],[data-swap],[data-param-toggle]");
   if (!el) return;
 
   if (el.dataset.step) return stepParam(el.dataset.step, Number(el.dataset.dir));
+  if (el.dataset.paramToggle) {
+    const k = el.dataset.paramToggle;
+    state.params[ui.templateId] = { ...(state.params[ui.templateId] || {}), [k]: !paramsFor(ui.templateId)[k] };
+    save(); return render();
+  }
   if (el.dataset.setting) {
     const k = el.dataset.setting;
     state.settings[k] = !state.settings[k]; save();
     if (k === "sound" && state.settings.sound) { Cues.unlock(); Cues.beep(); }
     if (k === "voice" && state.settings.voice) { Cues.unlock(); Cues.say("Spoken cues on"); }
     if (k === "vibrate" && state.settings.vibrate) Cues.buzz(80);
-    return render();
+    return keepScroll(render);
   }
-  if (el.dataset.template) { ui.templateId = el.dataset.template; state.lastTemplate = ui.templateId; save(); return render(); }
+  if (el.dataset.filter) { ui.filters[el.dataset.filter] = el.dataset.value; return keepScroll(render); }
+  if (el.dataset.swap) {
+    const sw = { ...swapsFor(ui.templateId) };
+    if (el.dataset.to === el.dataset.swap) delete sw[el.dataset.swap]; else sw[el.dataset.swap] = el.dataset.to;
+    state.swaps[ui.templateId] = sw; save();
+    return keepScroll(render);
+  }
+  if (el.dataset.template) {
+    ui.templateId = el.dataset.template; state.lastTemplate = ui.templateId; save();
+    ui.screen = "setup"; return render();
+  }
   if (el.dataset.history) {
     const h = state.history.find(x => x.id === el.dataset.history);
     if (h) { ui.summary = h; ui.viewingHistory = true; ui.screen = "summary"; render(); }
@@ -1050,29 +1184,41 @@ app.addEventListener("click", ev => {
       const on = !(state.settings.sound || state.settings.voice);
       state.settings.sound = on; state.settings.voice = on; save();
       if (on) { Cues.unlock(); Cues.beep(); } else Cues.hush();
-      return ui.screen === "player" ? renderPlayer() : render();
+      return ui.screen === "player" ? renderPlayer() : keepScroll(render);
     }
     case "save":
       if (!ui.summary.saved) {
         ui.summary.saved = true;
         state.history.unshift({ ...ui.summary });
-        state.history = state.history.slice(0, 200);
-        save(); toast("Workout saved");
-        render();
+        state.history = state.history.slice(0, 300);
+        save(); toast(ui.summary.bench?.totalMi ? `Saved · ${ui.summary.bench.totalMi.toFixed(2)} mi` : "Workout saved");
+        keepScroll(render);
       }
       return;
     case "repeat":
       ui.templateId = ui.summary.templateId;
-      state.params[ui.templateId] = { ...ui.summary.params }; save();
+      state.params[ui.templateId] = { ...ui.summary.params };
+      state.swaps[ui.templateId] = { ...(ui.summary.swaps || {}) };
+      save();
       return startWorkout();
     case "delete-history":
       state.history = state.history.filter(h => h.id !== ui.summary.id); save();
       ui.screen = "history"; return render();
-    case "reset-params": delete state.params[ui.templateId]; save(); return render();
+    case "reset-params": delete state.params[ui.templateId]; save(); return keepScroll(render);
+    case "reset-swaps": delete state.swaps[ui.templateId]; save(); return keepScroll(render);
+    case "clear-filters": ui.filters = { time: "all", level: "all", focus: "all", equip: "all" }; return keepScroll(render);
     case "history": ui.screen = "history"; return render();
-    case "home": engine = null; session = null; ui.screen = "home"; return render();
+    case "setup": engine = null; session = null; ui.screen = "setup"; return render();
+    case "library": engine = null; session = null; ui.screen = "library"; return render();
   }
 });
+
+/* Re-render without jumping back to the top (toggles, chips, steppers). */
+function keepScroll(fn) {
+  const y = window.scrollY;
+  fn();
+  window.scrollTo(0, y);
+}
 
 function stepParam(key, dir) {
   const t = templateById(ui.templateId);
@@ -1082,7 +1228,7 @@ function stepParam(key, dir) {
   v = Math.min(p.max, Math.max(p.min, v));
   state.params[t.id] = { ...(state.params[t.id] || {}), [key]: v };
   save();
-  render();
+  keepScroll(render);
 }
 
 document.addEventListener("keydown", ev => {
@@ -1121,6 +1267,6 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
 }
 
 // Exposed for testing and future workouts.
-window.VYRA = { TEMPLATES, IntervalEngine, compile, createWorkout, resolveSegments, version: APP_VERSION };
+window.VYRA = { TEMPLATES, EXERCISES, IntervalEngine, compile, createWorkout, resolveSegments, swappableIds, planTotals, version: APP_VERSION };
 
 render();
