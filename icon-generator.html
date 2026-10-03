@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Conqur — Icon Generator</title>
+  <style>
+    body { background:#09080f; color:#f0eff8; font-family:system-ui,sans-serif; padding:40px 24px; max-width:600px; margin:0 auto; }
+    h1 { font-size:20px; margin-bottom:6px; }
+    p  { color:#9896b8; font-size:14px; margin-bottom:32px; }
+    .grid { display:flex; flex-wrap:wrap; gap:24px; }
+    .icon-item { display:flex; flex-direction:column; align-items:center; gap:10px; }
+    canvas { border-radius:20%; display:block; }
+    button {
+      background:linear-gradient(135deg,#b44fff,#ff4fa3);
+      color:#fff; border:none; border-radius:8px;
+      padding:8px 16px; font-size:13px; font-weight:700;
+      cursor:pointer; width:100%;
+    }
+    button:hover { opacity:0.9; }
+    .size-label { font-size:12px; color:#9896b8; }
+    hr { border:none; border-top:1px solid #1e1c33; margin:32px 0; }
+    .note { font-size:12px; color:#9896b8; background:#110f1e; padding:12px 16px; border-radius:8px; border:1px solid #1e1c33; }
+    a { color:#a855f7; }
+  </style>
+</head>
+<body>
+  <h1>🎨 Icon Generator</h1>
+  <p>Click Download under each size to save the PNG. You'll need all three for the Play Store and PWA manifest.</p>
+
+  <div class="grid" id="grid"></div>
+
+  <hr>
+  <div class="note">
+    <strong>After downloading:</strong><br>
+    1. Save the files to your <code>icons/</code> folder as <code>icon-192.png</code>, <code>icon-512.png</code>, <code>icon-1024.png</code><br>
+    2. The manifest.json and Play Store submission will use the 512px version<br>
+    3. iOS App Store requires 1024px<br><br>
+    Need to change the design? Edit the <code>drawIcon()</code> function in this file.
+  </div>
+
+  <script>
+    const SIZES = [
+      { size: 1024, label: "1024×1024", filename: "icon-1024.png", note: "iOS App Store" },
+      { size: 512,  label: "512×512",   filename: "icon-512.png",  note: "Google Play + PWA" },
+      { size: 192,  label: "192×192",   filename: "icon-192.png",  note: "PWA manifest" },
+      { size: 48,   label: "48×48",     filename: "icon-48.png",   note: "Android notification" },
+    ];
+
+    function drawIcon(canvas, size) {
+      const ctx   = canvas.getContext("2d");
+      const s     = size;
+      const cx    = s / 2;
+      const cy    = s / 2;
+      const r     = s * 0.395;       // ring radius
+      const sw    = s * 0.057;       // ring stroke width
+      const rx    = s * 0.22;        // corner radius for background rect
+
+      // Gradient
+      const grad = ctx.createLinearGradient(0, 0, s, s);
+      grad.addColorStop(0, "#b44fff");
+      grad.addColorStop(1, "#ff4fa3");
+
+      // Background
+      ctx.clearRect(0, 0, s, s);
+      roundRect(ctx, 0, 0, s, s, rx);
+      ctx.fillStyle = "#000000";
+      ctx.fill();
+
+      // Dark ring track
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.strokeStyle = "#111111";
+      ctx.lineWidth   = sw;
+      ctx.stroke();
+
+      // Gradient arc (~270 degrees, starting from top)
+      const startAngle = -Math.PI / 2;
+      const endAngle   = startAngle + (Math.PI * 2 * 0.78);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, startAngle, endAngle);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth   = sw;
+      ctx.lineCap     = "round";
+      ctx.stroke();
+
+      // Letter "C"
+      const fontSize = Math.round(s * 0.46);
+      ctx.font        = `900 ${fontSize}px 'Arial Black', Arial, system-ui, sans-serif`;
+      ctx.textAlign   = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle   = grad;
+      ctx.fillText("C", cx, cy * 1.03);
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    const grid = document.getElementById("grid");
+
+    SIZES.forEach(({ size, label, filename, note }) => {
+      const displaySize = Math.min(size, 128);
+      const wrapper  = document.createElement("div");
+      wrapper.className = "icon-item";
+
+      const canvas   = document.createElement("canvas");
+      canvas.width   = size;
+      canvas.height  = size;
+      canvas.style.width  = displaySize + "px";
+      canvas.style.height = displaySize + "px";
+      drawIcon(canvas, size);
+
+      const sizeLabel = document.createElement("div");
+      sizeLabel.className = "size-label";
+      sizeLabel.textContent = label + " · " + note;
+
+      const btn = document.createElement("button");
+      btn.textContent = "Download " + label;
+      btn.onclick = () => {
+        const a = document.createElement("a");
+        a.download = filename;
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+      };
+
+      wrapper.appendChild(canvas);
+      wrapper.appendChild(sizeLabel);
+      wrapper.appendChild(btn);
+      grid.appendChild(wrapper);
+    });
+  </script>
+</body>
+</html>
