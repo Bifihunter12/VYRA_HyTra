@@ -13,7 +13,7 @@
      5. UI                   — library, setup, player, summary, history screens
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.03.2";
+const APP_VERSION = "2026.10.03.3";
 const STORE_KEY = "vyra_v1";
 
 /* ── 1. Workout data model ─────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ function swappableIds(workout) {
 
 function resolveExercise(ref, swaps) {
   const want = swaps?.[ref.id];
-  const id = want && EXERCISES[ref.id]?.subs?.includes(want) ? want : ref.id;
+  const id = want && want !== ref.id && EXERCISES[ref.id]?.subs?.includes(want) ? want : ref.id;
   const def = EXERCISES[id] || { name: id, instruction: "", equipment: [] };
   return { ...def, id, baseId: ref.id, swapped: id !== ref.id, target: ref.target };
 }
@@ -121,9 +121,16 @@ function spokenTarget(target) {
 
 const OPEN_ENDED_ESTIMATE = 60;   // seconds assumed for rep-only stations when planning
 
-function compile(workout, swaps = {}) {
+function compile(workout, swaps = {}, opts = {}) {
   const timeline = [];
   const rounds = workout.rounds.length;
+  const easy = (list, kind) => list.forEach(([id, sec], i) => {
+    const e = EXERCISES[id];
+    timeline.push({ type: "WARM", state: kind === "warm" ? "WARM-UP" : "COOL-DOWN", phase: kind, round: kind === "warm" ? 0 : rounds + 1,
+      rounds, roundStart: false, duration: sec, title: e.name, cue: i === 0 ? e.cue : e.cue || e.name, icon: "ti-stretching",
+      instruction: e.instruction, exercises: [], segments: [], exId: id });
+  });
+  if (opts.warmup) easy(WARMUP, "warm");
   workout.rounds.forEach((round, ri) => {
     round.blocks.forEach((b, bi) => {
       const base = { round: ri + 1, rounds, roundStart: bi === 0 };
@@ -152,8 +159,9 @@ function compile(workout, swaps = {}) {
       }
     });
   });
+  if (opts.cooldown) easy(COOLDOWN, "cool");
   // Single-round workouts (mini triathlons) count parts instead of rounds.
-  const parts = timeline.filter(iv => iv.type !== "REST");
+  const parts = timeline.filter(iv => iv.type !== "REST" && iv.type !== "WARM");
   parts.forEach((iv, i) => { iv.part = i + 1; });
   timeline.forEach(iv => { iv.parts = parts.length; });
 
@@ -164,6 +172,9 @@ function compile(workout, swaps = {}) {
     if (iv.type === "CARDIO") {
       const pace = iv.speed ? ` ${Number(Number(iv.speed).toFixed(1))} miles per hour.` : "";
       iv.say = `${lead}${iv.cue}.${pace}`;
+    } else if (iv.type === "WARM") {
+      iv.say = `${iv.cue}.`;
+      if (iv.phase === "cool" && timeline[i - 1]?.type !== "WARM") iv.say = `Main workout done. ${iv.cue}.`;
     } else if (iv.type === "REST") {
       const upNext = !next ? "" : next.roundStart && next.rounds > 1 ? " Next round coming up." : ` Up next, ${next.cue || next.title}.`;
       iv.say = `${spokenDuration(iv.duration)} rest.${upNext}`;
@@ -344,7 +355,7 @@ class IntervalEngine {
     const unit = rounds > 1 ? "round" : "part";
     const groups = rounds > 1
       ? Array.from({ length: rounds }, (_, r) => this.timeline.map((iv, i) => ({ iv, i })).filter(({ iv }) => iv.round === r + 1 && iv.type !== "REST"))
-      : this.timeline.map((iv, i) => ({ iv, i })).filter(({ iv }) => iv.type !== "REST").map(x => [x]);
+      : this.timeline.map((iv, i) => ({ iv, i })).filter(({ iv }) => iv.type !== "REST" && iv.type !== "WARM").map(x => [x]);
     const done = groups.filter(g => g.length && g.every(({ i }) => this.visits.some(v => v.index === i && finished(v)))).length;
     return {
       totalSec: Math.round(sum(() => true) / 1000),
@@ -352,6 +363,9 @@ class IntervalEngine {
       runSec: Math.round(sum(v => !!this.timeline[v.index].speed) / 1000),
       workSec: Math.round(sum(v => v.type === "WORK") / 1000),
       restSec: Math.round(sum(v => v.type === "REST") / 1000),
+      warmSec: Math.round(sum(v => v.type === "WARM") / 1000),
+      intervalsDone: new Set(this.visits.filter(v => v.type !== "REST" && v.type !== "WARM" && finished(v)).map(v => v.index)).size,
+      intervalsTotal: this.timeline.filter(iv => iv.type !== "REST" && iv.type !== "WARM").length,
       distance: Math.round(distance * 100) / 100,
       distanceUnit: "mi",
       stations: stationIdx.size,
@@ -451,22 +465,38 @@ const WakeLock = {
 
 /* ── State & persistence ───────────────────────────────────────────────────── */
 
+const ALL_EQUIPMENT = Object.keys(EQUIPMENT_LABEL);
 const state = loadState();
+const TABS = [
+  { id: "today", label: "Today", icon: "ti-home" },
+  { id: "library", label: "Library", icon: "ti-books" },
+  { id: "progress", label: "Progress", icon: "ti-chart-bar" },
+  { id: "history", label: "History", icon: "ti-history" },
+  { id: "profile", label: "Profile", icon: "ti-user" },
+];
 const ui = {
-  screen: "library", templateId: state.lastTemplate || TEMPLATES[0].id, summary: null, viewingHistory: false,
-  confirmEnd: false, go: false, filters: { time: "all", level: "all", focus: "all", equip: "all" },
+  screen: state.profile.onboarded ? "today" : "onboarding", tab: "today",
+  templateId: state.lastTemplate || TEMPLATES[0].id, summary: null, viewingHistory: false,
+  confirmEnd: false, confirm: null, go: false, calOffset: 0,
+  filters: { time: "all", type: "all", level: "all" }, fitsGear: true,
+  ob: { goal: 3, level: "intermediate", equipment: [...ALL_EQUIPMENT] },
 };
 let engine = null;
 let session = null;  // { workout, timeline, swaps, startedAt }
 let driver = null;
 
 function loadState() {
-  const fresh = { settings: { sound: true, voice: true, vibrate: true }, params: {}, swaps: {}, history: [], lastTemplate: null };
+  const fresh = {
+    settings: { sound: true, voice: true, vibrate: true },
+    profile: { onboarded: false, goal: 3, level: "intermediate", equipment: [...ALL_EQUIPMENT], warmup: true, cooldown: true },
+    params: {}, swaps: {}, history: [], checkin: null, lastTemplate: null,
+  };
   try {
     const raw = localStorage.getItem(STORE_KEY);
     if (!raw) return fresh;
     const s = JSON.parse(raw);
-    return { ...fresh, ...s, swaps: s.swaps || {}, settings: { ...fresh.settings, ...(s.settings || {}) } };
+    return { ...fresh, ...s, swaps: s.swaps || {}, settings: { ...fresh.settings, ...(s.settings || {}) },
+      profile: { ...fresh.profile, ...(s.profile || {}), onboarded: s.profile?.onboarded ?? (s.history?.length > 0) } };
   } catch { return fresh; }
 }
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch { /* storage unavailable */ } }
@@ -477,11 +507,41 @@ function paramsFor(templateId) {
 }
 function swapsFor(templateId) { return state.swaps[templateId] || {}; }
 
-/* Planned workout for a template with the athlete's current settings. */
+/* ── Equipment: auto-swap anything the athlete doesn't own ─────────────────── */
+
+function hasGear(e) {
+  const have = state.profile.equipment;
+  return (e.equipment || []).every(q => q.split("|").some(x => have.includes(x)));
+}
+function allExerciseIds(workout) {
+  const ids = [];
+  workout.rounds.forEach(r => r.blocks.forEach(b => {
+    (b.type === "cardio" ? [b.id] : b.type === "station" ? b.exercises.map(e => e.id) : []).forEach(id => { if (!ids.includes(id)) ids.push(id); });
+  }));
+  return ids;
+}
+function gearPlan(templateId, workout) {
+  const manual = swapsFor(templateId);
+  const auto = {};
+  const missing = new Set();
+  const need = e => (e.equipment || []).forEach(q => { if (!q.split("|").some(x => state.profile.equipment.includes(x))) missing.add(q.split("|")[0]); });
+  allExerciseIds(workout).forEach(id => {
+    const base = EXERCISES[id];
+    const chosen = manual[id] && (manual[id] === id || base.subs?.includes(manual[id])) ? manual[id] : null;
+    if (chosen) { need(EXERCISES[chosen]); return; }
+    if (hasGear(base)) return;
+    const sub = (base.subs || []).find(s => hasGear(EXERCISES[s]));
+    if (sub) auto[id] = sub; else need(base);
+  });
+  return { swaps: { ...auto, ...manual }, auto, missing: [...missing], doable: missing.size === 0 };
+}
+
+/* Planned workout for a template with the athlete's settings, gear and warm-up choice. */
 function planFor(templateId) {
   const workout = createWorkout(templateId, paramsFor(templateId));
-  const timeline = compile(workout, swapsFor(templateId));
-  return { workout, timeline, totals: planTotals(timeline) };
+  const gear = gearPlan(templateId, workout);
+  const timeline = compile(workout, gear.swaps, { warmup: state.profile.warmup, cooldown: state.profile.cooldown });
+  return { workout, timeline, gear, totals: planTotals(timeline) };
 }
 
 /* ── Formatting helpers ────────────────────────────────────────────────────── */
@@ -495,10 +555,8 @@ function fmtClock(sec) {
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
   return h ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
-function fmtShort(sec) {
-  const m = Math.floor(sec / 60), s = sec % 60;
-  return `${m}:${pad(s)}`;
-}
+function fmtShort(sec) { const m = Math.floor(sec / 60), s = sec % 60; return `${m}:${pad(s)}`; }
+function fmtHours(sec) { const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60); return h ? `${h}h ${pad(m)}m` : `${m} min`; }
 function fmtSpeed(v) { return Number(v).toFixed(1); }
 function fmtMi(v) { return `${Number(v).toFixed(2)} mi`; }
 function spokenDuration(sec) {
@@ -506,27 +564,42 @@ function spokenDuration(sec) {
   if (!m) return `${s} seconds`;
   return `${m} minute${m > 1 ? "s" : ""}${s ? ` ${s}` : ""}`;
 }
-function fmtParam(p, v) {
-  if (p.kind === "time") return fmtShort(v);
-  if (p.kind === "speed") return fmtSpeed(v);
-  return String(v);
-}
-function fmtDate(ts) {
-  return new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }).toUpperCase();
-}
+function fmtParam(p, v) { return p.kind === "time" ? fmtShort(v) : p.kind === "speed" ? fmtSpeed(v) : String(v); }
+function fmtDate(ts) { return new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }).toUpperCase(); }
+function fmtDay(ts) { return new Date(ts).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }); }
 function planTotals(timeline) {
   const sum = f => timeline.filter(f).reduce((a, iv) => a + planSec(iv), 0);
   const dist = timeline.filter(iv => iv.speed).reduce((a, iv) => a + (iv.duration / 3600) * iv.speed, 0);
   return {
-    total: sum(() => true), cardio: sum(iv => iv.type === "CARDIO"), run: sum(iv => !!iv.speed), work: sum(iv => iv.type === "WORK"),
+    total: sum(() => true), main: sum(iv => iv.type !== "WARM"), warm: sum(iv => iv.type === "WARM"),
+    cardio: sum(iv => iv.type === "CARDIO"), run: sum(iv => !!iv.speed), work: sum(iv => iv.type === "WORK"),
     dist, openEnded: timeline.some(iv => iv.openEnded),
   };
 }
-function timeBucket(sec) {
-  const min = sec / 60;
-  return min <= 25 ? "20" : min <= 40 ? "30" : "45";
-}
+function timeBucket(sec) { const min = sec / 60; return min <= 25 ? "20" : min <= 40 ? "30" : "45"; }
 const BUCKET_LABEL = { 20: "20 min", 30: "30 min", 45: "45+ min" };
+function timelinePatterns(timeline) {
+  const set = new Set();
+  timeline.forEach(iv => {
+    if (iv.type === "CARDIO") set.add("cardio");
+    iv.exercises.forEach(e => e.pattern && set.add(e.pattern));
+  });
+  return set;
+}
+/* Seconds per movement pattern actually trained (from engine visits). */
+function visitPatterns(timeline, visits) {
+  const out = {};
+  visits.forEach(v => {
+    const iv = timeline[v.index];
+    const sec = v.ms / 1000;
+    if (iv.type === "CARDIO") out.cardio = (out.cardio || 0) + sec;
+    else if (iv.type === "WORK" && iv.exercises.length) {
+      iv.exercises.forEach(e => { if (e.pattern) out[e.pattern] = (out[e.pattern] || 0) + sec / iv.exercises.length; });
+    }
+  });
+  Object.keys(out).forEach(k => { out[k] = Math.round(out[k]); });
+  return out;
+}
 
 /* ── Benchmarks (Row → Bike → Run) ─────────────────────────────────────────── */
 
@@ -553,15 +626,31 @@ function benchResults(templateId) {
 /* ── 5. UI ─────────────────────────────────────────────────────────────────── */
 
 const app = document.getElementById("app");
+const TAB_SCREENS = TABS.map(t => t.id);
 
 function render() {
   document.body.dataset.screen = ui.screen;
   if (ui.screen === "player") return renderPlayer();
-  if (ui.screen === "summary") app.innerHTML = renderSummary();
-  else if (ui.screen === "history") app.innerHTML = renderHistory();
-  else if (ui.screen === "setup") app.innerHTML = renderSetup();
-  else app.innerHTML = renderLibrary();
+  const views = {
+    onboarding: renderOnboarding, today: renderToday, library: renderLibrary, progress: renderProgress,
+    history: renderHistory, profile: renderProfile, setup: renderSetup, summary: renderSummary,
+  };
+  app.innerHTML = (views[ui.screen] || renderToday)() + (TAB_SCREENS.includes(ui.screen) ? renderNav() : "");
   window.scrollTo(0, 0);
+}
+function rerender() { const y = window.scrollY; render(); window.scrollTo(0, y); }
+function go(screen) {
+  if (TAB_SCREENS.includes(screen)) ui.tab = screen;
+  ui.screen = screen; ui.confirm = null;
+  render();
+}
+
+function renderNav() {
+  return `
+  <nav class="tabbar" aria-label="Main">
+    ${TABS.map(t => `<button class="tab ${ui.screen === t.id ? "active" : ""}" data-go="${t.id}" ${ui.screen === t.id ? 'aria-current="page"' : ""}>
+      <i class="ti ${t.icon}" aria-hidden="true"></i><span>${t.label}</span></button>`).join("")}
+  </nav>`;
 }
 
 function topbar(right = "", left = "") {
@@ -572,107 +661,227 @@ function topbar(right = "", left = "") {
   </header>`;
 }
 const backButton = (act, label = "Back") =>
-  `<button class="back-btn" data-act="${act}" aria-label="${label}"><i class="ti ti-chevron-left"></i><span>${label}</span></button>`;
+  `<button class="back-btn" data-go="${act}" aria-label="${label}"><i class="ti ti-chevron-left"></i><span>${label}</span></button>`;
 
 function soundButton() {
   const on = state.settings.sound || state.settings.voice;
   return `<button class="icon-btn" data-act="toggle-audio" aria-label="${on ? "Mute audio cues" : "Turn audio cues on"}" title="Audio cues">
     <i class="ti ${on ? "ti-volume" : "ti-volume-off"}" aria-hidden="true"></i></button>`;
 }
+const sectionLabel = (text, right = "") => `<div class="section-label section-label--row"><span>${text}</span>${right}</div>`;
+const switchRow = (attr, on, label, icon, sub = "") => `
+  <button class="set-row set-toggle" ${attr} role="switch" aria-checked="${!!on}">
+    <i class="ti ${icon} set-ic" aria-hidden="true"></i>
+    <span class="set-label">${label}${sub ? `<span class="set-unit">${sub}</span>` : ""}</span>
+    <span class="switch ${on ? "on" : ""}" aria-hidden="true"><span></span></span>
+  </button>`;
+const chips = (attr, options, current, multi = false) => `<div class="cl-filters">${options.map(([v, l]) => {
+  const on = multi ? current.includes(v) : current === v;
+  return `<button class="cl-chip ${on ? "active" : ""}" ${attr}="${v}" aria-pressed="${on}">${l}</button>`;
+}).join("")}</div>`;
 
 const EQUIP_SHORT = { treadmill: "Treadmill", rower: "Rower", bike: "Bike", kettlebell: "KB", dumbbell: "DB", "battle-ropes": "Ropes" };
 const CATEGORY_ICON = { hybrid: "ti-run", "kb-db": "ti-barbell", benchmark: "ti-trophy" };
 
-/* Library */
 function templateMeta(t) {
-  const { totals } = planFor(t.id);
-  const bucket = timeBucket(totals.total);
-  const machine = t.equipment.some(e => MACHINES.includes(e));
-  return { t, totals, bucket, machine, minutes: Math.round(totals.total / 60) };
+  const plan = planFor(t.id);
+  return { t, ...plan, bucket: timeBucket(plan.totals.main), minutes: Math.round(plan.totals.main / 60),
+    machine: plan.timeline.some(iv => iv.type === "CARDIO" && machineWord(iv)), patterns: timelinePatterns(plan.timeline),
+    doable: plan.gear.doable };
 }
 
-function passesFilters(m) {
+/* ── Onboarding ───────────────────────────────────────────────────────────── */
+function renderOnboarding() {
+  const o = ui.ob;
+  const noWeights = !o.equipment.includes("dumbbell") && !o.equipment.includes("kettlebell");
+  return `
+  ${topbar()}
+  <section class="ob">
+    <h1 class="ob-title">Workouts that run themselves.</h1>
+    <p class="about">Press start and VYRA tells you what to do, when to rest and what's next. Three quick questions so we can pick the right sessions for you.</p>
+    <div class="ob-q">
+      <div class="ob-label"><span>01</span> Workouts per week</div>
+      ${chips("data-ob-goal", [2, 3, 4, 5].map(n => [n, `${n} × week`]), o.goal)}
+      <p class="hint">Three is a great start. Rest days are when you get fitter.</p>
+    </div>
+    <div class="ob-q">
+      <div class="ob-label"><span>02</span> Your level</div>
+      ${chips("data-ob-level", LEVELS.map(l => [l, cap(l)]), o.level)}
+    </div>
+    <div class="ob-q">
+      <div class="ob-label"><span>03</span> Equipment you have</div>
+      ${chips("data-ob-equip", ALL_EQUIPMENT.map(e => [e, EQUIPMENT_LABEL[e]]), o.equipment, true)}
+      <p class="hint ${noWeights ? "hint--warn" : ""}">${noWeights ? "Most workouts need at least one dumbbell or kettlebell." : "Missing something? VYRA swaps in an alternative automatically."}</p>
+    </div>
+  </section>
+  <div class="start-dock"><button class="btn-primary btn-start" data-act="ob-done">Start training <i class="ti ti-arrow-right"></i></button></div>`;
+}
+
+/* ── Today ────────────────────────────────────────────────────────────────── */
+function renderToday() {
+  const now = Date.now();
+  const goal = state.profile.goal;
+  const h = state.history;
+  const week = sessionsInRange(h, startOfWeek(now), startOfWeek(now) + 7 * DAY_MS);
+  const streak = weekStreak(h, goal, now);
+  const weekMin = Math.round(week.reduce((a, x) => a + x.stats.totalSec, 0) / 60);
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const checkin = state.checkin?.day === dayKey(now) ? state.checkin.value : null;
+  const metas = TEMPLATES.map(templateMeta);
+  const rec = recommend({ history: h, candidates: metas, checkin, level: state.profile.level, now });
+  const trainedDays = new Set(week.map(x => (new Date(x.date).getDay() + 6) % 7));
+  const dots = ["M", "T", "W", "T", "F", "S", "S"].map((d, i) => {
+    const isToday = i === (new Date(now).getDay() + 6) % 7;
+    return `<span class="day ${trainedDays.has(i) ? "on" : ""} ${isToday ? "today" : ""}" title="${d}">${d}</span>`;
+  }).join("");
+  const badges = badgeStatus(h, goal);
+  const nextBadge = badges.filter(b => !b.earned).sort((a, b) => b.pct - a.pct)[0];
+  const last = h[0];
+
+  const pickCard = !rec ? `<p class="empty">No workout fits your equipment yet. Add equipment in your profile.</p>`
+    : rec.rest ? `
+      <div class="pick pick--rest">
+        <div class="pick-eyebrow"><i class="ti ti-first-aid-kit"></i> Today's advice</div>
+        <div class="pick-name">${rec.title}</div>
+        <p class="pick-reason">${rec.reason}</p>
+        <button class="btn-secondary" data-act="start-recovery"><i class="ti ti-stretching"></i> 8-min gentle mobility</button>
+      </div>`
+    : `
+      <div class="pick">
+        <div class="pick-eyebrow"><i class="ti ti-sparkles"></i> Today's pick</div>
+        <button class="pick-main" data-template="${rec.pick.t.id}">
+          <span class="pick-name">${esc(rec.pick.t.name)}</span>
+          <span class="pick-meta">${rec.pick.minutes} min · ${cap(rec.pick.t.level)} · ${esc(rec.pick.t.tagline)}</span>
+          <span class="pick-reason"><i class="ti ti-arrow-right"></i> ${esc(rec.pick.reason)}</span>
+        </button>
+        ${rec.note ? `<p class="hint">${esc(rec.note)}</p>` : ""}
+        <button class="btn-primary" data-act="quick-start" data-id="${rec.pick.t.id}"><i class="ti ti-player-play"></i> Start ${esc(rec.pick.t.name)}</button>
+        ${rec.alternatives.length ? `<div class="alt">Or try ${rec.alternatives.map(a => `<button class="alt-link" data-template="${a.t.id}">${esc(a.t.name)}</button>`).join(" · ")}</div>` : ""}
+      </div>`;
+
+  return `
+  ${topbar()}
+  <section class="hero">
+    <div class="hero-daycount">${fmtDay(now)}</div>
+    <div class="hero-titlebar"><h1 class="hero-name">${greet}.</h1></div>
+  </section>
+
+  <section class="week-card" aria-label="This week">
+    <div class="ring-wrap">
+      ${ringSVG(week.length / goal, { size: 120, stroke: 9, label: `${week.length} of ${goal} workouts this week` })}
+      <div class="ring-center"><b>${week.length}<small>/${goal}</small></b><span>this week</span></div>
+    </div>
+    <div class="week-side">
+      <div class="streak ${streak ? "on" : ""}"><i class="ti ti-flame"></i> ${streak ? `${streak}-week streak` : "Start a streak"}</div>
+      <div class="week-meta">${weekMin} min trained${week.length >= goal ? " · goal hit" : ` · ${goal - week.length} to go`}</div>
+      <div class="days">${dots}</div>
+    </div>
+  </section>
+
+  ${sectionLabel("How's your body today?")}
+  <div class="checkin">${CHECKINS.map(c => `
+    <button class="check ${checkin === c.id ? "active" : ""}" data-checkin="${c.id}" aria-pressed="${checkin === c.id}"><i class="ti ${c.icon}"></i><span>${c.label}</span></button>`).join("")}
+  </div>
+  ${checkin === "sore" ? `<p class="hint">Got it. Today's pick avoids heavy legs and impact.</p>` : ""}
+
+  ${pickCard}
+
+  ${sectionLabel("Short on time?")}
+  <div class="time-pick">${["20", "30", "45"].map(b => `<button class="time-btn" data-time="${b}"><b>${b === "45" ? "45+" : b}</b><span>min</span></button>`).join("")}</div>
+
+  ${nextBadge ? `${sectionLabel("Next badge")}
+  <button class="badge-next" data-go="progress">
+    <i class="ti ${nextBadge.icon}"></i>
+    <span class="badge-next-main"><span class="cl-name">${nextBadge.name}</span><span class="cl-meta">${nextBadge.desc}</span>
+      <span class="mini-track"><span style="width:${Math.round(nextBadge.pct * 100)}%"></span></span></span>
+    <span class="badge-next-val">${Math.min(nextBadge.current, nextBadge.goal)}/${nextBadge.goal}</span>
+  </button>` : ""}
+
+  ${last ? `${sectionLabel("Last workout")}<div class="cl-list">${historyRow(last)}</div>` : ""}`;
+}
+
+/* ── Library ──────────────────────────────────────────────────────────────── */
+const TYPE_FILTERS = [
+  ["all", "Any"], ["low-impact", "Low impact"], ["strength-heavy", "Strength"], ["cardio-heavy", "Cardio"],
+  ["minimal", "Minimal kit"], ["no-machines", "No machines"], ["benchmark", "Benchmark"],
+];
+function filterHits(m) {
   const f = ui.filters;
-  if (f.time !== "all" && m.bucket !== f.time) return false;
-  if (f.level !== "all" && m.t.level !== f.level) return false;
-  if (f.focus !== "all" && !m.t.focus.includes(f.focus)) return false;
-  if (f.equip === "no-machines" && m.machine) return false;
-  if (f.equip === "machine" && !m.machine) return false;
-  if (!["all", "no-machines", "machine"].includes(f.equip) && !m.t.equipment.includes(f.equip)) return false;
-  return true;
+  const checks = [];
+  if (f.time !== "all") checks.push(m.bucket === f.time);
+  if (f.level !== "all") checks.push(m.t.level === f.level);
+  if (f.type === "no-machines") checks.push(!m.machine);
+  else if (f.type !== "all") checks.push(m.t.focus.includes(f.type));
+  return { exact: checks.every(Boolean), score: checks.filter(Boolean).length };
 }
 
 function renderLibrary() {
-  const metas = TEMPLATES.map(templateMeta);
-  const shown = metas.filter(passesFilters);
-  const chipGroup = (key, label, options) => `
-    <div class="filter-group">
-      <span class="filter-label">${label}</span>
-      <div class="cl-filters">${options.map(([v, l]) => `
-        <button class="cl-chip ${ui.filters[key] === v ? "active" : ""}" data-filter="${key}" data-value="${v}" aria-pressed="${ui.filters[key] === v}">${l}</button>`).join("")}
-      </div>
-    </div>`;
+  const metas = TEMPLATES.map(templateMeta).filter(m => !ui.fitsGear || m.doable);
+  const hits = metas.map(m => ({ m, ...filterHits(m) }));
+  const exact = hits.filter(x => x.exact).map(x => x.m);
+  const closest = exact.length ? [] : hits.filter(x => x.score > 0 || true).sort((a, b) => b.score - a.score).slice(0, 4).map(x => x.m);
   const anyFilter = Object.values(ui.filters).some(v => v !== "all");
+  const hidden = TEMPLATES.length - metas.length;
 
-  const row = m => {
-    const best = m.t.focus.includes("benchmark") ? benchResults(m.t.id).reduce((a, h) => Math.max(a, h.bench.totalMi), 0) : 0;
-    const equip = m.t.equipment.map(e => EQUIP_SHORT[e]).join(" · ");
-    return `
-    <button class="cl-row" data-template="${m.t.id}">
+  const groups = CATEGORIES.map(c => {
+    const items = exact.filter(m => m.t.category === c.id);
+    if (!items.length) return "";
+    return `<div class="cl-cat"><span class="cl-cat-name">${c.label}</span><span class="cl-cat-count">${items.length}</span></div>
+      <div class="cl-list">${items.map(libraryRow).join("")}</div>`;
+  }).join("");
+
+  return `
+  ${topbar()}
+  <section class="hero">
+    <div class="hero-daycount">${metas.length} of ${TEMPLATES.length} workouts fit your equipment</div>
+    <div class="hero-titlebar"><h1 class="hero-name">Library</h1></div>
+  </section>
+  <section class="filters" aria-label="Filters">
+    <div class="filter-group"><span class="filter-label">Time</span>${chips("data-f-time", [["all", "Any"], ["20", "20 min"], ["30", "30 min"], ["45", "45+ min"]], ui.filters.time)}</div>
+    <div class="filter-group"><span class="filter-label">Type</span>${chips("data-f-type", TYPE_FILTERS, ui.filters.type)}</div>
+    <div class="filter-group"><span class="filter-label">Level</span>${chips("data-f-level", [["all", "Any"], ...LEVELS.map(l => [l, cap(l)])], ui.filters.level)}</div>
+  </section>
+  <div class="set-list set-list--tight">
+    ${switchRow('data-act="fits-gear"', ui.fitsGear, "Only show what fits my equipment", "ti-adjustments",
+      hidden ? `${hidden} hidden · edit equipment in Profile` : "Anything missing is swapped automatically")}
+  </div>
+  ${anyFilter ? `<button class="text-btn" data-act="clear-filters"><i class="ti ti-x"></i> Clear filters</button>` : ""}
+  ${exact.length ? groups : `
+    <div class="no-match"><i class="ti ti-adjustments"></i> Nothing matches all of those. Here are the closest options.</div>
+    <div class="cl-list">${closest.map(libraryRow).join("")}</div>`}`;
+}
+
+function libraryRow(m) {
+  const best = m.t.focus.includes("benchmark") ? benchResults(m.t.id).reduce((a, h) => Math.max(a, h.bench.totalMi), 0) : 0;
+  const swapped = Object.keys(m.gear.auto).length;
+  return `
+    <button class="cl-row ${m.doable ? "" : "is-locked"}" data-template="${m.t.id}">
       <i class="ti ${CATEGORY_ICON[m.t.category]} cl-ic" aria-hidden="true"></i>
       <span class="cl-main">
         <span class="cl-name">${esc(m.t.name)}</span>
         <span class="cl-sub">${esc(m.t.tagline)}</span>
-        <span class="cl-meta">${m.minutes} min · ${cap(m.t.level)} · ${esc(equip)}${best ? ` · <b>Best ${fmtMi(best)}</b>` : ""}</span>
+        <span class="cl-meta">${m.minutes} min · ${cap(m.t.level)}${best ? ` · <b>Best ${fmtMi(best)}</b>` : ""}${!m.doable ? ` · <b>Needs ${m.gear.missing.map(e => EQUIPMENT_LABEL[e] || e).join(", ")}</b>` : swapped ? " · Adjusted for your kit" : ""}</span>
       </span>
       <i class="ti ti-chevron-right cl-go" aria-hidden="true"></i>
     </button>`;
-  };
-
-  const groups = CATEGORIES.map(c => {
-    const items = shown.filter(m => m.t.category === c.id);
-    if (!items.length) return "";
-    return `
-      <div class="cl-cat"><span class="cl-cat-name">${c.label}</span><span class="cl-cat-count">${items.length}</span></div>
-      <div class="cl-list">${items.map(row).join("")}</div>`;
-  }).join("");
-
-  return `
-  ${topbar(`<button class="icon-btn" data-act="history" aria-label="History"><i class="ti ti-history"></i></button>`)}
-  <section class="hero">
-    <div class="hero-daycount">${TEMPLATES.length} workouts · ${Object.keys(EXERCISES).length} movements</div>
-    <div class="hero-titlebar"><h1 class="hero-name">Workout library</h1></div>
-  </section>
-  <section class="filters" aria-label="Filters">
-    ${chipGroup("time", "Time", [["all", "All"], ["20", "20 min"], ["30", "30 min"], ["45", "45+ min"]])}
-    ${chipGroup("level", "Level", [["all", "All"], ...LEVELS.map(l => [l, cap(l)])])}
-    ${chipGroup("focus", "Focus", [["all", "All"], ...Object.entries(FOCUS_LABEL)])}
-    ${chipGroup("equip", "Equipment", [["all", "All"], ["no-machines", "No machines"], ["machine", "Machine"], ...Object.entries(EQUIPMENT_LABEL)])}
-    ${anyFilter ? `<button class="text-btn" data-act="clear-filters"><i class="ti ti-x"></i> Clear filters</button>` : ""}
-  </section>
-  ${groups || `<p class="empty">No workouts match these filters.</p>`}`;
 }
 
-/* Setup */
+/* ── Setup ────────────────────────────────────────────────────────────────── */
 function renderSetup() {
   const t = templateById(ui.templateId);
   const params = paramsFor(t.id);
-  const swaps = swapsFor(t.id);
-  const { workout, timeline, totals } = planFor(t.id);
+  const manual = swapsFor(t.id);
+  const { workout, timeline, totals, gear } = planFor(t.id);
   const isBench = t.focus.includes("benchmark");
 
   const cardioKeys = { rowSec: "row", bikeSec: "bike", runSec: "run" };
   const paramLabel = p => {
     const base = cardioKeys[p.key];
-    const to = base && swaps[base] && EXERCISES[base].subs.includes(swaps[base]) ? EXERCISES[swaps[base]] : null;
+    const to = base && gear.swaps[base] && gear.swaps[base] !== base ? EXERCISES[gear.swaps[base]] : null;
     return to ? to.name.replace("Treadmill ", "") : p.label;
   };
-  const paramRow = p => p.kind === "bool" ? `
-    <button class="set-row set-toggle" data-param-toggle="${p.key}" role="switch" aria-checked="${!!params[p.key]}">
-      <i class="ti ${p.icon} set-ic" aria-hidden="true"></i>
-      <span class="set-label">${esc(p.label)}</span>
-      <span class="switch ${params[p.key] ? "on" : ""}" aria-hidden="true"><span></span></span>
-    </button>` : `
+  const paramRow = p => p.kind === "bool" ? switchRow(`data-param-toggle="${p.key}"`, params[p.key], esc(p.label), p.icon) : `
     <div class="set-row">
       <i class="ti ${p.icon} set-ic" aria-hidden="true"></i>
       <label class="set-label" for="param-${p.key}">${esc(paramLabel(p))}
@@ -684,32 +893,23 @@ function renderSetup() {
       </div>
     </div>`;
 
-  const toggle = (key, label, icon) => `
-    <button class="set-row set-toggle" data-setting="${key}" role="switch" aria-checked="${state.settings[key]}">
-      <i class="ti ${icon} set-ic" aria-hidden="true"></i>
-      <span class="set-label">${label}</span>
-      <span class="switch ${state.settings[key] ? "on" : ""}" aria-hidden="true"><span></span></span>
-    </button>`;
-
-  // Swaps: one row per swappable movement, choices as chips.
   const swapRows = swappableIds(workout).map(id => {
     const base = EXERCISES[id];
-    const current = swaps[id] && base.subs.includes(swaps[id]) ? swaps[id] : id;
-    const opts = [id, ...base.subs];
+    const current = gear.swaps[id] && (gear.swaps[id] === id || base.subs.includes(gear.swaps[id])) ? gear.swaps[id] : id;
+    const isAuto = gear.auto[id] && !manual[id];
     return `
       <div class="swap-row">
         <div class="swap-head">
           <i class="ti ${exerciseIcon({ ...base, id })} set-ic" aria-hidden="true"></i>
           <span class="swap-name">${esc(base.name)}</span>
-          ${current !== id ? `<span class="swap-now"><i class="ti ti-arrows-exchange"></i> ${esc(EXERCISES[current].name)}</span>` : ""}
+          ${current !== id ? `<span class="swap-now"><i class="ti ti-arrows-exchange"></i> ${esc(EXERCISES[current].name)}${isAuto ? " · auto" : ""}</span>` : ""}
         </div>
-        <div class="cl-filters">${opts.map(o => `
-          <button class="cl-chip ${o === current ? "active" : ""}" data-swap="${id}" data-to="${o}" aria-pressed="${o === current}">${o === id ? "Original" : esc(EXERCISES[o].name)}</button>`).join("")}
+        <div class="cl-filters">${[id, ...base.subs].map(o => `
+          <button class="cl-chip ${o === current ? "active" : ""} ${hasGear(EXERCISES[o]) ? "" : "cl-chip--off"}" data-swap="${id}" data-to="${o}" aria-pressed="${o === current}">${o === id ? "Original" : esc(EXERCISES[o].name)}</button>`).join("")}
         </div>
       </div>`;
   }).join("");
 
-  // Rounds, summarised from the compiled timeline.
   const roundRows = workout.rounds.map((_, i) => {
     const ivs = timeline.filter(iv => iv.round === i + 1);
     const moves = ivs.filter(iv => iv.type !== "REST");
@@ -722,101 +922,303 @@ function renderSetup() {
     return `
       <li class="round-row">
         <span class="round-no">${pad(i + 1)}</span>
-        <div class="round-main">
-          <div class="round-name">${esc(title)}</div>
-          <div class="round-meta">${esc(detail)}${targets ? ` · ${esc(targets)}` : ""}</div>
-        </div>
+        <div class="round-main"><div class="round-name">${esc(title)}</div>
+          <div class="round-meta">${esc(detail)}${targets ? ` · ${esc(targets)}` : ""}</div></div>
         <span class="round-time">${fmtShort(total)}</span>
       </li>`;
   }).join("");
+  const warmRow = (phase, label) => {
+    const ivs = timeline.filter(iv => iv.phase === phase);
+    return ivs.length ? `<li class="round-row round-row--warm"><span class="round-no"><i class="ti ti-stretching"></i></span>
+      <div class="round-main"><div class="round-name">${label}</div><div class="round-meta">${esc(ivs.map(iv => iv.title).join(" · "))}</div></div>
+      <span class="round-time">${fmtShort(ivs.reduce((a, iv) => a + iv.duration, 0))}</span></li>` : "";
+  };
 
   const bench = isBench ? benchResults(t.id) : [];
   const best = bench.reduce((a, h) => (h.bench.totalMi > (a?.bench.totalMi || 0) ? h : a), null);
   const benchBlock = isBench ? `
-    <div class="section-label">Benchmark</div>
+    ${sectionLabel("Benchmark")}
     ${bench.length ? `
       <div class="bench-best">
-        <div><div class="stat-label"><i class="ti ti-trophy"></i> Best total</div><div class="stat-value">${best.bench.totalMi.toFixed(2)}<small> mi</small></div></div>
+        <div><div class="stat-label"><i class="ti ti-trophy"></i> Best</div><div class="stat-value">${best.bench.totalMi.toFixed(2)}<small> mi</small></div></div>
         <div><div class="stat-label">Last</div><div class="stat-value stat-value--dim">${bench[0].bench.totalMi.toFixed(2)}<small> mi</small></div></div>
         <div><div class="stat-label">Attempts</div><div class="stat-value stat-value--dim">${bench.length}</div></div>
       </div>
-      <div class="cl-list">${bench.slice(0, 5).map(h => `
-        <div class="bench-row"><span class="cl-meta">${fmtDate(h.date)}</span>
-          <span class="bench-legs">${h.bench.legs.map(l => `${esc(l.name.replace("Treadmill ", ""))} ${l.value || "—"}${l.value ? ` ${l.unit}` : ""}`).join(" · ")}</span>
-          <span class="bench-total ${h === best ? "is-best" : ""}">${h.bench.totalMi.toFixed(2)} mi</span></div>`).join("")}
-      </div>` : `<p class="empty">Finish this workout and log your distances. Your best total shows here so you can beat it next time.</p>`}` : "";
+      ${bench.length > 1 ? `<div class="spark-wrap">${sparklineSVG(bench.map(x => x.bench.totalMi).reverse())}</div>` : ""}`
+      : `<p class="empty">Finish this workout and log your distances. Your best total shows here so you can beat it next time.</p>`}` : "";
 
-  const focus = [cap(t.level), BUCKET_LABEL[timeBucket(totals.total)], ...t.focus.map(f => FOCUS_LABEL[f]),
-    t.equipment.some(e => MACHINES.includes(e)) ? "Machine required" : null].filter(Boolean);
+  const tags = [cap(t.level), BUCKET_LABEL[timeBucket(totals.main)], ...t.focus.map(f => FOCUS_LABEL[f])];
+  const autoList = Object.entries(gear.auto).filter(([id]) => !manual[id]);
 
   return `
-  ${topbar(`<button class="icon-btn" data-act="history" aria-label="History"><i class="ti ti-history"></i></button>`, backButton("library", "Library"))}
+  ${topbar("", backButton(ui.tab, cap(ui.tab)))}
   <section class="hero">
     <div class="hero-daycount">${esc(t.tagline)}</div>
     <div class="hero-titlebar"><i class="ti ${CATEGORY_ICON[t.category]} hero-ic" aria-hidden="true"></i><h1 class="hero-name">${esc(t.name)}</h1></div>
     <div class="journey-track"><div class="journey-fill" style="width:100%"></div></div>
     <div class="hero-stats">
-      <span><i class="ti ti-clock"></i> ${fmtClock(totals.total)}${totals.openEnded ? "+" : ""} total</span>
+      <span><i class="ti ti-clock"></i> ${fmtClock(totals.total)}${totals.openEnded ? "+" : ""}</span>
       ${totals.cardio ? `<span class="hero-stat-dot">·</span><span><i class="ti ti-heartbeat"></i> ${fmtClock(totals.cardio)} cardio</span>` : ""}
-      ${totals.dist ? `<span class="hero-stat-dot">·</span><span>~${totals.dist.toFixed(2)} mi run</span>` : ""}
       ${totals.work ? `<span class="hero-stat-dot">·</span><span><i class="ti ti-barbell"></i> ${fmtClock(totals.work)} work</span>` : ""}
+      ${totals.dist ? `<span class="hero-stat-dot">·</span><span>~${totals.dist.toFixed(2)} mi run</span>` : ""}
     </div>
     <p class="about">${esc(t.about)}</p>
-    <div class="tag-row">${focus.map(f => `<span class="tag">${esc(f)}</span>`).join("")}
-      ${t.equipment.map(e => `<span class="tag tag--equip">${esc(EQUIPMENT_LABEL[e])}</span>`).join("")}</div>
+    <div class="tag-row">${tags.map(f => `<span class="tag">${esc(f)}</span>`).join("")}</div>
+    ${!gear.doable ? `<div class="gear-note gear-note--warn"><i class="ti ti-alert-triangle"></i> Needs ${gear.missing.map(e => EQUIPMENT_LABEL[e] || e).join(", ")}. Add it in Profile or pick a swap below.</div>`
+      : autoList.length ? `<div class="gear-note"><i class="ti ti-adjustments"></i> Adjusted for your equipment: ${autoList.map(([a, b]) => `${esc(EXERCISES[a].name)} → ${esc(EXERCISES[b].name)}`).join(", ")}</div>` : ""}
   </section>
 
   ${benchBlock}
 
-  <div class="section-label">Setup</div>
+  ${sectionLabel("Setup")}
   <div class="set-list">${t.params.map(paramRow).join("")}</div>
   ${Object.keys(state.params[t.id] || {}).length ? `<button class="text-btn" data-act="reset-params"><i class="ti ti-restore"></i> Reset to defaults</button>` : ""}
 
-  ${swapRows ? `<div class="section-label section-label--row"><span>Swaps</span>${Object.keys(swaps).length ? `<button class="text-btn" data-act="reset-swaps">Reset</button>` : ""}</div>
-  <div class="swap-list">${swapRows}</div>` : ""}
-
-  <div class="section-label">Cues</div>
+  ${sectionLabel("Warm-up & safety")}
   <div class="set-list">
-    ${toggle("sound", "Beeps", "ti-bell-ringing")}
-    ${toggle("voice", "Spoken cues", "ti-microphone-2")}
-    ${toggle("vibrate", "Vibration", "ti-device-mobile-vibration")}
+    ${switchRow('data-profile-toggle="warmup"', state.profile.warmup, "Warm-up", "ti-stretching", "4:30 · mobility before you load up")}
+    ${switchRow('data-profile-toggle="cooldown"', state.profile.cooldown, "Cool-down", "ti-yoga", "3:00 · walk and stretch")}
   </div>
 
-  <div class="section-label section-label--row"><span>Session</span><span class="cl-cat-count">${timeline.length} intervals</span></div>
-  <ol class="round-list">${roundRows}</ol>
+  ${swapRows ? `${sectionLabel("Swaps", Object.keys(manual).length ? `<button class="text-btn" data-act="reset-swaps">Reset</button>` : "")}
+  <div class="swap-list">${swapRows}</div>` : ""}
+
+  ${sectionLabel("Session", `<span class="cl-cat-count">${timeline.length} intervals</span>`)}
+  <ol class="round-list">${warmRow("warm", "Warm-up")}${roundRows}${warmRow("cool", "Cool-down")}</ol>
 
   <div class="start-dock">
-    <button class="btn-primary btn-start" data-act="start"><i class="ti ti-player-play"></i> Start workout</button>
+    <button class="btn-primary btn-start" data-act="start" ${gear.doable ? "" : "disabled"}><i class="ti ti-player-play"></i> Start workout</button>
   </div>`;
 }
 
+/* ── Progress ─────────────────────────────────────────────────────────────── */
+function renderProgress() {
+  const h = state.history;
+  const goal = state.profile.goal;
+  if (!h.length) {
+    return `
+    ${topbar()}
+    <section class="hero"><div class="hero-daycount">Nothing tracked yet</div><div class="hero-titlebar"><h1 class="hero-name">Progress</h1></div></section>
+    <div class="empty-card">
+      ${ringSVG(0, { size: 96, stroke: 8, label: "No workouts yet" })}
+      <p>Every workout you finish is saved here automatically: your weekly goal, streak, training calendar, movement balance, benchmark trends and badges.</p>
+      <button class="btn-primary" data-go="today"><i class="ti ti-player-play"></i> Pick today's workout</button>
+      <button class="text-btn text-btn--center" data-act="sample-on">Preview with sample data</button>
+    </div>`;
+  }
+  const now = Date.now();
+  const t = totals(h);
+  const weeks = weeklySeries(h, 12, now);
+  const thisWeek = weeks[weeks.length - 1];
+  const streak = weekStreak(h, goal, now);
+  const best = bestWeekStreak(h, goal, now);
+  const balance = patternBalance(h, 30, now);
+  const maxBal = Math.max(...Object.values(balance), 1);
+  const strength = ["squat", "hinge", "lunge", "push", "pull", "carry", "core"];
+  const weakest = strength.filter(p => p !== "core").reduce((a, p) => (balance[p] < balance[a] ? p : a), "squat");
+  const weakFix = TEMPLATES.find(tp => timelinePatterns(planFor(tp.id).timeline).has(weakest) && planFor(tp.id).gear.doable);
+  const rated = t.rated;
+  const avg = rated.length ? rated.reduce((a, x) => a + x.rating, 0) / rated.length : 0;
+  const feel = { easy: 0, right: 0, hard: 0 };
+  h.slice(0, 20).forEach(x => { if (x.feel in feel) feel[x.feel]++; });
+  const feelTotal = feel.easy + feel.right + feel.hard;
+  const badges = badgeStatus(h, goal);
+
+  // Calendar for the selected month
+  const ref = new Date(now); ref.setDate(1); ref.setMonth(ref.getMonth() + ui.calOffset);
+  const year = ref.getFullYear(), month = ref.getMonth();
+  const daysIn = new Date(year, month + 1, 0).getDate();
+  const lead = (new Date(year, month, 1).getDay() + 6) % 7;
+  const byDay = {};
+  h.forEach(x => { const d = new Date(x.date); if (d.getFullYear() === year && d.getMonth() === month) byDay[d.getDate()] = (byDay[d.getDate()] || 0) + x.stats.totalSec; });
+  const monthCount = h.filter(x => { const d = new Date(x.date); return d.getFullYear() === year && d.getMonth() === month; }).length;
+  const todayKey = dayKey(now);
+  const cells = [...Array(lead).fill(""), ...Array.from({ length: daysIn }, (_, i) => i + 1)].map(d => {
+    if (!d) return `<span class="cal-cell cal-cell--blank"></span>`;
+    const sec = byDay[d] || 0;
+    const lvl = !sec ? 0 : sec < 1500 ? 1 : sec < 2700 ? 2 : 3;
+    const isToday = dayKey(new Date(year, month, d).getTime()) === todayKey;
+    return `<span class="cal-cell lvl-${lvl} ${isToday ? "is-today" : ""}" title="${d} ${ref.toLocaleDateString(undefined, { month: "short" })}${sec ? ` · ${Math.round(sec / 60)} min` : ""}">${d}</span>`;
+  }).join("");
+
+  const benchBlocks = TEMPLATES.filter(tp => tp.focus.includes("benchmark")).map(tp => {
+    const res = benchResults(tp.id);
+    if (!res.length) return "";
+    const vals = res.map(x => x.bench.totalMi).reverse();
+    const bestV = Math.max(...vals);
+    const delta = vals.length > 1 ? vals[vals.length - 1] - vals[0] : 0;
+    return `
+      <div class="bench-card">
+        <div class="bench-head"><span class="cl-name">${esc(tp.name)}</span>
+          <span class="cl-meta">Best <b>${bestV.toFixed(2)} mi</b>${vals.length > 1 ? ` · ${delta >= 0 ? "+" : ""}${delta.toFixed(2)} mi since first` : ""}</span></div>
+        ${sparklineSVG(vals)}
+      </div>`;
+  }).join("");
+
+  return `
+  ${topbar()}
+  <section class="hero">
+    <div class="hero-daycount">Since ${fmtDate(h[h.length - 1].date)}${h.some(x => x.demo) ? " · includes sample data" : ""}</div>
+    <div class="hero-titlebar"><h1 class="hero-name">Progress</h1></div>
+  </section>
+
+  <div class="tiles">
+    <div class="tile"><span class="stat-label">Workouts</span><b>${t.sessions}</b></div>
+    <div class="tile"><span class="stat-label">Time</span><b>${fmtHours(t.seconds)}</b></div>
+    <div class="tile"><span class="stat-label">Run</span><b>${t.runMi.toFixed(1)}<small> mi</small></b></div>
+  </div>
+
+  ${sectionLabel("Weekly goal", `<span class="cl-cat-count">${goal} per week</span>`)}
+  <div class="goal-row">
+    <div class="ring-wrap ring-wrap--sm">
+      ${ringSVG(thisWeek.count / goal, { size: 92, stroke: 8, label: `${thisWeek.count} of ${goal} this week` })}
+      <div class="ring-center"><b>${thisWeek.count}<small>/${goal}</small></b></div>
+    </div>
+    <div class="goal-facts">
+      <div><i class="ti ti-flame"></i> <b>${streak}</b> week streak</div>
+      <div class="cl-meta">Best streak ${best} weeks · ${weeks.filter(w => w.count >= goal).length} of last 12 weeks on goal</div>
+    </div>
+  </div>
+  <div class="chart-wrap">${weeklyBarsSVG(weeks, goal)}</div>
+
+  ${sectionLabel("Calendar", `<span class="cal-nav"><button class="icon-btn icon-btn--sm" data-act="cal-prev" aria-label="Previous month"><i class="ti ti-chevron-left"></i></button>
+    <button class="icon-btn icon-btn--sm" data-act="cal-next" aria-label="Next month" ${ui.calOffset >= 0 ? "disabled" : ""}><i class="ti ti-chevron-right"></i></button></span>`)}
+  <div class="cal-title">${ref.toLocaleDateString(undefined, { month: "long", year: "numeric" })} · ${monthCount} workout${monthCount === 1 ? "" : "s"}</div>
+  <div class="cal">${["M", "T", "W", "T", "F", "S", "S"].map(d => `<span class="cal-dow">${d}</span>`).join("")}${cells}</div>
+  <div class="cal-legend"><span>Less</span><i class="cal-cell lvl-1"></i><i class="cal-cell lvl-2"></i><i class="cal-cell lvl-3"></i><span>More</span></div>
+
+  ${sectionLabel("Movement balance", `<span class="cl-cat-count">Last 30 days</span>`)}
+  <div class="balance">${PATTERNS.map(p => `
+    <div class="bal-row ${p.id === weakest ? "is-weak" : ""}" title="${p.label}: ${Math.round(balance[p.id] / 60)} min">
+      <span class="bal-label">${p.label}</span>
+      <span class="bal-track"><span style="width:${(balance[p.id] / maxBal) * 100}%"></span></span>
+      <span class="bal-val">${Math.round(balance[p.id] / 60)}<small> min</small></span>
+    </div>`).join("")}
+  </div>
+  <p class="hint"><i class="ti ti-shield-check"></i> Balanced training protects your joints. Least trained lately: <b>${PATTERNS.find(p => p.id === weakest).label.toLowerCase()}</b>.${weakFix ? ` <button class="alt-link" data-template="${weakFix.id}">Try ${esc(weakFix.name)}</button>` : ""}</p>
+
+  ${benchBlocks ? `${sectionLabel("Benchmarks")}${benchBlocks}` : ""}
+
+  ${sectionLabel("How it felt", `<span class="cl-cat-count">${rated.length} rated</span>`)}
+  <div class="felt">
+    <div class="felt-avg"><b>${avg ? avg.toFixed(1) : "–"}</b>${starsSVG(Math.round(avg), { size: 16 })}<span class="cl-meta">Average rating</span></div>
+    <div class="felt-split">${feelTotal ? `
+      <div class="split-bar">${["easy", "right", "hard"].map(k => feel[k] ? `<span class="split-${k}" style="flex:${feel[k]}" title="${FEEL_LABEL[k]}: ${feel[k]}"></span>` : "").join("")}</div>
+      <div class="split-legend">${["easy", "right", "hard"].map(k => `<span><i class="sw sw-${k}"></i>${FEEL_LABEL[k]} ${feel[k]}</span>`).join("")}</div>
+      <p class="cl-meta">${feel.hard > feel.right ? "Lots of hard sessions. Add a low-impact day." : feel.easy > feel.right ? "Feeling easy? Use “make it harder” after your next session." : "Mostly just right. Good balance."}</p>`
+      : `<p class="cl-meta">Rate how sessions felt to see your trend.</p>`}
+    </div>
+  </div>
+
+  ${sectionLabel("Badges", `<span class="cl-cat-count">${badges.filter(b => b.earned).length} / ${badges.length}</span>`)}
+  <div class="badges">${badges.map(b => `
+    <div class="badge ${b.earned ? "earned" : ""}" title="${esc(b.desc)}">
+      <i class="ti ${b.earned ? b.icon : "ti-lock"}"></i>
+      <span class="badge-name">${b.name}</span>
+      <span class="badge-desc">${b.desc}</span>
+      ${b.earned ? "" : `<span class="mini-track"><span style="width:${Math.round(b.pct * 100)}%"></span></span>`}
+    </div>`).join("")}
+  </div>`;
+}
+
+/* ── History ──────────────────────────────────────────────────────────────── */
 function historyRow(h) {
   return `
     <button class="cl-row" data-history="${h.id}">
-      <i class="ti ${h.bench ? "ti-trophy" : h.stats.rounds === h.stats.roundsTotal ? "ti-check" : "ti-flag"} cl-ic" aria-hidden="true"></i>
-      <span class="cl-main"><span class="cl-name">${esc(h.name)}</span>
-        <span class="cl-meta">${fmtDate(h.date)} · ${fmtClock(h.stats.totalSec)} · ${h.bench ? `${h.bench.totalMi.toFixed(2)} mi total` : `${h.stats.rounds}/${h.stats.roundsTotal} rounds${h.stats.distance ? ` · ${h.stats.distance.toFixed(2)} mi` : ""}`}</span></span>
+      <i class="ti ${h.bench ? "ti-trophy" : h.early ? "ti-flag" : "ti-check"} cl-ic" aria-hidden="true"></i>
+      <span class="cl-main"><span class="cl-name">${esc(h.name)}${h.demo ? ` <span class="tag tag--sample">Sample</span>` : ""}</span>
+        <span class="cl-meta">${fmtDay(h.date)} · ${fmtClock(h.stats.totalSec)}${h.bench ? ` · ${h.bench.totalMi.toFixed(2)} mi` : h.stats.distance ? ` · ${h.stats.distance.toFixed(2)} mi` : ""}</span>
+        ${h.rating ? starsSVG(h.rating, { size: 13 }) : ""}</span>
       <i class="ti ti-chevron-right cl-go" aria-hidden="true"></i>
     </button>`;
 }
 
 function renderHistory() {
-  const rows = state.history.map(historyRow).join("");
+  const months = [];
+  state.history.forEach(h => {
+    const d = new Date(h.date);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    let m = months.find(x => x.key === key);
+    if (!m) months.push(m = { key, label: d.toLocaleDateString(undefined, { month: "long", year: "numeric" }), items: [] });
+    m.items.push(h);
+  });
   return `
-  ${topbar("", backButton("library", "Library"))}
+  ${topbar()}
   <section class="hero">
-    <div class="hero-daycount">${state.history.length} saved</div>
-    <div class="hero-titlebar"><i class="ti ti-history hero-ic"></i><h1 class="hero-name">History</h1></div>
+    <div class="hero-daycount">${state.history.length} workouts saved</div>
+    <div class="hero-titlebar"><h1 class="hero-name">History</h1></div>
   </section>
-  ${rows ? `<div class="cl-list">${rows}</div>` : `<p class="empty">No saved workouts yet. Finish a session and tap Save Workout.</p>`}`;
+  ${months.length ? months.map(m => `
+    <div class="cl-cat"><span class="cl-cat-name">${m.label}</span>
+      <span class="cl-cat-count">${m.items.length} · ${fmtHours(m.items.reduce((a, x) => a + x.stats.totalSec, 0))}</span></div>
+    <div class="cl-list">${m.items.map(historyRow).join("")}</div>`).join("")
+    : `<p class="empty">Finished workouts are saved here automatically, with your rating and how it felt.</p>`}`;
 }
 
-/* Player */
-function startWorkout() {
+/* ── Profile ──────────────────────────────────────────────────────────────── */
+function renderProfile() {
+  const p = state.profile;
+  const hasSample = state.history.some(h => h.demo);
+  return `
+  ${topbar()}
+  <section class="hero">
+    <div class="hero-daycount">${cap(p.level)} · ${p.goal} workouts a week</div>
+    <div class="hero-titlebar"><h1 class="hero-name">Profile</h1></div>
+  </section>
+
+  ${sectionLabel("Weekly goal")}
+  <div class="set-list"><div class="set-row">
+    <i class="ti ti-target set-ic" aria-hidden="true"></i>
+    <span class="set-label">Workouts per week<span class="set-unit">drives your ring and streak</span></span>
+    <div class="stepper">
+      <button class="step-btn" data-goal="-1" aria-label="Fewer workouts per week"><i class="ti ti-minus"></i></button>
+      <output class="step-val">${p.goal}</output>
+      <button class="step-btn" data-goal="1" aria-label="More workouts per week"><i class="ti ti-plus"></i></button>
+    </div>
+  </div></div>
+
+  ${sectionLabel("Level")}
+  <div class="pad-y">${chips("data-p-level", LEVELS.map(l => [l, cap(l)]), p.level)}</div>
+
+  ${sectionLabel("My equipment")}
+  <div class="pad-y">${chips("data-p-equip", ALL_EQUIPMENT.map(e => [e, EQUIPMENT_LABEL[e]]), p.equipment, true)}
+    <p class="hint">Workouts swap in alternatives for anything you don't have.</p></div>
+
+  ${sectionLabel("Safety")}
+  <div class="set-list">
+    ${switchRow('data-profile-toggle="warmup"', p.warmup, "Warm-up before every workout", "ti-stretching", "4:30 of mobility")}
+    ${switchRow('data-profile-toggle="cooldown"', p.cooldown, "Cool-down after every workout", "ti-yoga", "3:00 walk and stretch")}
+  </div>
+
+  ${sectionLabel("Cues")}
+  <div class="set-list">
+    ${switchRow('data-setting="sound"', state.settings.sound, "Beeps", "ti-bell-ringing")}
+    ${switchRow('data-setting="voice"', state.settings.voice, "Spoken cues", "ti-microphone-2")}
+    ${switchRow('data-setting="vibrate"', state.settings.vibrate, "Vibration", "ti-device-mobile-vibration")}
+  </div>
+
+  ${sectionLabel("Data")}
+  <div class="set-list">
+    <button class="set-row" data-act="${hasSample ? "sample-off" : "sample-on"}">
+      <i class="ti ti-sparkles set-ic"></i><span class="set-label">${hasSample ? "Remove sample data" : "Load sample data"}
+      <span class="set-unit">${hasSample ? "keeps your real workouts" : "6 weeks of example workouts to preview Progress"}</span></span></button>
+    <button class="set-row set-row--danger" data-act="erase">
+      <i class="ti ti-trash set-ic"></i><span class="set-label">${ui.confirm === "erase" ? "Tap again to erase everything" : "Erase all data"}
+      <span class="set-unit">history, settings and benchmarks on this device</span></span></button>
+  </div>
+  <p class="hint"><a href="privacy.html">Privacy</a> · Everything stays on this device. VYRA ${APP_VERSION}</p>`;
+}
+
+/* ── Player ───────────────────────────────────────────────────────────────── */
+function startWorkout(templateId = ui.templateId, custom = null) {
   Cues.unlock();
-  const swaps = { ...swapsFor(ui.templateId) };
-  const workout = createWorkout(ui.templateId, paramsFor(ui.templateId));
-  const timeline = compile(workout, swaps);
+  ui.templateId = templateId;
+  let workout, timeline, swaps;
+  if (custom) ({ workout, timeline, swaps } = custom);
+  else {
+    const plan = planFor(templateId);
+    ({ workout, timeline } = plan); swaps = plan.gear.swaps;
+  }
   session = { workout, timeline, swaps, startedAt: Date.now() };
   engine = new IntervalEngine(timeline, { countdown: 3 });
   wireCues(engine);
@@ -839,35 +1241,51 @@ function startWorkout() {
   engine.start();
 }
 
+function recoveryWorkout() {
+  const workout = { id: uid(), templateId: "recovery", name: "Gentle Mobility", params: {}, rounds: [] };
+  const timeline = compile(workout, {}, { warmup: true, cooldown: true });
+  timeline.forEach(iv => { iv.state = "MOBILITY"; iv.say = iv.cue + "."; });
+  return { workout, timeline, swaps: {} };
+}
+
 function finishWorkout(early) {
   clearInterval(driver); driver = null;
   WakeLock.release();
   const stats = engine.stats();
-  const t = templateById(session.workout.templateId);
-  ui.summary = {
-    id: uid(), date: session.startedAt, name: session.workout.name, templateId: t.id,
-    params: session.workout.params, swaps: session.swaps, stats, early, saved: false,
-    bench: t.focus.includes("benchmark") ? {
+  const t = TEMPLATES.find(x => x.id === session.workout.templateId);
+  const before = new Set(badgeStatus(state.history, state.profile.goal).filter(b => b.earned).map(b => b.id));
+  const rec = {
+    id: uid(), date: session.startedAt, name: session.workout.name, templateId: session.workout.templateId,
+    params: session.workout.params, swaps: session.swaps, stats, early,
+    patterns: visitPatterns(session.timeline, engine.visits), rating: 0, feel: null,
+    bench: t?.focus.includes("benchmark") ? {
       legs: benchmarkLegs(session.timeline).map(l => ({ id: l.id, name: l.name, unit: l.unit,
-        value: l.estimate && !early ? (l.unit === "m" ? Math.round(l.estimate * METERS_PER_MILE) : Number(l.estimate.toFixed(2))) : "" })),
+        value: l.estimate && !early ? Number(l.estimate.toFixed(2)) : "" })),
       bikeCal: "", totalMi: 0,
     } : null,
   };
-  if (ui.summary.bench) ui.summary.bench.totalMi = benchTotalMi(ui.summary.bench);
+  if (rec.bench) rec.bench.totalMi = benchTotalMi(rec.bench);
+  // Anything shorter than a minute is a mis-tap, not a workout.
+  rec.saved = stats.totalSec >= 60;
+  if (rec.saved) { state.history.unshift(rec); state.history = state.history.slice(0, 500); save(); }
+  rec.newBadges = rec.saved ? badgeStatus(state.history, state.profile.goal).filter(b => b.earned && !before.has(b.id)).map(b => b.id) : [];
+  ui.summary = rec;
   ui.screen = "summary";
   ui.viewingHistory = false;
-  ui.confirmEnd = false;
+  ui.confirmEnd = false; ui.confirm = null;
   render();
 }
 
 function toneFor(iv, seg) {
   if (iv.type === "CARDIO") return "run";
   if (iv.type === "REST") return "rest";
+  if (iv.type === "WARM") return "warm";
   if (seg && (seg.tone === "easy" || seg.tone === "rest")) return "easy";
   return "work";
 }
 
 function counterText(iv) {
+  if (iv.type === "WARM") return iv.phase === "warm" ? "Warm-up" : "Cool-down";
   if (iv.rounds > 1) return `Round ${iv.round} of ${iv.rounds}`;
   const word = templateById(session.workout.templateId).roundWord || "Part";
   const part = iv.part || (engine.timeline.slice(engine.index).find(x => x.part)?.part ?? iv.parts);
@@ -882,6 +1300,7 @@ function exList(exs) {
   return `<ol class="ex-list">${exs.map(x => `<li><span>${esc(x.name)}</span>${x.target ? `<em>${esc(targetText(x.target))}</em>` : ""}</li>`).join("")}</ol>`;
 }
 
+/* Player screen */
 function renderPlayer() {
   if (!engine) return;
   const e = engine;
@@ -1058,7 +1477,9 @@ function updatePlayer() {
   }
 }
 
-/* Summary */
+/* ── Summary ──────────────────────────────────────────────────────────────── */
+const FEEL_LABEL = { easy: "Too easy", right: "Just right", hard: "Too hard" };
+
 function renderSummary() {
   const s = ui.summary;
   const st = s.stats;
@@ -1066,6 +1487,9 @@ function renderSummary() {
     <div class="stat"><div class="stat-label"><i class="ti ${icon}"></i> ${label}</div><div class="stat-value">${value}</div></div>`;
   const fromHistory = ui.viewingHistory;
   const onlyRun = st.cardioSec > 0 && st.cardioSec === st.runSec;
+  const t = TEMPLATES.find(x => x.id === s.templateId);
+  const pct = st.intervalsTotal ? st.intervalsDone / st.intervalsTotal : s.early ? 0.5 : 1;
+  const advice = t && !fromHistory ? progressionAdvice(t, paramsFor(t.id), s.feel) : null;
 
   let benchBlock = "";
   if (s.bench) {
@@ -1074,102 +1498,176 @@ function renderSummary() {
     const total = s.bench.totalMi;
     const delta = best && total ? total - best : 0;
     benchBlock = `
-    <div class="section-label section-label--row"><span>Distances</span>${total ? `<span class="cl-cat-count">${best ? (delta > 0 ? `New best · +${delta.toFixed(2)} mi` : `Best ${best.toFixed(2)} mi`) : "First attempt"}</span>` : ""}</div>
+    ${sectionLabel("Distances", total ? `<span class="cl-cat-count" data-bind="bench-status">${best ? (delta > 0 ? `New best · +${delta.toFixed(2)} mi` : `Best ${best.toFixed(2)} mi`) : "First attempt"}</span>` : "")}
     <div class="set-list">
       ${s.bench.legs.map((l, i) => `
         <div class="set-row">
           <i class="ti ${exerciseIcon({ id: l.id, cardio: true })} set-ic" aria-hidden="true"></i>
           <label class="set-label" for="bench-${i}">${esc(l.name)}<span class="set-unit">${l.unit === "m" ? "meters" : "miles"}</span></label>
-          <input class="num-input" id="bench-${i}" data-bench="${i}" type="number" inputmode="decimal" min="0" step="${l.unit === "m" ? 10 : 0.01}"
-            value="${esc(l.value)}" placeholder="0" ${fromHistory ? "disabled" : ""}>
+          <input class="num-input" id="bench-${i}" data-bench="${i}" type="number" inputmode="decimal" min="0" step="${l.unit === "m" ? 10 : 0.01}" value="${esc(l.value)}" placeholder="0">
         </div>`).join("")}
       ${s.bench.legs.some(l => l.id === "bike") ? `
         <div class="set-row">
           <i class="ti ti-flame set-ic" aria-hidden="true"></i>
           <label class="set-label" for="bench-cal">Bike calories<span class="set-unit">optional · not in total</span></label>
-          <input class="num-input" id="bench-cal" data-bench-cal type="number" inputmode="numeric" min="0" step="1" value="${esc(s.bench.bikeCal)}" placeholder="0" ${fromHistory ? "disabled" : ""}>
+          <input class="num-input" id="bench-cal" data-bench-cal type="number" inputmode="numeric" min="0" step="1" value="${esc(s.bench.bikeCal)}" placeholder="0">
         </div>` : ""}
       <div class="set-row bench-total-row"><span class="set-label">Total distance</span><span class="bench-sum" data-bind="bench-total">${total.toFixed(2)} mi</span></div>
     </div>`;
   }
 
+  const newBadges = (s.newBadges || []).map(id => BADGES.find(b => b.id === id)).filter(Boolean);
+
   return `
-  ${topbar(fromHistory ? backButton("history", "History") : "")}
+  ${topbar("", fromHistory ? backButton("history", "History") : "")}
   <section class="done-hero">
-    <div class="hero-daycount">${esc(s.name)} · ${fmtDate(s.date)}</div>
-    <h1 class="done-title">${s.early ? "Workout<br>ended" : "Workout<br>complete"}</h1>
-    <div class="journey-track"><div class="journey-fill" style="width:${Math.round((st.rounds / (st.roundsTotal || 1)) * 100)}%"></div></div>
+    <div class="hero-daycount">${esc(s.name)} · ${fmtDate(s.date)}${s.demo ? " · sample" : ""}</div>
+    <div class="done-top">
+      <h1 class="done-title">${s.early ? "Workout<br>ended" : "Workout<br>complete"}</h1>
+      <div class="ring-wrap ring-wrap--sm">
+        ${ringSVG(pct, { size: 96, stroke: 8, label: `${Math.round(pct * 100)}% completed` })}
+        <div class="ring-center"><b>${Math.round(pct * 100)}<small>%</small></b><span>done</span></div>
+      </div>
+    </div>
+    ${!s.saved && !fromHistory ? `<p class="hint">Less than a minute, so this one wasn't saved.</p>` : ""}
   </section>
+
+  ${newBadges.length ? `<div class="new-badges">${newBadges.map(b => `
+    <div class="new-badge"><i class="ti ${b.icon}"></i><span><b>Badge unlocked · ${b.name}</b><span class="cl-meta">${b.desc}</span></span></div>`).join("")}</div>` : ""}
+
   <div class="stat-grid">
     ${cell("Total time", fmtClock(st.totalSec), "ti-clock")}
     ${st.cardioSec ? cell(onlyRun ? "Run time" : "Cardio time", fmtClock(st.cardioSec), onlyRun ? "ti-run" : "ti-heartbeat") : ""}
     ${st.runSec ? cell("Est. run distance", `${st.distance.toFixed(2)}<small> mi</small>`, "ti-route") : ""}
     ${st.workSec || !st.cardioSec ? cell("Work time", fmtClock(st.workSec), "ti-barbell") : ""}
     ${st.stationsTotal ? cell("Stations", `${st.stations}<small> / ${st.stationsTotal}</small>`, "ti-target") : ""}
-    ${cell(st.unit === "round" ? "Rounds" : `${templateById(s.templateId).roundWord || "Part"}s`, `${st.rounds}<small> / ${st.roundsTotal}</small>`, "ti-repeat")}
+    ${st.roundsTotal ? cell(st.unit === "round" ? "Rounds" : `${(t && t.roundWord) || "Part"}s`, `${st.rounds}<small> / ${st.roundsTotal}</small>`, "ti-repeat") : ""}
   </div>
+
+  ${s.saved ? `
+  ${sectionLabel("Rate this workout")}
+  <div class="rate">${starsSVG(s.rating || 0, { size: 34, act: "rate" })}<span class="cl-meta">${["Tap to rate", "Not for me", "Meh", "Good", "Great", "Loved it"][s.rating || 0]}</span></div>
+
+  ${sectionLabel("How did it feel?")}
+  <div class="feel">${Object.entries(FEEL_LABEL).map(([k, l]) => `
+    <button class="check ${s.feel === k ? "active" : ""}" data-feel="${k}" aria-pressed="${s.feel === k}"><span>${l}</span></button>`).join("")}</div>
+  ${advice ? `
+    <div class="advice">
+      <div><b>${advice.title}</b><span class="cl-meta">${esc(advice.text)}</span></div>
+      <button class="btn-secondary btn-sm ${s.applied ? "is-done" : ""}" data-act="apply-advice" ${s.applied ? "disabled" : ""}>${s.applied ? '<i class="ti ti-check"></i> Applied' : "Apply"}</button>
+    </div>` : s.feel === "hard" ? `<p class="hint"><i class="ti ti-shield-check"></i> Hard is fine now and then. Keep tomorrow easy and sleep well.</p>` : ""}` : ""}
+
   ${benchBlock}
+
   <div class="summary-actions">
     ${fromHistory
       ? `<button class="btn-primary" data-act="repeat"><i class="ti ti-repeat"></i> Repeat workout</button>
-         <button class="btn-secondary" data-act="delete-history"><i class="ti ti-trash"></i> Delete</button>`
-      : `<button class="btn-primary ${s.saved ? "is-saved" : ""}" data-act="save" ${s.saved ? "disabled" : ""}><i class="ti ${s.saved ? "ti-check" : "ti-device-floppy"}"></i> ${s.saved ? "Saved" : "Save workout"}</button>
+         <button class="btn-secondary" data-act="delete-history"><i class="ti ti-trash"></i> ${ui.confirm === "delete" ? "Tap again to delete" : "Delete"}</button>`
+      : `<button class="btn-primary" data-go="today"><i class="ti ti-check"></i> ${s.saved ? "Saved · Done" : "Done"}</button>
          <button class="btn-secondary" data-act="repeat"><i class="ti ti-repeat"></i> Repeat workout</button>
-         <button class="text-btn text-btn--center" data-act="setup">Done</button>`}
+         ${s.saved ? `<button class="text-btn text-btn--center" data-act="delete-history">${ui.confirm === "delete" ? "Tap again to discard" : "Discard this workout"}</button>` : ""}`}
   </div>`;
+}
+
+/* ── Sample data (clearly marked, removable) ──────────────────────────────── */
+function sampleHistory() {
+  const ids = ["vyra-8", "engine-builder", "the-forge", "tri-15", "carry-me-home", "db-destroyer", "sprint-20", "tri-15", "bike-bells", "gauntlet"];
+  const out = [];
+  const now = Date.now();
+  let triMi = 2.6;
+  for (let d = 41; d >= 1; d--) {
+    const dow = new Date(now - d * DAY_MS).getDay();
+    if (![1, 3, 5, 6].includes(dow) || (d % 9 === 0)) continue;
+    const id = ids[out.length % ids.length];
+    const workout = createWorkout(id, {});
+    const timeline = compile(workout, {}, { warmup: true, cooldown: false });
+    const visits = timeline.map((iv, i) => ({ index: i, type: iv.type, round: iv.round, ms: planSec(iv) * 1000, outcome: "complete" }));
+    const e = new IntervalEngine(timeline); e.visits = visits;
+    const stats = e.stats();
+    const date = startOfDay(now - d * DAY_MS) + 18 * 3600000;
+    const rec = { id: uid(), demo: true, date, name: workout.name, templateId: id, params: workout.params, swaps: {}, stats, early: false,
+      patterns: visitPatterns(timeline, visits), rating: 3 + (out.length % 3), feel: ["right", "right", "hard", "easy"][out.length % 4], saved: true, bench: null };
+    if (id === "tri-15") {
+      triMi += 0.12;
+      rec.bench = { legs: [{ id: "row", name: "Row", unit: "m", value: Math.round(1150 + triMi * 20) }, { id: "bike", name: "Bike", unit: "mi", value: 1.45 + (triMi - 2.6) / 2 },
+        { id: "run", name: "Treadmill Run", unit: "mi", value: 0.58 }], bikeCal: "", totalMi: 0 };
+      rec.bench.totalMi = benchTotalMi(rec.bench);
+    }
+    out.unshift(rec);
+  }
+  return out;
 }
 
 /* ── Events ────────────────────────────────────────────────────────────────── */
 
 app.addEventListener("input", ev => {
   const s = ui.summary;
-  if (!s?.bench || s.saved) return;
+  if (!s?.bench) return;
   const el = ev.target;
   if (el.dataset.bench != null) s.bench.legs[Number(el.dataset.bench)].value = el.value === "" ? "" : Number(el.value);
   else if (el.dataset.benchCal != null) s.bench.bikeCal = el.value === "" ? "" : Number(el.value);
   else return;
   s.bench.totalMi = benchTotalMi(s.bench);
+  save();
   const out = app.querySelector('[data-bind="bench-total"]');
   if (out) out.textContent = `${s.bench.totalMi.toFixed(2)} mi`;
 });
 
 app.addEventListener("click", ev => {
-  const el = ev.target.closest("[data-act],[data-step],[data-setting],[data-template],[data-history],[data-filter],[data-swap],[data-param-toggle]");
+  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level]");
   if (!el) return;
+  const d = el.dataset;
+  if (d.act !== "erase" && d.act !== "delete-history") ui.confirm = null;
 
-  if (el.dataset.step) return stepParam(el.dataset.step, Number(el.dataset.dir));
-  if (el.dataset.paramToggle) {
-    const k = el.dataset.paramToggle;
-    state.params[ui.templateId] = { ...(state.params[ui.templateId] || {}), [k]: !paramsFor(ui.templateId)[k] };
-    save(); return render();
+  if (d.go) return go(d.go);
+  if (d.step) return stepParam(d.step, Number(d.dir));
+  if (d.paramToggle) {
+    state.params[ui.templateId] = { ...(state.params[ui.templateId] || {}), [d.paramToggle]: !paramsFor(ui.templateId)[d.paramToggle] };
+    save(); return rerender();
   }
-  if (el.dataset.setting) {
-    const k = el.dataset.setting;
+  if (d.profileToggle) { state.profile[d.profileToggle] = !state.profile[d.profileToggle]; save(); return rerender(); }
+  if (d.setting) {
+    const k = d.setting;
     state.settings[k] = !state.settings[k]; save();
     if (k === "sound" && state.settings.sound) { Cues.unlock(); Cues.beep(); }
     if (k === "voice" && state.settings.voice) { Cues.unlock(); Cues.say("Spoken cues on"); }
     if (k === "vibrate" && state.settings.vibrate) Cues.buzz(80);
-    return keepScroll(render);
+    return rerender();
   }
-  if (el.dataset.filter) { ui.filters[el.dataset.filter] = el.dataset.value; return keepScroll(render); }
-  if (el.dataset.swap) {
-    const sw = { ...swapsFor(ui.templateId) };
-    if (el.dataset.to === el.dataset.swap) delete sw[el.dataset.swap]; else sw[el.dataset.swap] = el.dataset.to;
+  if (d.fTime) { ui.filters.time = d.fTime; return rerender(); }
+  if (d.fType) { ui.filters.type = d.fType; return rerender(); }
+  if (d.fLevel) { ui.filters.level = d.fLevel; return rerender(); }
+  if (d.time) { ui.filters = { time: d.time, type: "all", level: "all" }; return go("library"); }
+  if (d.checkin) { state.checkin = { day: dayKey(Date.now()), value: d.checkin }; save(); return rerender(); }
+  if (d.obGoal) { ui.ob.goal = Number(d.obGoal); return rerender(); }
+  if (d.obLevel) { ui.ob.level = d.obLevel; return rerender(); }
+  if (d.obEquip) { toggleIn(ui.ob.equipment, d.obEquip); return rerender(); }
+  if (d.pLevel) { state.profile.level = d.pLevel; save(); return rerender(); }
+  if (d.pEquip) { toggleIn(state.profile.equipment, d.pEquip); save(); return rerender(); }
+  if (d.goal) { state.profile.goal = Math.min(7, Math.max(1, state.profile.goal + Number(d.goal))); save(); return rerender(); }
+  if (d.feel) {
+    ui.summary.feel = ui.summary.feel === d.feel ? null : d.feel; ui.summary.applied = false;
+    save(); return rerender();
+  }
+  if (d.swap) {
+    const sw = { ...swapsFor(ui.templateId), [d.swap]: d.to };
     state.swaps[ui.templateId] = sw; save();
-    return keepScroll(render);
+    return rerender();
   }
-  if (el.dataset.template) {
-    ui.templateId = el.dataset.template; state.lastTemplate = ui.templateId; save();
+  if (d.template) {
+    ui.templateId = d.template; state.lastTemplate = ui.templateId; save();
     ui.screen = "setup"; return render();
   }
-  if (el.dataset.history) {
-    const h = state.history.find(x => x.id === el.dataset.history);
+  if (d.history) {
+    const h = state.history.find(x => x.id === d.history);
     if (h) { ui.summary = h; ui.viewingHistory = true; ui.screen = "summary"; render(); }
     return;
   }
 
-  switch (el.dataset.act) {
+  switch (d.act) {
     case "start": return startWorkout();
+    case "quick-start": return startWorkout(d.id);
+    case "start-recovery": return startWorkout("recovery", recoveryWorkout());
     case "pause": return engine?.toggle();
     case "skip": return engine?.next();
     case "prev": return engine?.prev();
@@ -1184,41 +1682,56 @@ app.addEventListener("click", ev => {
       const on = !(state.settings.sound || state.settings.voice);
       state.settings.sound = on; state.settings.voice = on; save();
       if (on) { Cues.unlock(); Cues.beep(); } else Cues.hush();
-      return ui.screen === "player" ? renderPlayer() : keepScroll(render);
+      return ui.screen === "player" ? renderPlayer() : rerender();
     }
-    case "save":
-      if (!ui.summary.saved) {
-        ui.summary.saved = true;
-        state.history.unshift({ ...ui.summary });
-        state.history = state.history.slice(0, 300);
-        save(); toast(ui.summary.bench?.totalMi ? `Saved · ${ui.summary.bench.totalMi.toFixed(2)} mi` : "Workout saved");
-        keepScroll(render);
-      }
-      return;
-    case "repeat":
-      ui.templateId = ui.summary.templateId;
-      state.params[ui.templateId] = { ...ui.summary.params };
-      state.swaps[ui.templateId] = { ...(ui.summary.swaps || {}) };
+    case "rate": {
+      const v = Number(d.value);
+      ui.summary.rating = ui.summary.rating === v ? 0 : v; save();
+      return rerender();
+    }
+    case "apply-advice": {
+      const t = templateById(ui.summary.templateId);
+      const a = progressionAdvice(t, paramsFor(t.id), ui.summary.feel);
+      if (a) { state.params[t.id] = { ...(state.params[t.id] || {}), [a.key]: a.value }; ui.summary.applied = true; save(); toast("Saved for next time"); }
+      return rerender();
+    }
+    case "repeat": {
+      const s = ui.summary;
+      if (s.templateId === "recovery") return startWorkout("recovery", recoveryWorkout());
+      state.params[s.templateId] = { ...(state.params[s.templateId] || {}), ...s.params };
+      if (s.swaps) state.swaps[s.templateId] = { ...s.swaps };
       save();
-      return startWorkout();
+      return startWorkout(s.templateId);
+    }
     case "delete-history":
+      if (ui.confirm !== "delete") { ui.confirm = "delete"; return rerender(); }
       state.history = state.history.filter(h => h.id !== ui.summary.id); save();
-      ui.screen = "history"; return render();
-    case "reset-params": delete state.params[ui.templateId]; save(); return keepScroll(render);
-    case "reset-swaps": delete state.swaps[ui.templateId]; save(); return keepScroll(render);
-    case "clear-filters": ui.filters = { time: "all", level: "all", focus: "all", equip: "all" }; return keepScroll(render);
-    case "history": ui.screen = "history"; return render();
-    case "setup": engine = null; session = null; ui.screen = "setup"; return render();
-    case "library": engine = null; session = null; ui.screen = "library"; return render();
+      ui.confirm = null;
+      return go(ui.viewingHistory ? "history" : "today");
+    case "erase":
+      if (ui.confirm !== "erase") { ui.confirm = "erase"; return rerender(); }
+      try { localStorage.removeItem(STORE_KEY); } catch { /* ignore */ }
+      Object.assign(state, loadState());
+      ui.confirm = null; ui.ob = { goal: 3, level: "intermediate", equipment: [...ALL_EQUIPMENT] };
+      return go("onboarding");
+    case "sample-on":
+      state.history = [...state.history.filter(h => !h.demo), ...sampleHistory()].sort((a, b) => b.date - a.date);
+      save(); toast("Sample data loaded"); return go("progress");
+    case "sample-off":
+      state.history = state.history.filter(h => !h.demo); save(); toast("Sample data removed"); return rerender();
+    case "ob-done":
+      Object.assign(state.profile, { goal: ui.ob.goal, level: ui.ob.level, equipment: [...ui.ob.equipment], onboarded: true });
+      save(); return go("today");
+    case "fits-gear": ui.fitsGear = !ui.fitsGear; return rerender();
+    case "reset-params": delete state.params[ui.templateId]; save(); return rerender();
+    case "reset-swaps": delete state.swaps[ui.templateId]; save(); return rerender();
+    case "clear-filters": ui.filters = { time: "all", type: "all", level: "all" }; return rerender();
+    case "cal-prev": ui.calOffset--; return rerender();
+    case "cal-next": ui.calOffset = Math.min(0, ui.calOffset + 1); return rerender();
   }
 });
 
-/* Re-render without jumping back to the top (toggles, chips, steppers). */
-function keepScroll(fn) {
-  const y = window.scrollY;
-  fn();
-  window.scrollTo(0, y);
-}
+function toggleIn(list, v) { const i = list.indexOf(v); if (i >= 0) list.splice(i, 1); else list.push(v); }
 
 function stepParam(key, dir) {
   const t = templateById(ui.templateId);
@@ -1228,7 +1741,7 @@ function stepParam(key, dir) {
   v = Math.min(p.max, Math.max(p.min, v));
   state.params[t.id] = { ...(state.params[t.id] || {}), [key]: v };
   save();
-  keepScroll(render);
+  rerender();
 }
 
 document.addEventListener("keydown", ev => {
@@ -1267,6 +1780,6 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
 }
 
 // Exposed for testing and future workouts.
-window.VYRA = { TEMPLATES, EXERCISES, IntervalEngine, compile, createWorkout, resolveSegments, swappableIds, planTotals, version: APP_VERSION };
+window.VYRA = { TEMPLATES, EXERCISES, IntervalEngine, compile, createWorkout, resolveSegments, swappableIds, planTotals, planFor, recommend, version: APP_VERSION };
 
 render();

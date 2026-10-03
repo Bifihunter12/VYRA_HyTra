@@ -338,3 +338,46 @@ const CATEGORIES = [
   { id: "kb-db", label: "Kettlebell & dumbbell" },
   { id: "benchmark", label: "Benchmarks" },
 ];
+
+/* ── Movement patterns (progress balance) ──────────────────────────────── */
+const PATTERNS = [
+  { id: "squat", label: "Squat" }, { id: "hinge", label: "Hinge" }, { id: "lunge", label: "Lunge" },
+  { id: "push", label: "Push" }, { id: "pull", label: "Pull" }, { id: "carry", label: "Carry" },
+  { id: "core", label: "Core" }, { id: "cardio", label: "Cardio" }, { id: "conditioning", label: "Conditioning" },
+];
+const PATTERN_OF = {
+  cardio: ["run", "row", "bike", "incline-walk", "step-ups", "cardio-choice"],
+  conditioning: ["battle-ropes", "db-ski-punch", "high-knee-march", "bike-sprint", "row-sprint", "shadow-boxing", "rapid-step-ups"],
+  hinge: ["kb-swing", "kb-swing-fast", "db-swing", "kb-deadlift", "db-rdl", "kb-clean", "db-clean", "deadlift-front-rack"],
+  squat: ["kb-front-squat", "goblet-squat", "db-squat", "clean-thruster", "db-thruster", "squat-press", "squat-to-press"],
+  push: ["kb-push-press", "push-press", "db-floor-press", "shoulder-press"],
+  pull: ["kb-row", "db-row", "bent-over-row", "high-pull"],
+  lunge: ["kb-reverse-lunge", "reverse-lunge"],
+  carry: ["kb-suitcase-carry", "farmer-carry", "farmer-march", "suitcase-carry", "suitcase-left", "suitcase-right", "front-rack-carry", "overhead-carry"],
+  core: ["core-finish"],
+};
+Object.entries(PATTERN_OF).forEach(([p, ids]) => ids.forEach(id => { EXERCISES[id].pattern = p; }));
+
+/* Movements that work with either a dumbbell or a kettlebell. */
+["goblet-squat", "reverse-lunge", "farmer-carry", "farmer-march", "suitcase-carry", "suitcase-left", "suitcase-right",
+ "front-rack-carry", "overhead-carry", "db-rdl", "push-press", "shoulder-press", "squat-to-press"]
+  .forEach(id => { EXERCISES[id].equipment = ["dumbbell|kettlebell"]; });
+
+/* ── Warm-up and cool-down (bodyweight, no equipment) ──────────────────── */
+Object.assign(EXERCISES, {
+  "wu-march":      { name: "Easy March or Light Jog", cue: "Warm up. Easy march", equipment: [], pattern: "mobility", instruction: "Get the blood moving. Easy pace, relaxed shoulders." },
+  "wu-arm-circles":{ name: "Arm Circles", cue: "Arm circles", equipment: [], pattern: "mobility", instruction: "Big slow circles forward, then backward." },
+  "wu-hinge":      { name: "Hip Hinge Drill", cue: "Hip hinges", equipment: [], pattern: "mobility", instruction: "Hands on hips, push the hips back with a flat back. Wakes up the hamstrings for swings and RDLs." },
+  "wu-squat":      { name: "Bodyweight Squats", cue: "Bodyweight squats", equipment: [], pattern: "mobility", instruction: "Slow and deep. Knees track over the toes." },
+  "wu-lunge-reach":{ name: "Reverse Lunge + Reach", cue: "Lunge and reach", equipment: [], pattern: "mobility", instruction: "Step back, reach both arms overhead, alternate legs." },
+  "wu-inchworm":   { name: "Inchworms", cue: "Inchworms", equipment: [], pattern: "mobility", instruction: "Walk the hands out to a plank, walk them back. Bend the knees if you need to." },
+  "cd-walk":       { name: "Easy Walk", cue: "Cool down. Easy walk", equipment: [], pattern: "mobility", instruction: "Bring the heart rate down. Breathe slowly through the nose." },
+  "cd-hip-flexor": { name: "Hip Flexor Stretch", cue: "Hip flexor stretch", equipment: [], pattern: "mobility", instruction: "Half kneeling, squeeze the glute, lean forward gently. Switch sides halfway." },
+  "cd-hamstring":  { name: "Hamstring Fold", cue: "Hamstring fold", equipment: [], pattern: "mobility", instruction: "Soft knees, hang forward, let the head relax." },
+  "cd-chest":      { name: "Chest + Shoulder Opener", cue: "Chest opener", equipment: [], pattern: "mobility", instruction: "Hands clasped behind you, lift the chest, shoulders down." },
+});
+const WARMUP = [["wu-march", 60], ["wu-arm-circles", 30], ["wu-hinge", 45], ["wu-squat", 45], ["wu-lunge-reach", 45], ["wu-inchworm", 45]];
+const COOLDOWN = [["cd-walk", 60], ["cd-hip-flexor", 60], ["cd-hamstring", 30], ["cd-chest", 30]];
+
+/* Workouts that are kind to sore legs and joints. */
+const LOW_IMPACT_IDS = ["carry-me-home", "engine-builder", "tri-15", "bike-bells"];
