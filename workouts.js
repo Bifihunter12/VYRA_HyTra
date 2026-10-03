@@ -13,9 +13,9 @@ const EXERCISES = {
   // ── Cardio ──────────────────────────────────────────────────────────────
   "run":          { name: "Treadmill Run", cue: "Run", state: "RUN", cardio: true, speed: true, equipment: ["treadmill"],
                     subs: ["incline-walk", "bike", "row"], instruction: "Steady, controlled pace." },
-  "row":          { name: "Row", cue: "Row", state: "ROW", cardio: true, equipment: ["rower"], effort: "Steady pace",
+  "row":          { name: "Row", cue: "Row", state: "ROW", cardio: true, equipment: ["rower"], effort: "Steady · 22–26 strokes/min",
                     subs: ["bike", "run", "incline-walk"], instruction: "Legs, then hips, then arms. Long, controlled strokes." },
-  "bike":         { name: "Bike", cue: "Bike", state: "BIKE", cardio: true, equipment: ["bike"], effort: "Steady pace",
+  "bike":         { name: "Bike", cue: "Bike", state: "BIKE", cardio: true, equipment: ["bike"], effort: "Steady · 80–90 rpm",
                     subs: ["row", "run", "step-ups"], instruction: "Smooth cadence, light grip, breathe through the nose when you can." },
   "incline-walk": { name: "Brisk Incline Walk", cue: "Incline walk", state: "WALK", cardio: true, equipment: ["treadmill"], effort: "Brisk walk",
                     instruction: "Steep incline, brisk pace, hands off the rails." },
@@ -106,7 +106,7 @@ const HARD_EASY_HARD = { pattern: [
 const P = {
   rounds: (d, min = 1, max = 12) => ({ key: "rounds", label: "Rounds", icon: "ti-repeat", kind: "count", min, max, step: 1, default: d }),
   time: (key, label, d, icon = "ti-clock", step = 15, min = 0, max = 900) => ({ key, label, icon, kind: "time", min, max, step, default: d }),
-  speed: (d = 7.0) => ({ key: "speed", label: "Treadmill speed", icon: "ti-gauge", kind: "speed", min: 2, max: 15, step: 0.1, default: d }),
+  speed: (d = 7.0) => ({ key: "speed", label: "Treadmill speed", icon: "ti-gauge", kind: "speed", min: 2, max: 12, step: 0.1, default: d }),
   toggle: (key, label, d, icon) => ({ key, label, icon, kind: "bool", default: d }),
 };
 
@@ -154,7 +154,7 @@ const TEMPLATES = [
     build(p) {
       const moves = ["goblet-squat", "db-row", "db-rdl", "push-press", "reverse-lunge", "farmer-carry"];
       return { rounds: Array.from({ length: p.rounds }, (_, i) => round([
-        cardio("row", p.rowSec, { effort: "Controlled · not a sprint" }), rest(p.restSec), station([moves[i % moves.length]], p.stationSec),
+        cardio("row", p.rowSec, { effort: "Controlled · 20–24 strokes/min" }), rest(p.restSec), station([moves[i % moves.length]], p.stationSec),
       ])) };
     },
   },
@@ -381,3 +381,50 @@ const COOLDOWN = [["cd-walk", 60], ["cd-hip-flexor", 60], ["cd-hamstring", 30], 
 
 /* Workouts that are kind to sore legs and joints. */
 const LOW_IMPACT_IDS = ["carry-me-home", "engine-builder", "tri-15", "bike-bells"];
+
+/* ── Programs: 4-week plans built from the templates ───────────────────────
+   Each session names a template and optional adjustments, applied as deltas
+   to the athlete's own settings (clamped to each setting's range). Week 4 is
+   always lighter so the body can absorb the work.                           */
+const PROGRAMS = [
+  {
+    id: "hybrid-base", name: "Hybrid Base", tagline: "Build an engine for run + strength", level: "beginner",
+    about: "Three sessions a week mixing cardio machines and full-body strength. Volume rises for three weeks, then a lighter week with a benchmark so you can see how far you've come.",
+    weeks: [
+      [{ t: "engine-builder" }, { t: "vyra-8" }, { t: "carry-me-home" }],
+      [{ t: "engine-builder", adj: { rounds: 1 } }, { t: "vyra-8", adj: { speed: 0.2 } }, { t: "bike-bells" }],
+      [{ t: "engine-builder", adj: { rounds: 2 } }, { t: "vyra-8", adj: { speed: 0.4 } }, { t: "bike-bells", adj: { rounds: 1 } }],
+      [{ t: "carry-me-home", adj: { rounds: -1 } }, { t: "tri-15" }, { t: "vyra-8" }],
+    ],
+  },
+  {
+    id: "low-impact-base", name: "Low-Impact Base", tagline: "Fitness without pounding the joints", level: "beginner",
+    about: "Bike, rower and loaded carries. No running and no jumping. A good place to start, or to come back after time off.",
+    weeks: [
+      [{ t: "carry-me-home" }, { t: "engine-builder" }, { t: "carry-me-home" }],
+      [{ t: "carry-me-home", adj: { carrySec: 15 } }, { t: "engine-builder", adj: { rounds: 1 } }, { t: "bike-bells" }],
+      [{ t: "carry-me-home", adj: { carrySec: 15, cardioSec: 15 } }, { t: "engine-builder", adj: { rounds: 2 } }, { t: "bike-bells", adj: { rounds: 1 } }],
+      [{ t: "carry-me-home", adj: { rounds: -1 } }, { t: "engine-builder", adj: { rounds: -1 } }],
+    ],
+  },
+  {
+    id: "benchmark-builder", name: "Benchmark Builder", tagline: "Beat your Row → Bike → Run total", level: "intermediate",
+    about: "Test your Mini Triathlon 15 in week 1, train with intervals and hybrids, then retest in week 4.",
+    weeks: [
+      [{ t: "tri-15" }, { t: "engine-builder" }, { t: "bike-bells" }],
+      [{ t: "tri-intervals" }, { t: "sprint-20" }, { t: "carry-me-home" }],
+      [{ t: "tri-intervals", adj: { rounds: 1 } }, { t: "the-mixer" }, { t: "engine-builder", adj: { rounds: 1 } }],
+      [{ t: "carry-me-home" }, { t: "tri-15" }],
+    ],
+  },
+  {
+    id: "strength-block", name: "Strength Block", tagline: "Kettlebells and dumbbells, no machines needed", level: "intermediate",
+    about: "Strength-first sessions with short conditioning. Work gets a little longer each week, then backs off in week 4.",
+    weeks: [
+      [{ t: "the-forge" }, { t: "db-destroyer" }, { t: "kb-flow" }],
+      [{ t: "the-forge", adj: { workSec: 5 } }, { t: "db-destroyer", adj: { rounds: 1 } }, { t: "kb-flow", adj: { rounds: 1 } }],
+      [{ t: "the-forge", adj: { workSec: 10 } }, { t: "db-destroyer", adj: { rounds: 1, workSec: 5 } }, { t: "kb-flow", adj: { rounds: 1 } }],
+      [{ t: "the-forge", adj: { rounds: -1 } }, { t: "db-destroyer", adj: { rounds: -1 } }],
+    ],
+  },
+];
