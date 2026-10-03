@@ -830,3 +830,20 @@ body[data-screen="history"] .app-shell, body[data-screen="profile"] .app-shell {
 .ack.on { background: var(--tint); color: var(--text); }
 .ack-box { flex: none; width: 24px; height: 24px; border-radius: 7px; border: 1.5px solid var(--text-faint); display: grid; place-items: center; margin-top: 1px; }
 .ack.on .ack-box { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+/* ── Account & sync ────────────────────────────────────────────────────────── */
+.account { display: flex; flex-direction: column; gap: 12px; background: var(--surface); border-radius: var(--radius-md, 16px); padding: 16px 14px; margin-top: 6px; }
+.account-lead { font-size: 14px; line-height: 1.5; color: var(--text-dim); }
+.account-lead i { color: var(--accent); margin-right: 4px; }
+.account-lead b { color: var(--text); font-weight: 500; }
+.account .btn-secondary { background: var(--surface-2); }
+.or { display: flex; align-items: center; gap: 10px; color: var(--text-faint); font-size: 12.5px; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.field-row { display: flex; gap: 8px; }
+.text-input {
+  flex: 1; min-width: 0; height: 46px; padding: 0 14px; border-radius: var(--radius-sm, 12px);
+  background: var(--surface-2); border: 1px solid transparent; color: var(--text); font-size: 16px;
+}
+.text-input:focus { outline: none; border-color: var(--accent); }
+.field-row .btn-sm { min-height: 46px; }
+#sync-code { letter-spacing: 6px; font-variant-numeric: tabular-nums; text-align: center; }

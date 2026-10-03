@@ -11,6 +11,7 @@ const EXPORTS = [
   "hasGear", "gearPlan", "allExerciseIds", "programSessions", "programParams", "programStatus", "programById",
   "recommend", "weeklySeries", "weekStreak", "dayRun", "patternBalance", "badgeStatus", "progressionAdvice",
   "startOfWeek", "DAY_MS", "visitPatterns", "benchmarkLegs", "benchTotalMi",
+  "stampChanges", "profileBlob", "mergeRemoteWorkouts", "pendingWorkoutRows", "deletionStamp",
 ];
 
 module.exports = function load() {

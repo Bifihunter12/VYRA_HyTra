@@ -501,3 +501,72 @@ function programStatus(active) {
   const doneCount = sessions.filter(s => done[s.key]).length;
   return { prog, sessions, done, next, doneCount, total: sessions.length, week: next ? next.week : prog.weeks.length, complete: !next };
 }
+
+/* ── Cloud sync: pure merge rules (local-first) ─────────────────────────────
+   Every saved workout carries `updatedAt` (ms, the device's edit time).
+   Deleted workouts leave a tombstone { [id]: deletedAt } so the deletion
+   reaches other devices. The newest edit of each workout wins.            */
+
+const SYNC_PROFILE_KEYS = ["profile", "settings", "params", "swaps", "program", "lastTemplate"];
+
+/* Bump updatedAt on any workout whose content changed since it was last stamped. */
+function stampChanges(history, now = Date.now()) {
+  let changed = 0;
+  history.forEach(h => {
+    const { updatedAt, _sig, _remoteAt, ...rest } = h;
+    const sig = JSON.stringify(rest);
+    if (h._sig !== sig) { h._sig = sig; h.updatedAt = Math.max(now, (updatedAt || 0) + 1); changed++; }
+  });
+  return changed;
+}
+
+/* The synced part of the athlete's settings, and a signature to detect edits. */
+function profileBlob(st) {
+  return Object.fromEntries(SYNC_PROFILE_KEYS.map(k => [k, st[k] ?? null]));
+}
+
+/* Merge rows pulled from the server into local history. */
+function mergeRemoteWorkouts(history, tombstones, rows) {
+  const byId = new Map(history.map(h => [h.id, h]));
+  const tomb = { ...(tombstones || {}) };
+  let changed = false;
+  rows.forEach(r => {
+    const ts = Date.parse(r.updated_at);
+    const local = byId.get(r.id);
+    const localTs = local ? (local.updatedAt || local.date || 0) : (tomb[r.id] || 0);
+    if (!(ts > localTs)) return;
+    if (r.deleted) {
+      if (local) { byId.delete(r.id); changed = true; }
+      tomb[r.id] = ts;
+    } else if (r.data) {
+      const rec = { ...r.data, id: r.id, updatedAt: ts };
+      const { updatedAt, _sig, ...rest } = rec;
+      rec._sig = JSON.stringify(rest);
+      rec._remoteAt = ts;                     // came from the server: don't upload it again until edited here
+      byId.set(r.id, rec);
+      delete tomb[r.id];
+      changed = true;
+    }
+  });
+  return { history: [...byId.values()].sort((a, b) => b.date - a.date), tombstones: tomb, changed };
+}
+
+/* A deletion always beats the version the athlete was looking at, even if this device's clock is behind. */
+function deletionStamp(rec, now = Date.now()) {
+  return Math.max(now, (rec?.updatedAt || 0) + 1);
+}
+
+/* Rows to upload: real workouts and tombstones edited after `since` (ms). Sample data never leaves the device. */
+function pendingWorkoutRows(history, tombstones, since) {
+  const iso = ms => new Date(ms).toISOString();
+  const rows = history
+    .filter(h => !h.demo && (h.updatedAt || 0) > since && !(h._remoteAt && h.updatedAt <= h._remoteAt))
+    .map(h => {
+      const { _sig, _remoteAt, updatedAt, newBadges, ...data } = h;
+      return { id: h.id, data, deleted: false, performed_at: iso(h.date), updated_at: iso(updatedAt) };
+    });
+  Object.entries(tombstones || {}).forEach(([id, ts]) => {
+    if (ts > since) rows.push({ id, data: null, deleted: true, performed_at: null, updated_at: iso(ts) });
+  });
+  return rows;
+}

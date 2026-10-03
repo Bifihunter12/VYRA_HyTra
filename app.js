@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.03.4";
+const APP_VERSION = "2026.10.03.5";
 const STORE_KEY = "vyra_v1";
 /* Beeps, spoken cues and vibration are switched off for now. Set to true to bring them back. */
 const CUES_ENABLED = false;
@@ -121,6 +121,7 @@ const ui = {
   templateId: state.lastTemplate || TEMPLATES[0].id, summary: null, viewingHistory: false,
   confirmEnd: false, confirm: null, go: false, calOffset: 0,
   filters: { time: "all", type: "all", level: "all" }, fitsGear: false,
+  auth: { email: "", code: "", sent: false, busy: false, msg: "", error: false },
   ob: { goal: 3, level: "intermediate", equipment: [...ALL_EQUIPMENT] },
 };
 let engine = null;
@@ -132,6 +133,7 @@ function loadState() {
     settings: { sound: true, voice: true, vibrate: true },
     profile: { onboarded: false, goal: 3, level: "intermediate", equipment: [...ALL_EQUIPMENT], warmup: true, cooldown: true },
     params: {}, swaps: {}, history: [], checkin: null, lastTemplate: null, program: null,
+    deleted: {}, sync: defaultSyncState(), profileUpdatedAt: 0, profileSig: null,
   };
   try {
     const raw = localStorage.getItem(STORE_KEY);
@@ -141,7 +143,19 @@ function loadState() {
       profile: { ...fresh.profile, ...(s.profile || {}), onboarded: s.profile?.onboarded ?? (s.history?.length > 0) } };
   } catch { return fresh; }
 }
-function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch { /* storage unavailable */ } }
+/* Persist locally. Unless silent (the sync engine's own writes), stamp what changed and queue a cloud sync. */
+function save({ silent = false } = {}) {
+  if (!silent) {
+    let changed = stampChanges(state.history);
+    const sig = JSON.stringify(profileBlob(state));
+    if (sig !== state.profileSig) { state.profileSig = sig; state.profileUpdatedAt = Date.now(); changed++; }
+    // New deletions also need to reach the cloud.
+    const deletions = Object.keys(state.deleted || {}).length;
+    if (deletions !== state.deletedCount) { state.deletedCount = deletions; changed++; }
+    if (changed) Sync.schedule();
+  }
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch { /* storage unavailable */ }
+}
 
 function paramsFor(templateId) {
   const t = templateById(templateId);
@@ -906,11 +920,74 @@ function renderProfile() {
       <span class="set-unit">${hasSample ? "keeps your real workouts" : "6 weeks of example workouts to preview Progress"}</span></span></button>
     <button class="set-row set-row--danger" data-act="erase">
       <i class="ti ti-trash set-ic"></i><span class="set-label">${ui.confirm === "erase" ? "Tap again to erase everything" : "Erase all data"}
-      <span class="set-unit">history, settings and benchmarks on this device</span></span></button>
+      <span class="set-unit">history, settings and benchmarks on this device${Sync.user ? " · you'll be signed out; your cloud copy stays" : ""}</span></span></button>
   </div>
+  ${renderAccount()}
+
   ${sectionLabel("Health & safety")}
   <p class="hint hint--block">${HEALTH_NOTE} Stop if you feel chest pain, dizziness, or sharp or worsening pain.</p>
-  <p class="hint"><a href="privacy.html">Privacy & safety</a> · Everything stays on this device. VYRA ${APP_VERSION}</p>`;
+  <p class="hint"><a href="privacy.html">Privacy & safety</a> · ${Sync.user ? "Synced to your account" : "Everything stays on this device"}. VYRA ${APP_VERSION}</p>`;
+}
+
+/* ── Account & cloud sync ─────────────────────────────────────────────────── */
+function syncStatusText() {
+  const ago = ts => {
+    if (!ts) return "not yet";
+    const min = Math.round((Date.now() - ts) / 60000);
+    return min < 1 ? "just now" : min < 60 ? `${min} min ago` : fmtDay(ts);
+  };
+  return {
+    syncing: "Syncing…",
+    idle: `Synced ${ago(state.sync.lastSyncedAt)}`,
+    offline: "Offline. Changes sync when you're back online.",
+    error: `Couldn't sync: ${Sync.error}`,
+  }[Sync.status] || "";
+}
+
+function renderAccount() {
+  if (!Sync.configured()) return "";
+  const a = ui.auth;
+  if (Sync.user) {
+    return `
+    ${sectionLabel("Account & sync")}
+    <div class="set-list">
+      <div class="set-row">
+        <i class="ti ${Sync.status === "error" ? "ti-cloud-off" : "ti-cloud-check"} set-ic" aria-hidden="true"></i>
+        <span class="set-label">${esc(Sync.user.email || "Signed in")}<span class="set-unit" data-bind="sync-status">${esc(syncStatusText())}</span></span>
+      </div>
+      <button class="set-row" data-act="sync-now" ${Sync.status === "syncing" ? "disabled" : ""}><i class="ti ti-refresh set-ic"></i><span class="set-label">Sync now</span></button>
+      <button class="set-row" data-act="sync-signout"><i class="ti ti-logout set-ic"></i><span class="set-label">Sign out<span class="set-unit">Workouts stay on this device</span></span></button>
+      <button class="set-row set-row--danger" data-act="sync-delete"><i class="ti ti-user-x set-ic"></i>
+        <span class="set-label">${ui.confirm === "account" ? "Tap again to delete your account" : "Delete account"}<span class="set-unit">Removes your cloud copy for good. This device keeps its workouts.</span></span></button>
+    </div>`;
+  }
+  return `
+  ${sectionLabel("Account & sync")}
+  <div class="account">
+    <p class="account-lead"><i class="ti ti-cloud"></i> Optional. Back up your workouts and use VYRA on more than one device. Without an account, everything stays on this device.</p>
+    <button class="btn-secondary" data-act="sync-google" ${a.busy ? "disabled" : ""}><i class="ti ti-brand-google"></i> Continue with Google</button>
+    <div class="or"><span>or</span></div>
+    ${a.sent ? `
+      <p class="account-lead">We sent a sign-in email to <b>${esc(a.email)}</b>. Tap the link in it, or type the 6-digit code here:</p>
+      <div class="field-row">
+        <input class="text-input" id="sync-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" value="${esc(a.code)}" aria-label="6-digit code">
+        <button class="btn-primary btn-sm" data-act="sync-verify" ${a.busy ? "disabled" : ""}>Sign in</button>
+      </div>
+      <button class="text-btn" data-act="sync-reset">Use a different email</button>`
+    : `
+      <div class="field-row">
+        <input class="text-input" id="sync-email" type="email" autocomplete="email" placeholder="you@example.com" value="${esc(a.email)}" aria-label="Email address">
+        <button class="btn-primary btn-sm" data-act="sync-email" ${a.busy ? "disabled" : ""}><i class="ti ti-mail"></i> Send link</button>
+      </div>`}
+    ${a.msg ? `<p class="hint ${a.error ? "hint--warn" : ""}">${esc(a.msg)}</p>` : ""}
+  </div>`;
+}
+
+async function authAction(fn, okMsg = "") {
+  ui.auth.busy = true; ui.auth.msg = ""; ui.auth.error = false; rerender();
+  try { await fn(); ui.auth.msg = okMsg; }
+  catch (e) { ui.auth.msg = e?.message || "Something went wrong. Try again."; ui.auth.error = true; }
+  ui.auth.busy = false; rerender();
 }
 
 /* ── Player ───────────────────────────────────────────────────────────────── */
@@ -1318,6 +1395,8 @@ function sampleHistory() {
 /* ── Events ────────────────────────────────────────────────────────────────── */
 
 app.addEventListener("input", ev => {
+  if (ev.target.id === "sync-email") { ui.auth.email = ev.target.value.trim(); return; }
+  if (ev.target.id === "sync-code") { ui.auth.code = ev.target.value.replace(/\D/g, ""); return; }
   const s = ui.summary;
   if (!s?.bench) return;
   const el = ev.target;
@@ -1330,11 +1409,11 @@ app.addEventListener("input", ev => {
   if (out) out.textContent = `${s.bench.totalMi.toFixed(2)} mi`;
 });
 
-app.addEventListener("click", ev => {
+app.addEventListener("click", async ev => {
   const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session]");
   if (!el) return;
   const d = el.dataset;
-  if (!["erase", "delete-history", "program-join", "program-leave"].includes(d.act)) ui.confirm = null;
+  if (!["erase", "delete-history", "program-join", "program-leave", "sync-delete"].includes(d.act)) ui.confirm = null;
 
   if (d.go) return go(d.go);
   if (d.step) return stepParam(d.step, Number(d.dir));
@@ -1399,6 +1478,21 @@ app.addEventListener("click", ev => {
       if (ui.confirm !== "leave") { ui.confirm = "leave"; return rerender(); }
       state.program = null; ui.confirm = null; save(); toast("Plan ended"); return rerender();
     case "ob-ack": ui.ob.ack = !ui.ob.ack; return rerender();
+    case "sync-email":
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ui.auth.email)) { ui.auth.msg = "Enter a valid email address."; ui.auth.error = true; return rerender(); }
+      return authAction(async () => { await Sync.sendEmail(ui.auth.email); ui.auth.sent = true; });
+    case "sync-verify":
+      if (ui.auth.code.length !== 6) { ui.auth.msg = "Enter the 6-digit code from the email."; ui.auth.error = true; return rerender(); }
+      return authAction(async () => { await Sync.verifyCode(ui.auth.email, ui.auth.code); ui.auth = { email: "", code: "", sent: false, busy: false, msg: "", error: false }; });
+    case "sync-reset": ui.auth = { email: ui.auth.email, code: "", sent: false, busy: false, msg: "", error: false }; return rerender();
+    case "sync-google": return authAction(() => Sync.google());
+    case "sync-now": Sync.run(); return rerender();
+    case "sync-signout": await Sync.signOut(); toast("Signed out"); return rerender();
+    case "sync-delete":
+      if (ui.confirm !== "account") { ui.confirm = "account"; return rerender(); }
+      ui.confirm = null;
+      try { await Sync.deleteAccount(); toast("Account deleted"); } catch (e) { toast(`Couldn't delete: ${e.message}`); }
+      return rerender();
     case "health-ack": state.profile.healthAck = Date.now(); save(); return rerender();
     case "quick-start": return startWorkout(d.id);
     case "start-recovery": return startWorkout("recovery", recoveryWorkout());
@@ -1439,11 +1533,15 @@ app.addEventListener("click", ev => {
     }
     case "delete-history":
       if (ui.confirm !== "delete") { ui.confirm = "delete"; return rerender(); }
-      state.history = state.history.filter(h => h.id !== ui.summary.id); save();
+      state.history = state.history.filter(h => h.id !== ui.summary.id);
+      if (!ui.summary.demo) state.deleted = { ...state.deleted, [ui.summary.id]: deletionStamp(ui.summary) };
+      save();
       ui.confirm = null;
       return go(ui.viewingHistory ? "history" : "today");
     case "erase":
       if (ui.confirm !== "erase") { ui.confirm = "erase"; return rerender(); }
+      // Erases this device only; the cloud copy stays and returns on the next sign-in.
+      if (Sync.user) await Sync.signOut().catch(() => {});
       try { localStorage.removeItem(STORE_KEY); } catch { /* ignore */ }
       Object.assign(state, loadState());
       ui.confirm = null; ui.ob = { goal: 3, level: "intermediate", equipment: [...ALL_EQUIPMENT] };
@@ -1518,3 +1616,7 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
 window.VYRA = { TEMPLATES, EXERCISES, IntervalEngine, compile, createWorkout, resolveSegments, swappableIds, planTotals, planFor, recommend, version: APP_VERSION };
 
 render();
+Sync.init(changed => {
+  if (ui.screen === "player" || document.activeElement?.matches?.("input")) return;
+  if (changed || ui.screen === "profile") rerender();
+});

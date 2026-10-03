@@ -1,4 +1,4 @@
-const APP_VERSION = "2026.10.03.4";
+const APP_VERSION = "2026.10.03.5";
 const CACHE_NAME = `vyra-${APP_VERSION}`;
 const APP_FILES = [
   "/",
@@ -8,6 +8,8 @@ const APP_FILES = [
   `/workouts.js?v=${APP_VERSION}`,
   `/core.js?v=${APP_VERSION}`,
   `/progress.js?v=${APP_VERSION}`,
+  `/config.js?v=${APP_VERSION}`,
+  `/sync.js?v=${APP_VERSION}`,
   `/app.js?v=${APP_VERSION}`,
   `/app-version.json?v=${APP_VERSION}`,
   "/sw.js",
@@ -37,6 +39,11 @@ self.addEventListener("activate", (event) => {
 // Network-first: always fetch fresh, fall back to cache only when offline
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  // Only the app's own files and its font/icon/library CDNs are cached. API calls
+  // (e.g. Supabase sync, which carry the user's data) always go straight to the network.
+  const url = new URL(event.request.url);
+  const cacheable = url.origin === self.location.origin || /(^|\.)(jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(url.hostname);
+  if (!cacheable) return;
   event.respondWith(
     fetch(new Request(event.request, { cache: "reload" }))
       .then((response) => {
