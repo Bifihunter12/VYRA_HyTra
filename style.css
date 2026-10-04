@@ -986,6 +986,7 @@ body[data-screen="history"] .app-shell, body[data-screen="profile"] .app-shell {
    Phases 3–4 — events, ghost racing, verification, clubs
    ════════════════════════════════════════════════════════════════════════════ */
 .segmented { grid-template-columns: repeat(4, 1fr); }
+.segmented--3 { grid-template-columns: repeat(3, 1fr); }
 .segmented button { flex-direction: column; gap: 2px; padding: 8px 0; font-size: 11.5px; }
 .segmented button i { font-size: 19px; }
 
