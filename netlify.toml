@@ -39,3 +39,7 @@
   for = "/app.js"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
+
+# The only npm package is a dev/test dependency (embedded Postgres for SQL tests); skip it on deploy.
+[build.environment]
+  NPM_FLAGS = "--omit=dev"

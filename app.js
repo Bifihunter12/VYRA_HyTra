@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.04.1";
+const APP_VERSION = "2026.10.04.2";
 const STORE_KEY = "vyra_v1";
 /* Beeps, spoken cues and vibration are switched off for now. Set to true to bring them back. */
 const CUES_ENABLED = false;
@@ -206,7 +206,7 @@ function render() {
   document.body.dataset.screen = ui.screen;
   if (ui.screen === "player") return renderPlayer();
   const views = {
-    program: renderProgram, compete: renderCompete, challenge: renderChallenge, athlete: renderAthlete, "athlete-edit": renderAthleteEdit,
+    program: renderProgram, compete: renderCompete, activity: renderActivity, "athlete-view": renderAthleteView, challenge: renderChallenge, athlete: renderAthlete, "athlete-edit": renderAthleteEdit,
     onboarding: renderOnboarding, today: renderToday, library: renderLibrary, progress: renderProgress,
     history: renderHistory, profile: renderProfile, setup: renderSetup, summary: renderSummary,
   };
@@ -1280,7 +1280,8 @@ function updatePlayer() {
     const ch = session?.workout?.challenge && challengeById(session.workout.challenge.id);
     if (ch && ch.scoring === "time") {
       const warm = e.visits.filter(v => v.type === "WARM").reduce((a, v) => a + v.ms, 0) / 1000 + (e.current.type === "WARM" ? e.elapsedMs() / 1000 : 0);
-      clock.textContent = `Total ${fmtClock(doneSec - warm)}`;
+      const tgt = session.workout.challenge.target;
+      clock.textContent = `Total ${fmtClock(doneSec - warm)}${tgt && ch.better === "lower" ? ` · ${tgt.name} ${formatScore(ch, tgt.score)}` : ""}`;
     } else clock.textContent = `${fmtClock(doneSec)} · ${fmtClock(left)} left`;
   }
 }
@@ -1411,6 +1412,8 @@ function sampleHistory() {
 /* ── Events ────────────────────────────────────────────────────────────────── */
 
 app.addEventListener("input", ev => {
+  if (ev.target.id === "athlete-search") { searchAthletes(ev.target.value.trim()); return; }
+  if (ev.target.id === "comment-input" && ui.activity) { ui.activity.draft = ev.target.value; return; }
   if (ui.athleteDraft && ["ath-name", "ath-handle", "ath-birth"].includes(ev.target.id)) {
     const key = { "ath-name": "displayName", "ath-handle": "handle", "ath-birth": "birthYear" }[ev.target.id];
     ui.athleteDraft[key] = ev.target.value;
@@ -1432,13 +1435,14 @@ app.addEventListener("input", ev => {
 });
 
 app.addEventListener("click", async ev => {
-  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility]");
+  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility],[data-ath-activity],[data-compete-view],[data-athlete],[data-comments],[data-react],[data-follow],[data-del-comment]");
   if (!el) return;
   const d = el.dataset;
   if (!["erase", "delete-history", "program-join", "program-leave", "sync-delete"].includes(d.act)) ui.confirm = null;
 
   if (d.go) return go(d.go);
   if (handleCompeteClick(d)) return;
+  if (await handleCommunityClick(d)) return;
   if (d.step) return stepParam(d.step, Number(d.dir));
   if (d.paramToggle) {
     state.params[ui.templateId] = { ...(state.params[ui.templateId] || {}), [d.paramToggle]: !paramsFor(ui.templateId)[d.paramToggle] };

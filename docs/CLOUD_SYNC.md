@@ -23,6 +23,12 @@ values, sign-in is hidden and nothing leaves the device.
    about "destructive operations": that's the `drop policy if exists` /
    `drop trigger if exists` lines, which only replace VYRA's own rules.
 
+4. **Community (following, feed, comments):** one more **New query** with
+   `supabase/003_community.sql`, then **Run**. Run it after `002_competition.sql`.
+
+All three files are tested against a real Postgres database on every push
+(`npm run test:sql`, see `tests/sql/`).
+
 ## 2. Connect the app
 
 1. Open **Project Settings → API** (also shown under **Connect**).

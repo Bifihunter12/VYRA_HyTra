@@ -143,6 +143,24 @@ const Sync = {
         const { error } = await db.from("attempts").update({ deleted: true }).eq("user_id", uid).in("id", gone);
         if (error) throw error;
       }
+      // 2d. Activity for the community feed — only when the athlete shares it.
+      const sharing = state.athlete && state.athlete.activity && state.athlete.activity !== "off";
+      const athleteChanged = JSON.stringify(state.athlete || null) !== state.sync.athleteSig;
+      if (sharing) {
+        // Turning sharing on (or a new device) backfills the last few workouts.
+        const source = athleteChanged || firstSync
+          ? state.history.filter(h => !h.demo).slice(0, 20).map(h => ({ id: h.id, data: h, performed_at: new Date(h.date).toISOString(), updated_at: new Date(h.updatedAt || h.date).toISOString() }))
+          : rows.filter(row => !row.deleted);
+        const items = source.map(row => activityRow(uid, row));
+        for (let i = 0; i < items.length; i += 200) {
+          const { error } = await db.from("activity").upsert(items.slice(i, i + 200), { onConflict: "user_id,id" });
+          if (error) throw error;
+        }
+      }
+      if (gone.length) {
+        const { error } = await db.from("activity").update({ deleted: true }).eq("user_id", uid).in("id", gone);
+        if (error) throw error;
+      }
       state.sync.pushedAt = startedAt;
 
       // 2c. Athlete card (name, division, privacy) whenever it changed.
@@ -152,7 +170,7 @@ const Sync = {
         const { error } = await db.from("athletes").upsert({
           user_id: uid, handle: a.handle || null, display_name: a.displayName || null, birth_year: a.birthYear || null,
           category: a.category || "open", division: a.division || "open", visibility: a.visibility || "private",
-          leaderboards: !!a.leaderboards, updated_at: new Date().toISOString(),
+          leaderboards: !!a.leaderboards, activity: a.activity || "off", updated_at: new Date().toISOString(),
         });
         if (error) throw error.code === "23505" ? new Error("That handle is already taken. Pick another in your athlete profile.") : error;
         state.sync.athleteSig = athSig;
@@ -183,6 +201,33 @@ const Sync = {
     }
   },
 
+  /* ── Community (Phase 2) ── */
+  async call(name, args) {
+    if (!this.client || !this.user) throw new Error("Sign in first");
+    const { data, error } = await this.client.rpc(name, args);
+    if (error) throw error;
+    return data;
+  },
+  feed(before = null) { return this.call("feed", { p_limit: 30, p_before: before }); },
+  comments(owner, id) { return this.call("activity_comments", { p_owner: owner, p_id: id }); },
+  search(q) { return this.call("search_athletes", { p_query: q }); },
+  profile(userId) { return this.call("athlete_profile", { p_user: userId }); },
+  async write(table, op, payload, match) {
+    if (!this.client || !this.user) throw new Error("Sign in first");
+    let q = this.client.from(table);
+    q = op === "insert" ? q.insert(payload) : q.delete().match(match);
+    const { error } = await q;
+    if (error) throw error;
+  },
+  follow(userId) { return this.write("follows", "insert", { follower: this.user.id, followee: userId }); },
+  unfollow(userId) { return this.write("follows", "delete", null, { follower: this.user.id, followee: userId }); },
+  react(owner, id, kind, on) {
+    return on ? this.write("reactions", "insert", { owner, activity_id: id, kind })
+      : this.write("reactions", "delete", null, { owner, activity_id: id, user_id: this.user.id, kind });
+  },
+  addComment(owner, id, body) { return this.write("comments", "insert", { owner, activity_id: id, body }); },
+  deleteComment(commentId) { return this.write("comments", "delete", null, { id: commentId }); },
+
   /* Ranked best results for one challenge. Returns [] when not signed in. */
   async leaderboard(params) {
     if (!this.client || !this.user) return [];
@@ -200,3 +245,21 @@ const Sync = {
 };
 
 function defaultSyncState() { return { userId: null, cursor: null, pushedAt: 0, lastSyncedAt: 0 }; }
+
+/* One feed item for a saved workout or benchmark result. */
+function activityRow(uid, row) {
+  const h = row.data;
+  const a = h.attempt;
+  // "Training" results are private: they appear as a plain workout, without the score.
+  const c = a && a.verification !== "training" && typeof challengeById === "function" ? challengeById(a.challengeId) : null;
+  const v = c ? variantOf(c, a.variant) : null;
+  return {
+    user_id: uid, id: row.id, kind: c ? "result" : "workout",
+    title: (c ? `${c.name}${c.variants.length > 1 ? ` · ${v.name}` : ""}` : h.name || "Workout").slice(0, 80),
+    challenge_id: c ? c.id : null, variant: c ? a.variant : null, division: c ? a.division : null,
+    score: c && !a.dnf ? a.score : null, better: c ? a.better : null,
+    pr: !!(c && a.pr), first: !!(c && a.first), dnf: !!(c && a.dnf),
+    duration_sec: h.stats ? Math.round(h.stats.totalSec) : null,
+    performed_at: row.performed_at, deleted: false, updated_at: row.updated_at,
+  };
+}
