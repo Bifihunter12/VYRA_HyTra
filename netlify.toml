@@ -43,3 +43,11 @@
 # The only npm package is a dev/test dependency (embedded Postgres for SQL tests); skip it on deploy.
 [build.environment]
   NPM_FLAGS = "--omit=dev"
+
+# Digital Asset Links: proves the Android app (com.vyra.hytra) belongs to this site,
+# so it opens full screen without a browser bar.
+[[headers]]
+  for = "/.well-known/assetlinks.json"
+  [headers.values]
+    Content-Type = "application/json"
+    Cache-Control = "public, max-age=300"
