@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">VYRA</string>
-    <string name="host" translatable="false">animated-babka-e7f528.netlify.app</string>
     <string name="launch_url" translatable="false">https://animated-babka-e7f528.netlify.app/</string>
     <string name="provider_authority" translatable="false">com.vyra.hytra.fileprovider</string>
     <string name="asset_statements" translatable="false">
