@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.04.3";
+const APP_VERSION = "2026.10.04.4";
 const STORE_KEY = "vyra_v1";
 /* Beeps, spoken cues and vibration are switched off for now. Set to true to bring them back. */
 const CUES_ENABLED = false;

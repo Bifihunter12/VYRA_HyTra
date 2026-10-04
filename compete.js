@@ -23,18 +23,18 @@ function renderCompete() {
   const filter = ui.benchFilter || "all";
   const groups = { all: () => true, time: c => c.scoring === "time", distance: c => c.scoring === "distance", strength: c => ["reps", "load", "rounds"].includes(c.scoring) };
   const list = BENCHMARKS.filter(groups[filter]);
-  const view = ui.competeView || "challenges";
+  const view = ui.competeView === "clubs" && !FEATURES.clubs ? "challenges" : ui.competeView || "challenges";
   const header = `
   ${topbar()}
   <section class="hero">
     <div class="hero-daycount">Train alone. Compete together.</div>
     <div class="hero-titlebar"><h1 class="hero-name">Compete</h1></div>
   </section>
-  <div class="segmented" role="tablist">
+  <div class="segmented ${FEATURES.clubs ? "" : "segmented--3"}" role="tablist">
     <button role="tab" class="${view === "challenges" ? "on" : ""}" data-compete-view="challenges" aria-selected="${view === "challenges"}"><i class="ti ti-trophy"></i> Challenges</button>
     <button role="tab" class="${view === "events" ? "on" : ""}" data-compete-view="events" aria-selected="${view === "events"}"><i class="ti ti-flame"></i> Events</button>
     <button role="tab" class="${view === "community" ? "on" : ""}" data-compete-view="community" aria-selected="${view === "community"}"><i class="ti ti-users"></i> Community</button>
-    <button role="tab" class="${view === "clubs" ? "on" : ""}" data-compete-view="clubs" aria-selected="${view === "clubs"}"><i class="ti ti-building"></i> Clubs</button>
+    ${FEATURES.clubs ? `<button role="tab" class="${view === "clubs" ? "on" : ""}" data-compete-view="clubs" aria-selected="${view === "clubs"}"><i class="ti ti-building"></i> Clubs</button>` : ""}
   </div>`;
   if (view === "community") return header + renderCommunity();
   if (view === "events") return header + renderEvents();

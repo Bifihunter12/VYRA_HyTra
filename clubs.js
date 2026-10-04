@@ -4,6 +4,10 @@
    Server rules in supabase/005_clubs.sql. Loaded before app.js.
    ════════════════════════════════════════════════════════════════════════════ */
 
+/* Clubs are built and the database is ready, but the tab is switched off until we
+   launch them. Set to true to bring the Clubs tab back; nothing is deleted. */
+const FEATURES = { clubs: false };
+
 const CLUB_KIND = { club: { label: "Club", icon: "ti-users-group" }, gym: { label: "Gym", icon: "ti-building" }, team: { label: "Team", icon: "ti-users" } };
 
 async function loadClubs() {
