@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.03.5";
+const APP_VERSION = "2026.10.04.3";
 const STORE_KEY = "vyra_v1";
 /* Beeps, spoken cues and vibration are switched off for now. Set to true to bring them back. */
 const CUES_ENABLED = false;
@@ -111,9 +111,9 @@ const ALL_EQUIPMENT = Object.keys(EQUIPMENT_LABEL);
 const state = loadState();
 const TABS = [
   { id: "today", label: "Today", icon: "ti-home" },
-  { id: "library", label: "Library", icon: "ti-books" },
+  { id: "library", label: "Train", icon: "ti-books" },
+  { id: "compete", label: "Compete", icon: "ti-trophy" },
   { id: "progress", label: "Progress", icon: "ti-chart-bar" },
-  { id: "history", label: "History", icon: "ti-history" },
   { id: "profile", label: "Profile", icon: "ti-user" },
 ];
 const ui = {
@@ -133,7 +133,7 @@ function loadState() {
     settings: { sound: true, voice: true, vibrate: true },
     profile: { onboarded: false, goal: 3, level: "intermediate", equipment: [...ALL_EQUIPMENT], warmup: true, cooldown: true },
     params: {}, swaps: {}, history: [], checkin: null, lastTemplate: null, program: null,
-    deleted: {}, sync: defaultSyncState(), profileUpdatedAt: 0, profileSig: null,
+    deleted: {}, sync: defaultSyncState(), profileUpdatedAt: 0, profileSig: null, athlete: null,
   };
   try {
     const raw = localStorage.getItem(STORE_KEY);
@@ -206,7 +206,8 @@ function render() {
   document.body.dataset.screen = ui.screen;
   if (ui.screen === "player") return renderPlayer();
   const views = {
-    program: renderProgram,
+    program: renderProgram, compete: renderCompete, activity: renderActivity, "athlete-view": renderAthleteView,
+    event: renderEvent, verify: renderVerify, review: renderReview, club: renderClub, "club-new": renderClubNew, challenge: renderChallenge, athlete: renderAthlete, "athlete-edit": renderAthleteEdit,
     onboarding: renderOnboarding, today: renderToday, library: renderLibrary, progress: renderProgress,
     history: renderHistory, profile: renderProfile, setup: renderSetup, summary: renderSummary,
   };
@@ -378,6 +379,7 @@ function renderToday() {
   ${state.profile.healthAck ? "" : `<div class="pick plan"><div class="pick-eyebrow"><i class="ti ti-shield-check"></i> Before you train</div>
     <p class="pick-reason">${HEALTH_NOTE}</p><button class="btn-secondary" data-act="health-ack"><i class="ti ti-check"></i> I understand</button></div>`}
   ${programCard()}
+  ${monthlyCard()}
   ${pickCard}
 
   ${sectionLabel("Short on time?")}
@@ -777,6 +779,7 @@ function renderProgress() {
     <div class="hero-daycount">Since ${fmtDate(h[h.length - 1].date)}${h.some(x => x.demo) ? " · includes sample data" : ""}</div>
     <div class="hero-titlebar"><h1 class="hero-name">Progress</h1></div>
   </section>
+  <button class="text-btn" data-go="history"><i class="ti ti-history"></i> All workouts</button>
 
   <div class="tiles">
     <div class="tile"><span class="stat-label">Workouts</span><b>${t.sessions}</b></div>
@@ -839,11 +842,12 @@ function renderProgress() {
 
 /* ── History ──────────────────────────────────────────────────────────────── */
 function historyRow(h) {
+  const c = h.attempt && challengeById(h.attempt.challengeId);
   return `
     <button class="cl-row" data-history="${h.id}">
-      <i class="ti ${h.bench ? "ti-trophy" : h.early ? "ti-flag" : "ti-check"} cl-ic" aria-hidden="true"></i>
-      <span class="cl-main"><span class="cl-name">${esc(h.name)}${h.demo ? ` <span class="tag tag--sample">Sample</span>` : ""}</span>
-        <span class="cl-meta">${fmtDay(h.date)} · ${fmtClock(h.stats.totalSec)}${h.bench ? ` · ${h.bench.totalMi.toFixed(2)} mi` : h.stats.distance ? ` · ${h.stats.distance.toFixed(2)} mi` : ""}</span>
+      <i class="ti ${c ? c.icon : h.bench ? "ti-trophy" : h.early ? "ti-flag" : "ti-check"} cl-ic ${h.attempt?.pr ? "is-done" : ""}" aria-hidden="true"></i>
+      <span class="cl-main"><span class="cl-name">${esc(h.name)}${h.demo ? ` <span class="tag tag--sample">Sample</span>` : ""}${h.attempt?.pr ? ` <span class="tag tag--live">PR</span>` : ""}</span>
+        <span class="cl-meta">${fmtDay(h.date)} · ${c ? (h.attempt.dnf ? "DNF" : esc(formatScore(c, h.attempt.score))) : fmtClock(h.stats.totalSec)}${!c && h.bench ? ` · ${h.bench.totalMi.toFixed(2)} mi` : !c && h.stats.distance ? ` · ${h.stats.distance.toFixed(2)} mi` : ""}</span>
         ${h.rating ? starsSVG(h.rating, { size: 13 }) : ""}</span>
       <i class="ti ti-chevron-right cl-go" aria-hidden="true"></i>
     </button>`;
@@ -859,7 +863,7 @@ function renderHistory() {
     m.items.push(h);
   });
   return `
-  ${topbar()}
+  ${topbar("", backButton(ui.tab === "profile" ? "profile" : "progress", ui.tab === "profile" ? "Profile" : "Progress"))}
   <section class="hero">
     <div class="hero-daycount">${state.history.length} workouts saved</div>
     <div class="hero-titlebar"><h1 class="hero-name">History</h1></div>
@@ -881,6 +885,14 @@ function renderProfile() {
     <div class="hero-daycount">${cap(p.level)} · ${p.goal} workouts a week</div>
     <div class="hero-titlebar"><h1 class="hero-name">Profile</h1></div>
   </section>
+
+  <button class="athlete-card" data-go="athlete">
+    <span class="avatar avatar--sm">${esc(initials(athlete().displayName))}</span>
+    <span class="cl-main"><span class="cl-name">${esc(athlete().displayName || "Set up your athlete profile")}</span>
+      <span class="cl-meta">${athlete().displayName ? `${esc(DIVISIONS.find(d => d.id === athlete().division).label)} · ${personalRecords().length} records · ${athlete().visibility === "public" ? "public" : "private"}` : "Records, benchmarks, leaderboards and privacy"}</span></span>
+    <i class="ti ti-chevron-right cl-go" aria-hidden="true"></i>
+  </button>
+  <button class="text-btn" data-go="history"><i class="ti ti-history"></i> All workouts</button>
 
   ${sectionLabel("Weekly goal")}
   <div class="set-list"><div class="set-row">
@@ -923,6 +935,8 @@ function renderProfile() {
       <span class="set-unit">history, settings and benchmarks on this device${Sync.user ? " · you'll be signed out; your cloud copy stays" : ""}</span></span></button>
   </div>
   ${renderAccount()}
+
+  ${ui.isStaff ? `${sectionLabel("VYRA staff")}<div class="set-list"><button class="set-row" data-go="review"><i class="ti ti-video set-ic"></i><span class="set-label">Review queue<span class="set-unit">Approve or reject video verifications</span></span></button></div>` : ""}
 
   ${sectionLabel("Health & safety")}
   <p class="hint hint--block">${HEALTH_NOTE} Stop if you feel chest pain, dizziness, or sharp or worsening pain.</p>
@@ -1003,7 +1017,7 @@ function startWorkout(templateId = ui.templateId, custom = null, programKey = nu
     ({ workout, timeline } = plan); swaps = plan.gear.swaps;
   }
   ui.returnTo = ui.screen === "summary" ? ui.tab : ui.screen;
-  session = { workout, timeline, swaps, startedAt: Date.now(), programKey: inPlan ? inPlan.key : null };
+  session = { workout, timeline, swaps, startedAt: Date.now(), programKey: inPlan ? inPlan.key : null, ghost: custom?.ghost || null };
   engine = new IntervalEngine(timeline, { countdown: 3 });
   wireCues(engine);
   engine
@@ -1042,7 +1056,8 @@ function finishWorkout(early) {
   const before = new Set(badgeStatus(state.history, state.profile.goal).filter(b => b.earned).map(b => b.id));
   const rec = {
     id: uid(), date: session.startedAt, name: session.workout.name, templateId: session.workout.templateId,
-    params: session.workout.params, swaps: session.swaps, stats, early,
+    params: session.workout.params, swaps: session.swaps, stats, early, challenge: session.workout.challenge || null,
+    checkpoints: session.workout.challenge ? checkpointsFromVisits(session.timeline, engine.visits) : undefined,
     patterns: visitPatterns(session.timeline, engine.visits), rating: 0, feel: null,
     bench: t?.focus.includes("benchmark") ? {
       legs: benchmarkLegs(session.timeline).map(l => ({ id: l.id, name: l.name, unit: l.unit,
@@ -1151,7 +1166,7 @@ function renderPlayer() {
         <div class="pl-v"><div class="pl-name">${esc(iv.title)}</div>
           ${iv.instruction ? `<div class="pl-instr">${esc(iv.instruction)}</div>` : ""}
           ${iv.exercises.length > 1 ? exList(iv.exercises) : ""}
-          ${iv.openEnded ? `<div class="pl-note">For reps, not speed. Tap DONE when the set is finished.</div>` : ""}
+          ${iv.openEnded ? `<div class="pl-note">${iv.type === "WORK" ? "For reps, not speed. Tap DONE when the set is finished." : "Tap DONE when you reach the distance."}</div>` : ""}
           ${iv.note ? `<div class="pl-note">${esc(iv.note)}</div>` : ""}</div>
       </div>`;
 
@@ -1171,7 +1186,7 @@ function renderPlayer() {
         <div class="pl-v"><div class="pl-name pl-name--dim">${next ? esc(nextLabel(next)) : "Finish"}</div></div>
       </div>`;
 
-  const showDone = iv.type === "WORK" && (iv.hasTarget || iv.openEnded);
+  const showDone = (iv.type === "WORK" && (iv.hasTarget || iv.openEnded)) || (iv.type === "CARDIO" && iv.openEnded);
   const total = tl.reduce((a, x) => a + planSec(x), 0) || 1;
   const tickPos = i => (tl.slice(0, i).reduce((a, x) => a + planSec(x), 0) / total) * 100;
   const ticks = tl.map((x, i) => (i > 0 && (x.rounds > 1 ? x.roundStart : x.type !== "REST") ? i : null)).filter(i => i != null);
@@ -1183,6 +1198,7 @@ function renderPlayer() {
       <span class="pl-clock" data-bind="clock"></span>
       ${soundButton()}
     </div>
+    ${session?.ghost ? `<div class="ghost-line" data-bind="ghost" aria-live="polite">Ghost ready · ${esc(session.ghost.name)}</div>` : ""}
     <div class="pl-progress" aria-label="Workout progress">
       <div class="pl-progress-fill" data-bind="progress"></div>
       ${ticks.map(i => `<span class="pl-tick" style="left:${tickPos(i)}%"></span>`).join("")}
@@ -1266,7 +1282,19 @@ function updatePlayer() {
     const doneSec = e.visits.reduce((a, v) => a + v.ms, 0) / 1000 + e.elapsedMs() / 1000;
     const total = e.timeline.reduce((a, x) => a + planSec(x), 0);
     const left = Math.max(0, total - total * e.progress());
-    clock.textContent = `${fmtClock(doneSec)} · ${fmtClock(left)} left`;
+    const ch = session?.workout?.challenge && challengeById(session.workout.challenge.id);
+    if (ch && ch.scoring === "time") {
+      const warm = e.visits.filter(v => v.type === "WARM").reduce((a, v) => a + v.ms, 0) / 1000 + (e.current.type === "WARM" ? e.elapsedMs() / 1000 : 0);
+      const tgt = session.workout.challenge.target;
+      clock.textContent = `Total ${fmtClock(doneSec - warm)}${tgt && ch.better === "lower" && !session.ghost ? ` · ${tgt.name} ${formatScore(ch, tgt.score)}` : ""}`;
+      const gl = app.querySelector('[data-bind="ghost"]');
+      if (gl && session.ghost && e.current.type !== "WARM") {
+        const line = ghostLine(e, doneSec - warm);
+        gl.textContent = line;
+        gl.classList.toggle("ahead", /AHEAD/.test(line));
+        gl.classList.toggle("behind", /BEHIND/.test(line));
+      }
+    } else clock.textContent = `${fmtClock(doneSec)} · ${fmtClock(left)} left`;
   }
 }
 
@@ -1326,6 +1354,7 @@ function renderSummary() {
   </section>
 
   ${s.programKey && !fromHistory ? (() => { const st = activeProgram(); return st ? `<div class="gear-note"><i class="ti ti-calendar-event"></i> ${s.programDone ? `${esc(st.prog.name)} complete. Well done.` : `${esc(st.prog.name)} · ${st.doneCount} of ${st.total} sessions done`}</div>` : ""; })() : ""}
+  ${s.challenge && challengeById(s.challenge.id) ? challengeResultBlock(s) : ""}
   ${newBadges.length ? `<div class="new-badges">${newBadges.map(b => `
     <div class="new-badge"><i class="ti ${b.icon}"></i><span><b>Badge unlocked · ${b.name}</b><span class="cl-meta">${b.desc}</span></span></div>`).join("")}</div>` : ""}
 
@@ -1395,6 +1424,19 @@ function sampleHistory() {
 /* ── Events ────────────────────────────────────────────────────────────────── */
 
 app.addEventListener("input", ev => {
+  if (ev.target.id === "athlete-search") { searchAthletes(ev.target.value.trim()); return; }
+  if (ev.target.id === "club-search") { searchClubs(ev.target.value.trim()); return; }
+  if (ev.target.id === "ghost-target") { ui.ghost = { ...(ui.ghost || {}), target: ev.target.value }; return; }
+  if (ui.clubDraft && ["club-name", "club-city", "club-country", "club-desc"].includes(ev.target.id)) {
+    ui.clubDraft[{ "club-name": "name", "club-city": "city", "club-country": "country", "club-desc": "description" }[ev.target.id]] = ev.target.value; return;
+  }
+  if (ev.target.id === "comment-input" && ui.activity) { ui.activity.draft = ev.target.value; return; }
+  if (ui.athleteDraft && ["ath-name", "ath-handle", "ath-birth", "ath-city", "ath-country"].includes(ev.target.id)) {
+    const key = { "ath-name": "displayName", "ath-handle": "handle", "ath-birth": "birthYear", "ath-city": "city", "ath-country": "country" }[ev.target.id];
+    ui.athleteDraft[key] = ev.target.value;
+    return;
+  }
+  if (ev.target.dataset.result && ui.summary?.resultDraft) { ui.summary.resultDraft.values[ev.target.dataset.result] = ev.target.value; return; }
   if (ev.target.id === "sync-email") { ui.auth.email = ev.target.value.trim(); return; }
   if (ev.target.id === "sync-code") { ui.auth.code = ev.target.value.replace(/\D/g, ""); return; }
   const s = ui.summary;
@@ -1410,12 +1452,16 @@ app.addEventListener("input", ev => {
 });
 
 app.addEventListener("click", async ev => {
-  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session]");
+  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility],[data-ath-activity],[data-compete-view],[data-athlete],[data-comments],[data-react],[data-follow],[data-del-comment],[data-event],[data-event-division],[data-standings-division],[data-ghost],[data-review],[data-club],[data-club-join],[data-club-kind],[data-club-open],[data-battle-scope],[data-board-where]");
   if (!el) return;
   const d = el.dataset;
   if (!["erase", "delete-history", "program-join", "program-leave", "sync-delete"].includes(d.act)) ui.confirm = null;
 
   if (d.go) return go(d.go);
+  if (handleCompeteClick(d)) return;
+  if (await handleCommunityClick(d)) return;
+  if (await handleEventsClick(d)) return;
+  if (await handleClubsClick(d)) return;
   if (d.step) return stepParam(d.step, Number(d.dir));
   if (d.paramToggle) {
     state.params[ui.templateId] = { ...(state.params[ui.templateId] || {}), [d.paramToggle]: !paramsFor(ui.templateId)[d.paramToggle] };
@@ -1526,6 +1572,7 @@ app.addEventListener("click", async ev => {
     case "repeat": {
       const s = ui.summary;
       if (s.templateId === "recovery") return startWorkout("recovery", recoveryWorkout());
+      if (s.challenge) return startChallenge(s.challenge.id, s.challenge.variant, s.attempt?.division || s.challenge.division);
       state.params[s.templateId] = { ...(state.params[s.templateId] || {}), ...s.params };
       if (s.swaps) state.swaps[s.templateId] = { ...s.swaps };
       save();
@@ -1615,8 +1662,10 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
 // Exposed for testing and future workouts.
 window.VYRA = { TEMPLATES, EXERCISES, IntervalEngine, compile, createWorkout, resolveSegments, swappableIds, planTotals, planFor, recommend, version: APP_VERSION };
 
+restoreEventChallenges();
 render();
 Sync.init(changed => {
   if (ui.screen === "player" || document.activeElement?.matches?.("input")) return;
+  if (Sync.user && ui.isStaff === undefined) { ui.isStaff = false; Sync.isStaff().then(v => { ui.isStaff = v; if (v && ui.screen === "profile") rerender(); }); }
   if (changed || ui.screen === "profile") rerender();
 });

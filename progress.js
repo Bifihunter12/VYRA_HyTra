@@ -94,6 +94,14 @@ const BADGES = [
   { id: "bench",   icon: "ti-target",      name: "Benchmarked",     desc: "Log a Row → Bike → Run benchmark", value: c => c.benchmarks, goal: 1 },
   { id: "pb",      icon: "ti-trending-up", name: "Personal best",   desc: "Beat your own benchmark total", value: c => c.pbs, goal: 1 },
   { id: "plan",    icon: "ti-calendar-event", name: "Plan finished", desc: "Complete a 4-week program", value: c => c.plans, goal: 1 },
+  { id: "month1",  icon: "ti-medal-2",     name: "Monthly challenger", desc: "Complete a monthly challenge", value: c => c.months, goal: 1 },
+  { id: "month3",  icon: "ti-calendar-star", name: "Regular",        desc: "Complete 3 monthly challenges", value: c => c.months, goal: 3 },
+  { id: "bench5",  icon: "ti-target",      name: "Five benchmarks",  desc: "Set a result in 5 different benchmarks", value: c => c.benchDone, goal: 5 },
+  { id: "pr5",     icon: "ti-trending-up", name: "Record breaker",   desc: "Set 5 personal records", value: c => c.prCount, goal: 5 },
+  { id: "compdiv", icon: "ti-award",       name: "Competitive standard", desc: "Finish a benchmark in the Competitive division", value: c => c.competitive, goal: 1 },
+  { id: "elitediv",icon: "ti-trophy",      name: "Elite standard",   desc: "Finish a benchmark in the Elite division", value: c => c.elite, goal: 1 },
+  { id: "event1",  icon: "ti-flame",       name: "Event athlete",   desc: "Record a result in a special event", value: c => c.eventResults, goal: 1 },
+  { id: "verified",icon: "ti-circle-check", name: "Verified",        desc: "Get a result verified by video", value: c => c.verifiedResults, goal: 1 },
   { id: "warm",    icon: "ti-shield-check",name: "Warmed up",       desc: "Finish 10 workouts with a warm-up", value: c => c.warmups, goal: 10 },
 ];
 
@@ -114,6 +122,7 @@ function badgeContext(history, goal) {
     benchmarks: history.filter(h => h.bench?.totalMi > 0).length,
     pbs, warmups: history.filter(h => h.stats.warmSec > 0).length,
     plans: history.filter(h => h.programDone).length,
+    ...competitionContext(history),
   };
 }
 
@@ -273,4 +282,24 @@ function sparklineSVG(values, { W = 300, H = 70 } = {}) {
     ${values.length > 1 ? `<path d="${area}" class="spark-area"/><polyline points="${pts.join(" ")}" class="spark-line"/>` : ""}
     ${values.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="${i === bestI ? 5 : 3}" class="${i === bestI ? "spark-best" : "spark-dot"}"><title>Attempt ${i + 1}: ${v.toFixed(2)} mi${i === bestI ? " (best)" : ""}</title></circle>`).join("")}
   </svg>`;
+}
+
+/* Badge inputs from benchmark attempts (challenges.js). */
+function competitionContext(history) {
+  const done = history.filter(h => h.attempt && !h.attempt.dnf);
+  const months = new Set();
+  done.forEach(h => {
+    if (typeof monthlyChallenge !== "function") return;
+    const m = monthlyChallenge(new Date(h.date));
+    if (h.attempt.challengeId === m.challengeId && h.attempt.variant === m.variant) months.add(m.key);
+  });
+  return {
+    months: months.size,
+    benchDone: new Set(done.map(h => h.attempt.challengeId)).size,
+    prCount: done.filter(h => h.attempt.pr).length,
+    competitive: done.filter(h => h.attempt.division === "competitive").length,
+    elite: done.filter(h => h.attempt.division === "elite").length,
+    eventResults: done.filter(h => h.attempt.eventId).length,
+    verifiedResults: done.filter(h => h.attempt.verification === "verified").length,
+  };
 }
