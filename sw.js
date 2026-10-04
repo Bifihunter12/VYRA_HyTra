@@ -1,4 +1,4 @@
-const APP_VERSION = "2026.10.04.2";
+const APP_VERSION = "2026.10.04.3";
 const CACHE_NAME = `vyra-${APP_VERSION}`;
 const APP_FILES = [
   "/",
@@ -12,6 +12,8 @@ const APP_FILES = [
   `/config.js?v=${APP_VERSION}`,
   `/sync.js?v=${APP_VERSION}`,
   `/compete.js?v=${APP_VERSION}`,
+  `/events.js?v=${APP_VERSION}`,
+  `/clubs.js?v=${APP_VERSION}`,
   `/app.js?v=${APP_VERSION}`,
   `/app-version.json?v=${APP_VERSION}`,
   "/sw.js",

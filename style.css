@@ -981,3 +981,52 @@ body[data-screen="history"] .app-shell, body[data-screen="profile"] .app-shell {
 .medal b { font-size: 13px; font-weight: 500; }
 .medal span { font-size: 11px; color: var(--text-faint); line-height: 1.3; }
 .big-ic { font-size: 34px; color: var(--accent); }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Phases 3–4 — events, ghost racing, verification, clubs
+   ════════════════════════════════════════════════════════════════════════════ */
+.segmented { grid-template-columns: repeat(4, 1fr); }
+.segmented button { flex-direction: column; gap: 2px; padding: 8px 0; font-size: 11.5px; }
+.segmented button i { font-size: 19px; }
+
+.events { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+button.event { text-align: left; width: 100%; }
+.event--plain {
+  background: radial-gradient(120% 80% at 90% -10%, rgba(217,119,66,.14), transparent 60%), var(--surface);
+  border-color: transparent; color: var(--text);
+}
+.event--plain .event-kicker, .event--plain .cl-meta { color: var(--text-faint); }
+.event--plain .event-pitch, .event--plain .event-tests { color: var(--text-dim); }
+.event .cl-meta b { color: var(--secondary); }
+.event--hero { margin-top: 0; padding: 26px 18px 22px; }
+.event--hero .event-name { font-size: 40px; }
+.event-countdown { display: flex; align-items: baseline; gap: 10px; margin-top: 4px; }
+.event-countdown span { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: rgba(205,215,198,.6); }
+.event-countdown b { font-size: 26px; font-weight: 600; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+.event--plain .event-countdown span { color: var(--text-faint); }
+
+.secret { display: flex; gap: 14px; align-items: flex-start; margin-top: 8px; padding: 16px; border-radius: var(--radius-md, 16px);
+  background: linear-gradient(180deg, #121513, #0c0e0d); border: 1px solid rgba(160,175,150,.14); color: #e3e8df; }
+.secret > i { font-size: 24px; color: var(--secondary); }
+.secret b { font-weight: 500; font-size: 15px; }
+.secret p { font-size: 13px; letter-spacing: 1px; color: rgba(225,232,220,.7); margin-top: 6px; line-height: 1.6; }
+
+.b-sub { display: block; font-size: 11.5px; color: var(--text-faint); margin-top: 2px; white-space: normal; }
+button.b-name { text-align: left; color: inherit; }
+.b-name .ti-rosette-discount-check { color: var(--accent); }
+
+.ghost-line {
+  margin-top: 10px; padding: 9px 14px; border-radius: var(--pill, 999px); text-align: center;
+  font-size: 12px; letter-spacing: 1px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--surface); color: var(--text-dim);
+}
+.ghost-line.ahead { background: rgba(217,119,66,.16); color: var(--secondary); }
+.ghost-line.behind { background: var(--surface-2); color: var(--text); }
+.ghost-target { margin-top: 10px; max-width: 160px; }
+
+.verify-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 2px 10px; }
+.tag i { font-size: 12px; vertical-align: -1px; }
+.invite { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 14px; border-radius: var(--radius-md, 16px); background: var(--surface); }
+.invite > span { flex: none; }
+.invite b { flex: 1; font-size: 22px; letter-spacing: 4px; font-variant-numeric: tabular-nums; }
+.join-code { margin-top: 10px; }
+.avatar .ti { font-size: 28px; }

@@ -32,13 +32,16 @@ function renderCompete() {
   </section>
   <div class="segmented" role="tablist">
     <button role="tab" class="${view === "challenges" ? "on" : ""}" data-compete-view="challenges" aria-selected="${view === "challenges"}"><i class="ti ti-trophy"></i> Challenges</button>
+    <button role="tab" class="${view === "events" ? "on" : ""}" data-compete-view="events" aria-selected="${view === "events"}"><i class="ti ti-flame"></i> Events</button>
     <button role="tab" class="${view === "community" ? "on" : ""}" data-compete-view="community" aria-selected="${view === "community"}"><i class="ti ti-users"></i> Community</button>
+    <button role="tab" class="${view === "clubs" ? "on" : ""}" data-compete-view="clubs" aria-selected="${view === "clubs"}"><i class="ti ti-building"></i> Clubs</button>
   </div>`;
   if (view === "community") return header + renderCommunity();
+  if (view === "events") return header + renderEvents();
+  if (view === "clubs") return header + renderClubs();
   return `
   ${header}
   ${monthlyCard(true)}
-  ${eventCard()}
   ${sectionLabel("Benchmarks", `<span class="cl-cat-count">${BENCHMARKS.length} permanent tests</span>`)}
   <div class="pad-y">${chips("data-bench-filter", [["all", "All"], ["time", "For time"], ["distance", "For distance"], ["strength", "Reps, load & rounds"]], filter)}</div>
   <div class="cl-list">${list.map(c => {
@@ -130,6 +133,8 @@ function renderChallenge() {
   ${targetBanner(c, v.id, division)}
   <button class="btn-primary btn-inline-start" data-act="challenge-start" data-id="${c.id}" data-variant="${v.id}" data-division="${division}"><i class="ti ti-player-play"></i> Start ${esc(c.name)}</button>
 
+  ${ghostBlock(c, v.id, division)}
+
   ${sectionLabel("Standard")}
   <ol class="rules">${c.rules.map(r => `<li>${esc(r)}</li>`).join("")}</ol>
 
@@ -140,13 +145,13 @@ function renderChallenge() {
     <button class="cl-row" data-history="${a.id}">
       <i class="ti ${prIds.has(a.id) ? "ti-trophy" : a.dnf ? "ti-flag" : "ti-check"} cl-ic ${prIds.has(a.id) ? "is-done" : ""}" aria-hidden="true"></i>
       <span class="cl-main"><span class="cl-name">${a.dnf ? "Did not finish" : esc(formatScore(c, a.score))}${prIds.has(a.id) ? ` <span class="tag tag--live">PR</span>` : ""}</span>
-        <span class="cl-meta">${fmtDay(a.date)} · ${esc(VERIFICATION[a.verification]?.label || "")}</span></span>
+        <span class="cl-meta">${fmtDay(a.date)} · ${esc(VERIFICATION[a.verification]?.label || "")} ${verifyChip(a)}</span></span>
       <i class="ti ti-chevron-right cl-go" aria-hidden="true"></i>
     </button>`).join("")}</div>` : ""}`;
 }
 
 /* ── Leaderboards ─────────────────────────────────────────────────────────── */
-const boardKey = (id, variant, division, scope, cat = "all", age = "all") => [id, variant, division, scope, cat, age].join("|");
+const boardKey = (id, variant, division, scope, cat = "all", age = "all") => [id, variant, division, scope, cat, age, ui.boardWhere || "all"].join("|");
 
 async function loadBoard(c, variant, division, scope, cat = "all", age = "all") {
   ui.boards = ui.boards || {};
@@ -167,6 +172,8 @@ async function loadBoard(c, variant, division, scope, cat = "all", age = "all") 
       p_min_birth: age === "mine" && ageRange ? ageRange[0] : null,
       p_max_birth: age === "mine" && ageRange ? ageRange[1] : null,
       p_limit: 50,
+      ...(ui.boardWhere === "country" && ath.country ? { p_country: ath.country } : {}),
+      ...(ui.boardWhere === "city" && ath.city ? { p_city: ath.city, p_country: ath.country || null } : {}),
     });
     ui.boards[key] = { status: "ok", rows };
   } catch (e) {
@@ -212,6 +219,7 @@ function leaderboardBlock(c, variant, division) {
     <div class="board-filters">
       ${chips("data-board-cat", [["all", "Everyone"], ["mine", ath.category === "open" ? "Open" : cap(ath.category)]], cat)}
       ${ath.birthYear ? chips("data-board-age", [["all", "All ages"], ["mine", AGE_LABEL[ageGroup(ath.birthYear)]]], age) : ""}
+      ${ath.country ? chips("data-board-where", [["all", "Everywhere"], ["country", ath.country], ...(ath.city ? [["city", ath.city]] : [])], ui.boardWhere || "all") : ""}
     </div>` : "";
 
   return `${sectionLabel("Leaderboard", `<span class="cl-cat-count">${esc(DIVISIONS.find(d => d.id === division).label)}</span>`)}
@@ -226,7 +234,7 @@ function startChallenge(id, variantId, division) {
   const t = ui.target;
   if (t && t.challengeId === c.id && t.variant === workout.challenge.variant && t.division === div) workout.challenge.target = { name: t.name, score: t.score };
   const timeline = compile(workout, {}, { warmup: state.profile.warmup, cooldown: state.profile.cooldown });
-  startWorkout(workout.templateId, { workout, timeline, swaps: {} });
+  startWorkout(workout.templateId, { workout, timeline, swaps: {}, ghost: buildGhost(c, workout.challenge.variant, div, timeline) });
 }
 
 /* ── Result entry (on the summary screen) ─────────────────────────────────── */
@@ -273,6 +281,7 @@ function challengeResultBlock(rec) {
     <div class="filter-group"><span class="filter-label">Result</span>${chips("data-res-verify", [["training", "Training"], ["community", "Community"]], draft.verification)}</div>
     <p class="hint">${esc(VERIFICATION[draft.verification].desc)}${draft.verification === "community" && !(Sync.user && ath.leaderboards) ? " Sign in and join the leaderboards in your athlete profile so it appears there." : ""}</p>
   </div>
+  ${a && !a.dnf && a.verification !== "training" && Sync.user ? `<div class="verify-row">${verifyChip(a)}${a.verification !== "verified" ? `<button class="text-btn" data-act="verify-open" data-id="${rec.id}"><i class="ti ti-video"></i> ${a.verifyStatus ? "Verification" : "Verify with video"}</button>` : ""}</div>` : ""}
   <button class="btn-primary" data-act="save-result">${a ? '<i class="ti ti-check"></i> Update result' : '<i class="ti ti-device-floppy"></i> Save result'}</button>`;
 }
 
@@ -287,6 +296,8 @@ function saveResult(rec) {
     challengeId: c.id, variant: rec.challenge.variant, division: d.division, score, better: c.better,
     splits: { ...d.values, timeSec }, verification: d.verification, dnf,
     ...(rec.challenge.target ? { target: rec.challenge.target } : {}),
+    ...(rec.checkpoints?.length ? { checkpoints: rec.checkpoints } : {}),
+    ...(rec.challenge.eventId ? { eventId: rec.challenge.eventId, trialId: rec.challenge.trialId } : {}),
   };
   const pr = prCheck(allAttempts().filter(a => a.id !== rec.id), { ...rec.attempt, id: rec.id, date: rec.date });
   // A first result sets the mark; a PR has to beat something.
@@ -395,6 +406,8 @@ function renderAthleteEdit() {
   <div class="account">
     <label class="field"><span>Display name</span><input class="text-input" id="ath-name" maxlength="40" value="${esc(d.displayName)}" placeholder="Caro"></label>
     <label class="field"><span>Handle</span><input class="text-input" id="ath-handle" maxlength="20" value="${esc(d.handle)}" placeholder="caro_runs" autocapitalize="none"></label>
+    <label class="field"><span>City <small>(optional, for local leaderboards)</small></span><input class="text-input" id="ath-city" maxlength="60" value="${esc(d.city || "")}" placeholder="Berlin"></label>
+    <label class="field"><span>Country code <small>(optional, e.g. DE, US)</small></span><input class="text-input" id="ath-country" maxlength="2" value="${esc(d.country || "")}" placeholder="DE" autocapitalize="characters"></label>
     <label class="field"><span>Birth year <small>(for age groups, optional)</small></span><input class="text-input" id="ath-birth" inputmode="numeric" maxlength="4" value="${esc(d.birthYear || "")}" placeholder="1990"></label>
   </div>
   ${sectionLabel("Category")}
@@ -426,6 +439,7 @@ function handleCompeteClick(d) {
   if (d.boardScope) { ui.boardScope = d.boardScope; rerender(); return true; }
   if (d.boardCat) { ui.boardCat = d.boardCat; rerender(); return true; }
   if (d.boardAge) { ui.boardAge = d.boardAge; rerender(); return true; }
+  if (d.boardWhere) { ui.boardWhere = d.boardWhere; rerender(); return true; }
   if (d.resDivision) { ui.summary.resultDraft.division = d.resDivision; rerender(); return true; }
   if (d.resVerify) { ui.summary.resultDraft.verification = d.resVerify; rerender(); return true; }
   if (d.athCategory) { ui.athleteDraft.category = d.athCategory; rerender(); return true; }
@@ -444,9 +458,12 @@ function handleCompeteClick(d) {
       dr.handle = (document.getElementById("ath-handle")?.value || "").trim().toLowerCase();
       const by = Number(document.getElementById("ath-birth")?.value) || null;
       dr.birthYear = by;
+      dr.city = (document.getElementById("ath-city")?.value || "").trim();
+      dr.country = (document.getElementById("ath-country")?.value || "").trim().toUpperCase();
       const year = new Date().getFullYear();
       ui.athleteError = dr.handle && !/^[a-z0-9_]{3,20}$/.test(dr.handle) ? "Handles use 3–20 lowercase letters, numbers or _."
         : by && (by < year - 100 || by > year - 13) ? "Enter a valid birth year (13 or older)."
+        : dr.country && !/^[A-Z]{2}$/.test(dr.country) ? "Country code is two letters, like DE or US."
         : dr.leaderboards && !dr.displayName ? "Add a display name to appear on leaderboards." : "";
       if (ui.athleteError) { rerender(); return true; }
       state.athlete = { ...dr };

@@ -100,6 +100,8 @@ const BADGES = [
   { id: "pr5",     icon: "ti-trending-up", name: "Record breaker",   desc: "Set 5 personal records", value: c => c.prCount, goal: 5 },
   { id: "compdiv", icon: "ti-award",       name: "Competitive standard", desc: "Finish a benchmark in the Competitive division", value: c => c.competitive, goal: 1 },
   { id: "elitediv",icon: "ti-trophy",      name: "Elite standard",   desc: "Finish a benchmark in the Elite division", value: c => c.elite, goal: 1 },
+  { id: "event1",  icon: "ti-flame",       name: "Event athlete",   desc: "Record a result in a special event", value: c => c.eventResults, goal: 1 },
+  { id: "verified",icon: "ti-circle-check", name: "Verified",        desc: "Get a result verified by video", value: c => c.verifiedResults, goal: 1 },
   { id: "warm",    icon: "ti-shield-check",name: "Warmed up",       desc: "Finish 10 workouts with a warm-up", value: c => c.warmups, goal: 10 },
 ];
 
@@ -297,5 +299,7 @@ function competitionContext(history) {
     prCount: done.filter(h => h.attempt.pr).length,
     competitive: done.filter(h => h.attempt.division === "competitive").length,
     elite: done.filter(h => h.attempt.division === "elite").length,
+    eventResults: done.filter(h => h.attempt.eventId).length,
+    verifiedResults: done.filter(h => h.attempt.verification === "verified").length,
   };
 }

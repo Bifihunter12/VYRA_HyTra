@@ -46,12 +46,42 @@ Scoring types: time (lower or higher wins), distance, reps, load, rounds, points
 - `supabase/003_community.sql`: follows, activity, reactions, comments and
   `feed()`, `activity_comments()`, `search_athletes()`, `athlete_profile()`
 
+## Phase 3 (shipped)
+
+- **Ghost racing** on for-time challenges: race your PR (its per-segment
+  checkpoints), a friend's result ("Challenge this result") or a target time.
+  The player shows "YOU 3:00 · TARGET 2:35 · 25 SEC BEHIND" at every split
+- **Verification:** training, community and verified. Any community result can
+  be sent for review with a video link; staff verify or reject from a review
+  queue; the status syncs back to the athlete. Events ask the top results per
+  division (`verify_top`) to verify
+- **Special events** (`events.js`, `supabase/004_events.sql`): registration
+  window, capacity, countdown, competition window, divisions, rules, secret
+  Trials revealed at `reveal_at`, standings per division and final results.
+  Event results are tagged with the event and Trial and only count when the
+  athlete is registered and inside the window (enforced in the database)
+- **Forest Points:** each Trial ranks the field, 1st 100 → last 10, multiplied
+  by the Trial's weight; the Forest Score is the sum, so no single strength wins
+- **The Iron Forest 2027:** The Hunt, Forge, Burden, Mountain, River, Stand and
+  The Escape (×1.5). Messaging: THE FOREST IS COMING / OPEN / ENTER THE IRON
+  FOREST / CLOSED. **The Wild Hunt** (November 2026) is the first, smaller event
+- Trials are data (JSON specs built with `challengeFromSpec`), so new events need
+  no app update. Badges: Event athlete, Verified
+
+## Phase 4 (shipped)
+
+- **Clubs, gyms and teams** (`clubs.js`, `supabase/005_clubs.sql`): open or
+  invite-code clubs, owner/admin/member roles, teams of up to 6
+- **Club leaderboard** for the monthly challenge and a roster
+- **Gym vs gym:** each club scores the placement points of its best 10 members on
+  the monthly challenge; world or your country
+- **Local leaderboards:** athletes add a city and country; every benchmark board
+  filters to everywhere / country / city
+- **Partner gyms** (staff-flagged) and **in-person events** hosted by a club, with
+  a venue and capacity
+
 ## Next
 
-**Phase 3:** ghost racing (pace against a previous attempt's splits, which are already
-stored per segment), video verification queue, special events with registration,
-countdown, divisions and Forest Points. Iron Forest: secret Trials (Hunt,
-Forge, Burden, Mountain, River, Stand) scored to Forest Points so no single
-strength wins, plus The Escape.
-
-**Phase 4:** clubs, teams, gym-vs-gym and local leaderboards, physical events.
+- Event admin screen (today events are added with SQL; see the seed in 004)
+- Push or email reminders when an event opens
+- Payments for paid events and the club plan

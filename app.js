@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.04.2";
+const APP_VERSION = "2026.10.04.3";
 const STORE_KEY = "vyra_v1";
 /* Beeps, spoken cues and vibration are switched off for now. Set to true to bring them back. */
 const CUES_ENABLED = false;
@@ -206,7 +206,8 @@ function render() {
   document.body.dataset.screen = ui.screen;
   if (ui.screen === "player") return renderPlayer();
   const views = {
-    program: renderProgram, compete: renderCompete, activity: renderActivity, "athlete-view": renderAthleteView, challenge: renderChallenge, athlete: renderAthlete, "athlete-edit": renderAthleteEdit,
+    program: renderProgram, compete: renderCompete, activity: renderActivity, "athlete-view": renderAthleteView,
+    event: renderEvent, verify: renderVerify, review: renderReview, club: renderClub, "club-new": renderClubNew, challenge: renderChallenge, athlete: renderAthlete, "athlete-edit": renderAthleteEdit,
     onboarding: renderOnboarding, today: renderToday, library: renderLibrary, progress: renderProgress,
     history: renderHistory, profile: renderProfile, setup: renderSetup, summary: renderSummary,
   };
@@ -935,6 +936,8 @@ function renderProfile() {
   </div>
   ${renderAccount()}
 
+  ${ui.isStaff ? `${sectionLabel("VYRA staff")}<div class="set-list"><button class="set-row" data-go="review"><i class="ti ti-video set-ic"></i><span class="set-label">Review queue<span class="set-unit">Approve or reject video verifications</span></span></button></div>` : ""}
+
   ${sectionLabel("Health & safety")}
   <p class="hint hint--block">${HEALTH_NOTE} Stop if you feel chest pain, dizziness, or sharp or worsening pain.</p>
   <p class="hint"><a href="privacy.html">Privacy & safety</a> · ${Sync.user ? "Synced to your account" : "Everything stays on this device"}. VYRA ${APP_VERSION}</p>`;
@@ -1014,7 +1017,7 @@ function startWorkout(templateId = ui.templateId, custom = null, programKey = nu
     ({ workout, timeline } = plan); swaps = plan.gear.swaps;
   }
   ui.returnTo = ui.screen === "summary" ? ui.tab : ui.screen;
-  session = { workout, timeline, swaps, startedAt: Date.now(), programKey: inPlan ? inPlan.key : null };
+  session = { workout, timeline, swaps, startedAt: Date.now(), programKey: inPlan ? inPlan.key : null, ghost: custom?.ghost || null };
   engine = new IntervalEngine(timeline, { countdown: 3 });
   wireCues(engine);
   engine
@@ -1054,6 +1057,7 @@ function finishWorkout(early) {
   const rec = {
     id: uid(), date: session.startedAt, name: session.workout.name, templateId: session.workout.templateId,
     params: session.workout.params, swaps: session.swaps, stats, early, challenge: session.workout.challenge || null,
+    checkpoints: session.workout.challenge ? checkpointsFromVisits(session.timeline, engine.visits) : undefined,
     patterns: visitPatterns(session.timeline, engine.visits), rating: 0, feel: null,
     bench: t?.focus.includes("benchmark") ? {
       legs: benchmarkLegs(session.timeline).map(l => ({ id: l.id, name: l.name, unit: l.unit,
@@ -1162,7 +1166,7 @@ function renderPlayer() {
         <div class="pl-v"><div class="pl-name">${esc(iv.title)}</div>
           ${iv.instruction ? `<div class="pl-instr">${esc(iv.instruction)}</div>` : ""}
           ${iv.exercises.length > 1 ? exList(iv.exercises) : ""}
-          ${iv.openEnded ? `<div class="pl-note">For reps, not speed. Tap DONE when the set is finished.</div>` : ""}
+          ${iv.openEnded ? `<div class="pl-note">${iv.type === "WORK" ? "For reps, not speed. Tap DONE when the set is finished." : "Tap DONE when you reach the distance."}</div>` : ""}
           ${iv.note ? `<div class="pl-note">${esc(iv.note)}</div>` : ""}</div>
       </div>`;
 
@@ -1194,6 +1198,7 @@ function renderPlayer() {
       <span class="pl-clock" data-bind="clock"></span>
       ${soundButton()}
     </div>
+    ${session?.ghost ? `<div class="ghost-line" data-bind="ghost" aria-live="polite">Ghost ready · ${esc(session.ghost.name)}</div>` : ""}
     <div class="pl-progress" aria-label="Workout progress">
       <div class="pl-progress-fill" data-bind="progress"></div>
       ${ticks.map(i => `<span class="pl-tick" style="left:${tickPos(i)}%"></span>`).join("")}
@@ -1281,7 +1286,14 @@ function updatePlayer() {
     if (ch && ch.scoring === "time") {
       const warm = e.visits.filter(v => v.type === "WARM").reduce((a, v) => a + v.ms, 0) / 1000 + (e.current.type === "WARM" ? e.elapsedMs() / 1000 : 0);
       const tgt = session.workout.challenge.target;
-      clock.textContent = `Total ${fmtClock(doneSec - warm)}${tgt && ch.better === "lower" ? ` · ${tgt.name} ${formatScore(ch, tgt.score)}` : ""}`;
+      clock.textContent = `Total ${fmtClock(doneSec - warm)}${tgt && ch.better === "lower" && !session.ghost ? ` · ${tgt.name} ${formatScore(ch, tgt.score)}` : ""}`;
+      const gl = app.querySelector('[data-bind="ghost"]');
+      if (gl && session.ghost && e.current.type !== "WARM") {
+        const line = ghostLine(e, doneSec - warm);
+        gl.textContent = line;
+        gl.classList.toggle("ahead", /AHEAD/.test(line));
+        gl.classList.toggle("behind", /BEHIND/.test(line));
+      }
     } else clock.textContent = `${fmtClock(doneSec)} · ${fmtClock(left)} left`;
   }
 }
@@ -1413,9 +1425,14 @@ function sampleHistory() {
 
 app.addEventListener("input", ev => {
   if (ev.target.id === "athlete-search") { searchAthletes(ev.target.value.trim()); return; }
+  if (ev.target.id === "club-search") { searchClubs(ev.target.value.trim()); return; }
+  if (ev.target.id === "ghost-target") { ui.ghost = { ...(ui.ghost || {}), target: ev.target.value }; return; }
+  if (ui.clubDraft && ["club-name", "club-city", "club-country", "club-desc"].includes(ev.target.id)) {
+    ui.clubDraft[{ "club-name": "name", "club-city": "city", "club-country": "country", "club-desc": "description" }[ev.target.id]] = ev.target.value; return;
+  }
   if (ev.target.id === "comment-input" && ui.activity) { ui.activity.draft = ev.target.value; return; }
-  if (ui.athleteDraft && ["ath-name", "ath-handle", "ath-birth"].includes(ev.target.id)) {
-    const key = { "ath-name": "displayName", "ath-handle": "handle", "ath-birth": "birthYear" }[ev.target.id];
+  if (ui.athleteDraft && ["ath-name", "ath-handle", "ath-birth", "ath-city", "ath-country"].includes(ev.target.id)) {
+    const key = { "ath-name": "displayName", "ath-handle": "handle", "ath-birth": "birthYear", "ath-city": "city", "ath-country": "country" }[ev.target.id];
     ui.athleteDraft[key] = ev.target.value;
     return;
   }
@@ -1435,7 +1452,7 @@ app.addEventListener("input", ev => {
 });
 
 app.addEventListener("click", async ev => {
-  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility],[data-ath-activity],[data-compete-view],[data-athlete],[data-comments],[data-react],[data-follow],[data-del-comment]");
+  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility],[data-ath-activity],[data-compete-view],[data-athlete],[data-comments],[data-react],[data-follow],[data-del-comment],[data-event],[data-event-division],[data-standings-division],[data-ghost],[data-review],[data-club],[data-club-join],[data-club-kind],[data-club-open],[data-battle-scope],[data-board-where]");
   if (!el) return;
   const d = el.dataset;
   if (!["erase", "delete-history", "program-join", "program-leave", "sync-delete"].includes(d.act)) ui.confirm = null;
@@ -1443,6 +1460,8 @@ app.addEventListener("click", async ev => {
   if (d.go) return go(d.go);
   if (handleCompeteClick(d)) return;
   if (await handleCommunityClick(d)) return;
+  if (await handleEventsClick(d)) return;
+  if (await handleClubsClick(d)) return;
   if (d.step) return stepParam(d.step, Number(d.dir));
   if (d.paramToggle) {
     state.params[ui.templateId] = { ...(state.params[ui.templateId] || {}), [d.paramToggle]: !paramsFor(ui.templateId)[d.paramToggle] };
@@ -1643,8 +1662,10 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
 // Exposed for testing and future workouts.
 window.VYRA = { TEMPLATES, EXERCISES, IntervalEngine, compile, createWorkout, resolveSegments, swappableIds, planTotals, planFor, recommend, version: APP_VERSION };
 
+restoreEventChallenges();
 render();
 Sync.init(changed => {
   if (ui.screen === "player" || document.activeElement?.matches?.("input")) return;
+  if (Sync.user && ui.isStaff === undefined) { ui.isStaff = false; Sync.isStaff().then(v => { ui.isStaff = v; if (v && ui.screen === "profile") rerender(); }); }
   if (changed || ui.screen === "profile") rerender();
 });

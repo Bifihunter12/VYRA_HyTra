@@ -242,7 +242,10 @@ const EVENTS = [
   },
 ];
 
-const challengeById = id => BENCHMARKS.find(c => c.id === id) || null;
+/* Challenges defined as data (event Trials, future content) are registered here. */
+const EXTRA_CHALLENGES = new Map();
+const challengeById = id => BENCHMARKS.find(c => c.id === id) || EXTRA_CHALLENGES.get(id) || null;
+function registerChallenge(c) { EXTRA_CHALLENGES.set(c.id, c); return c; }
 const variantOf = (c, id) => c.variants.find(v => v.id === id) || c.variants.find(v => v.id === c.defaultVariant) || c.variants[0];
 
 function challengeWorkout(c, variantId, division = "open") {
@@ -320,4 +323,119 @@ function rankEntries(c, entries) {
   const sorted = [...entries].sort((a, b) => (c.better === "lower" ? a.score - b.score : b.score - a.score));
   let rank = 0, last = null;
   return sorted.map((e, i) => { if (e.score !== last) { rank = i + 1; last = e.score; } return { ...e, rank }; });
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Phase 3 — data-driven challenges, ghost racing, events and Forest Points
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* A challenge described as JSON (stored in the database for events):
+   { id, name, scoring, better?, tagline?, story?, rules?, rounds?, inputs?, roundReps?, divisions?,
+     segments: [ { type: "cardio", ex, sec | meters, estimate?, effort?, title? }
+               | { type: "station", exercises: [{ id, reps?, meters? }], sec?, name?, estimate?, note? }
+               | { type: "rest", sec, label? } ] }
+   Unknown movements are rejected so a bad spec can't break the player. */
+function challengeFromSpec(spec) {
+  if (!spec || !spec.id || !SCORING[spec.scoring] || !Array.isArray(spec.segments) || !spec.segments.length) throw new Error("Invalid challenge spec");
+  spec.segments.forEach(sg => {
+    const ids = sg.type === "cardio" ? [sg.ex] : sg.type === "station" ? (sg.exercises || []).map(e => e.id) : [];
+    ids.forEach(id => { if (!EXERCISES[id]) throw new Error(`Unknown movement: ${id}`); });
+    if (sg.type === "station" && !(sg.exercises || []).length) throw new Error("Station without movements");
+  });
+  const seg = sg => {
+    if (sg.type === "rest") return rest(sg.sec, sg.label);
+    if (sg.type === "cardio") return sg.meters ? toDistance(sg.ex, sg.meters, sg.estimate || sg.meters * 0.3, { title: sg.title, effort: sg.effort })
+      : cardio(sg.ex, sg.sec, { title: sg.title, effort: sg.effort });
+    const exs = sg.exercises.map(e => ex(e.id, e.reps ? reps(e.reps) : e.meters ? { distance: e.meters, unit: "m" } : undefined));
+    return station(exs, sg.sec ?? null, { name: sg.name, estimate: sg.estimate, note: sg.note });
+  };
+  return {
+    kind: spec.kind || "event", icon: spec.icon || "ti-trophy", level: spec.level || "intermediate",
+    tagline: spec.tagline || SCORING[spec.scoring].label, story: spec.story || "", rules: spec.rules || [],
+    equipment: spec.equipment || [], variants: [{ id: "standard", name: "Standard" }], defaultVariant: "standard",
+    ...spec,
+    better: spec.better || SCORING[spec.scoring].better,
+    inputs: spec.inputs ? () => spec.inputs : undefined,
+    build: () => ({ rounds: Array.from({ length: spec.rounds || 1 }, () => round(spec.segments.map(seg))) }),
+  };
+}
+
+/* ── Ghost racing (for-time challenges) ─────────────────────────────────────
+   Checkpoints are cumulative seconds at the end of each scored segment
+   (warm-up excluded, rests counted because the clock keeps running).        */
+
+/* Scored segments of a timeline: indices of every interval that isn't warm-up/cool-down or rest. */
+function scoredSegments(timeline) {
+  return timeline.map((iv, i) => (iv.type !== "WARM" && iv.type !== "REST" ? i : -1)).filter(i => i >= 0);
+}
+
+/* My checkpoints from the engine's visit log. */
+function checkpointsFromVisits(timeline, visits) {
+  let t = 0;
+  const cps = [];
+  visits.forEach(v => {
+    const iv = timeline[v.index];
+    if (!iv || iv.type === "WARM") return;
+    t += v.ms / 1000;
+    if (iv.type !== "REST" && (v.outcome === "complete" || v.outcome === "done")) cps.push(Math.round(t * 10) / 10);
+  });
+  return cps;
+}
+
+/* A ghost for a known total only (friend, leaderboard athlete, target time):
+   spread the total over the segments in proportion to their planned length. */
+function ghostFromTotal(timeline, totalSec) {
+  const idx = scoredSegments(timeline);
+  const plan = timeline.filter(iv => iv.type !== "WARM");
+  const weights = [];
+  let acc = 0;
+  plan.forEach(iv => { acc += planSec(iv); if (iv.type !== "REST") weights.push(acc); });
+  const sum = acc || 1;
+  return idx.map((_, k) => Math.round((weights[k] / sum) * totalSec * 10) / 10);
+}
+
+/* Where am I against the ghost? done = scored segments completed, elapsed = my seconds (warm-up excluded). */
+function ghostStatus(ghost, mine, done, elapsed) {
+  if (!ghost || !ghost.length) return null;
+  const next = ghost[Math.min(done, ghost.length - 1)];
+  const lastDelta = done > 0 && mine[done - 1] != null ? mine[done - 1] - ghost[done - 1] : 0;
+  // Still running this segment past the ghost's split: we're at least that far behind.
+  const delta = elapsed > next && done < ghost.length ? Math.max(lastDelta, elapsed - next) : lastDelta;
+  return { delta: Math.round(delta), ghostSplit: next, ghostTotal: ghost[ghost.length - 1] };
+}
+
+function ghostText(delta) {
+  if (Math.abs(delta) < 1) return "LEVEL";
+  return `${Math.abs(delta) >= 60 ? fmtShort(Math.abs(delta)) : `${Math.abs(delta)} SEC`} ${delta < 0 ? "AHEAD" : "BEHIND"}`;
+}
+
+/* ── Events ─────────────────────────────────────────────────────────────── */
+
+/* Placement points: 1st = 100, last = 10, linear between; scaled by the trial's weight. */
+function placementPoints(rank, field, weight = 1) {
+  if (!rank || !field) return 0;
+  return Math.round(weight * (field <= 1 ? 100 : 100 - (90 * (rank - 1)) / (field - 1)));
+}
+
+/* coming → registration → open → closed → final */
+function eventPhase(ev, now = Date.now()) {
+  const t = k => (ev[k] ? Date.parse(ev[k]) : null);
+  if (t("final_at") && now >= t("final_at")) return "final";
+  if (t("ends_at") && now >= t("ends_at")) return "closed";
+  if (t("starts_at") && now >= t("starts_at")) return "open";
+  if (t("registration_opens") && now >= t("registration_opens")) return "registration";
+  return "coming";
+}
+
+/* Messaging per phase. Iron Forest uses its own voice. */
+function eventLine(ev, phase) {
+  const forest = /forest/i.test(ev.name);
+  return {
+    coming: forest ? "THE FOREST IS COMING." : "COMING SOON.",
+    registration: forest ? "ENTER THE IRON FOREST." : "REGISTRATION IS OPEN.",
+    open: forest ? "THE FOREST IS OPEN." : "THE EVENT IS LIVE.",
+    closed: forest ? "THE FOREST IS CLOSED." : "THE EVENT HAS CLOSED.",
+    final: "FINAL RESULTS.",
+  }[phase];
 }

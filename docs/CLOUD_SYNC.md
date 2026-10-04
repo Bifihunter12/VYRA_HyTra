@@ -26,7 +26,15 @@ values, sign-in is hidden and nothing leaves the device.
 4. **Community (following, feed, comments):** one more **New query** with
    `supabase/003_community.sql`, then **Run**. Run it after `002_competition.sql`.
 
-All three files are tested against a real Postgres database on every push
+5. **Events & verification:** **New query** with `supabase/004_events.sql`, then
+   **Run**. It adds events (The Iron Forest, The Wild Hunt), registration, secret
+   Trials, Forest Points standings and the video-verification queue.
+
+6. **Clubs, gyms & teams:** **New query** with `supabase/005_clubs.sql`, then **Run**.
+   It adds clubs, invite codes, gym-vs-gym and local leaderboards.
+
+Always run the files in this order (schema, 002, 003, 004, 005). Every file is safe
+to run again. All of them are tested against a real Postgres database on every push
 (`npm run test:sql`, see `tests/sql/`).
 
 ## 2. Connect the app
@@ -111,4 +119,18 @@ template packs.
   `leaderboard()` function returns only opted-in athletes, and only their display
   name, best score and rank.
 - Athletes can't mark their own results as verified; a database trigger
-  downgrades that to "community". Verification (video review) is Phase 3.
+  downgrades that to "community". Only **staff** can verify, after watching the
+  submitted video, and editing a verified score removes the verification.
+- Event Trials stay unreadable until the event's reveal time, enforced in the
+  database, not just hidden in the app.
+- Invite codes are only visible to a club's owner and admins. Clubs survive their
+  creator deleting their account; ownership passes to the next admin or member.
+
+## Becoming staff (video review)
+
+Staff see **Profile → Review queue** and can verify or reject submitted videos.
+
+1. Supabase → **Authentication → Users**, find your email, copy the **User UID**.
+2. **Table Editor → staff → Insert row**, paste the UID into `user_id`, **Save**.
+3. Reload VYRA. Staff can also mark a club as a partner gym:
+   **SQL Editor** → `select set_partner('<club id>', true);`
