@@ -7,7 +7,7 @@ android {
     compileSdk 36
 
     defaultConfig {
-        applicationId "com.vyra.hytra"
+        applicationId "com.vyra.myapp"
         minSdk 21
         targetSdk 36
         // Raise versionCode by 1 for every upload to Google Play.

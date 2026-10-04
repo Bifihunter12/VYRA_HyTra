@@ -3,7 +3,7 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.vyra.hytra",
+      "package_name": "com.vyra.myapp",
       "sha256_cert_fingerprints": [
         "99:98:F3:6A:3E:22:EA:A2:46:8C:A1:5C:7C:4C:9D:1A:31:98:2C:40:3C:3C:B2:4E:40:7E:4C:CE:76:86:60:3A"
       ]
