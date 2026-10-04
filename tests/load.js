@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-const FILES = ["workouts.js", "core.js", "progress.js"];
+const FILES = ["workouts.js", "core.js", "challenges.js", "progress.js"];
 const EXPORTS = [
   "EXERCISES", "TEMPLATES", "PROGRAMS", "WARMUP", "COOLDOWN", "LOW_IMPACT_IDS", "PATTERNS",
   "createWorkout", "compile", "resolveSegments", "swappableIds", "planTotals", "IntervalEngine",
@@ -12,6 +12,8 @@ const EXPORTS = [
   "recommend", "weeklySeries", "weekStreak", "dayRun", "patternBalance", "badgeStatus", "progressionAdvice",
   "startOfWeek", "DAY_MS", "visitPatterns", "benchmarkLegs", "benchTotalMi",
   "stampChanges", "profileBlob", "mergeRemoteWorkouts", "pendingWorkoutRows", "deletionStamp",
+  "BENCHMARKS", "SCORING", "DIVISIONS", "challengeById", "variantOf", "challengeWorkout", "scoreFromInputs", "formatScore",
+  "ATHLETE_CATEGORIES", "formatDelta", "prCheck", "bestAttempt", "rankEntries", "monthlyChallenge", "ageGroup", "EVENTS",
 ];
 
 module.exports = function load() {

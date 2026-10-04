@@ -126,10 +126,14 @@ function compile(workout, swaps = {}, opts = {}) {
       if (b.type === "cardio") {
         const e = resolveExercise({ id: b.id }, swaps);
         const speed = e.speed ? b.speed : null;
-        timeline.push({ ...base, type: "CARDIO", state: e.state || "CARDIO", exId: e.id, duration: b.duration,
-          title: e.name, cue: e.cue || e.name, icon: exerciseIcon(e), speed, speedUnit: "mph",
+        // Cardio is either timed (duration) or "to a target" (duration null + target distance, tap DONE).
+        const open = b.duration == null;
+        timeline.push({ ...base, type: "CARDIO", state: e.state || "CARDIO", exId: e.id, duration: b.duration ?? null,
+          estimate: open ? (b.estimate || OPEN_ENDED_ESTIMATE) : undefined, openEnded: open,
+          target: b.target ? targetText(b.target) : "", hasTarget: !!b.target,
+          title: b.title || e.name, cue: b.cue || e.cue || e.name, icon: exerciseIcon(e), speed, speedUnit: "mph",
           effort: b.effort || e.effort || "", exercises: [], segments: [],
-          instruction: speed ? `Treadmill at ${fmtSpeed(speed)} MPH. ${e.instruction}` : e.instruction });
+          instruction: [speed ? `Treadmill at ${fmtSpeed(speed)} MPH.` : "", b.instruction || e.instruction].filter(Boolean).join(" ") });
       } else if (b.type === "rest") {
         timeline.push({ ...base, type: "REST", state: "REST", duration: b.duration, title: b.label || "Rest / Transition",
           icon: "ti-clock-pause", instruction: "", exercises: [], segments: [] });
@@ -141,7 +145,7 @@ function compile(workout, swaps = {}, opts = {}) {
         const cue = single && (single.swapped || !b.cue) ? (single.cue || single.name) : (b.cue || title);
         const instruction = (!anySwap && b.instruction) || (single ? single.instruction : b.instruction || "");
         const { segments, duration } = resolveSegments(b.segments, b.duration ?? null);
-        timeline.push({ ...base, type: "WORK", state: "WORK", duration, estimate: duration ?? OPEN_ENDED_ESTIMATE,
+        timeline.push({ ...base, type: "WORK", state: "WORK", duration, estimate: duration ?? b.estimate ?? OPEN_ENDED_ESTIMATE,
           title, cue, icon: exerciseIcon(single || exs[0]), instruction, note: b.note || "",
           exercises: exs, target: exs.map(e => targetText(e.target)).filter(Boolean).join(" + "),
           hasTarget: exs.some(e => e.target), openEnded: duration == null, segments });
@@ -160,7 +164,7 @@ function compile(workout, swaps = {}, opts = {}) {
     const lead = iv.rounds > 1 && iv.roundStart ? (iv.round === 1 ? "Round 1. " : `Next round. Round ${iv.round}. `) : "";
     if (iv.type === "CARDIO") {
       const pace = iv.speed ? ` ${Number(Number(iv.speed).toFixed(1))} miles per hour.` : "";
-      iv.say = `${lead}${iv.cue}.${pace}`;
+      iv.say = `${lead}${iv.cue}.${iv.target ? ` ${iv.target}.` : ""}${pace}`;
     } else if (iv.type === "WARM") {
       iv.say = `${iv.cue}.`;
       if (iv.phase === "cool" && timeline[i - 1]?.type !== "WARM") iv.say = `Main workout done. ${iv.cue}.`;
@@ -420,7 +424,7 @@ function fmtDate(ts) { return new Date(ts).toLocaleDateString(undefined, { day: 
 function fmtDay(ts) { return new Date(ts).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }); }
 function planTotals(timeline) {
   const sum = f => timeline.filter(f).reduce((a, iv) => a + planSec(iv), 0);
-  const dist = timeline.filter(iv => iv.speed).reduce((a, iv) => a + (iv.duration / 3600) * iv.speed, 0);
+  const dist = timeline.filter(iv => iv.speed && iv.duration).reduce((a, iv) => a + (iv.duration / 3600) * iv.speed, 0);
   return {
     total: sum(() => true), main: sum(iv => iv.type !== "WARM"), warm: sum(iv => iv.type === "WARM"),
     cardio: sum(iv => iv.type === "CARDIO"), run: sum(iv => !!iv.speed), work: sum(iv => iv.type === "WORK"),
@@ -507,7 +511,7 @@ function programStatus(active) {
    Deleted workouts leave a tombstone { [id]: deletedAt } so the deletion
    reaches other devices. The newest edit of each workout wins.            */
 
-const SYNC_PROFILE_KEYS = ["profile", "settings", "params", "swaps", "program", "lastTemplate"];
+const SYNC_PROFILE_KEYS = ["profile", "settings", "params", "swaps", "program", "lastTemplate", "athlete"];
 
 /* Bump updatedAt on any workout whose content changed since it was last stamped. */
 function stampChanges(history, now = Date.now()) {

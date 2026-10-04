@@ -17,6 +17,12 @@ values, sign-in is hidden and nothing leaves the device.
    press **Run**. It creates the tables and the rules that keep each person's data
    private. It's safe to run again.
 
+3. **Competition (leaderboards):** open another **New query**, paste the whole of
+   `supabase/002_competition.sql`, and press **Run**. It adds athlete profiles,
+   benchmark results and the leaderboard. Safe to run again. Supabase may warn
+   about "destructive operations": that's the `drop policy if exists` /
+   `drop trigger if exists` lines, which only replace VYRA's own rules.
+
 ## 2. Connect the app
 
 1. Open **Project Settings → API** (also shown under **Connect**).
@@ -90,3 +96,13 @@ The data model is ready for paid features without migration: add a
 `subscriptions` table keyed by `user_id` (fed by a Stripe webhook through a
 Supabase Edge Function) and check it before unlocking premium programs or
 template packs.
+
+## Leaderboards and privacy
+
+- Athlete profiles start **private** and **off** the leaderboards. Athletes opt in
+  under Profile → Athlete profile.
+- Results are stored in `attempts`, which no other user can read directly. The
+  `leaderboard()` function returns only opted-in athletes, and only their display
+  name, best score and rank.
+- Athletes can't mark their own results as verified; a database trigger
+  downgrades that to "community". Verification (video review) is Phase 3.

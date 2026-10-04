@@ -57,7 +57,7 @@ test("a local deletion beats an older remote copy", () => {
 
 test("profile blob holds only synced settings", () => {
   const blob = plain(V.profileBlob({ profile: { goal: 3 }, settings: {}, params: {}, swaps: {}, program: null, lastTemplate: "vyra-8", history: [1], checkin: {} }));
-  assert.deepEqual(Object.keys(blob).sort(), ["lastTemplate", "params", "profile", "program", "settings", "swaps"]);
+  assert.deepEqual(Object.keys(blob).sort(), ["athlete", "lastTemplate", "params", "profile", "program", "settings", "swaps"]);
 });
 
 test("downloaded workouts are not uploaded again until edited on this device", () => {

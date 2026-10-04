@@ -126,7 +126,37 @@ const Sync = {
         const { error } = await db.from("workouts").upsert(rows.slice(i, i + 200), { onConflict: "user_id,id" });
         if (error) throw error;
       }
+
+      // 2b. Benchmark results feed the leaderboards (own table, never readable by others directly).
+      const results = rows.filter(row => row.data?.attempt).map(row => {
+        const a = row.data.attempt;
+        return { user_id: uid, id: row.id, challenge_id: a.challengeId, variant: a.variant, division: a.division,
+          score: a.score, better: a.better, verification: a.verification === "verified" ? "community" : a.verification,
+          dnf: !!a.dnf, performed_at: row.performed_at, deleted: false, updated_at: row.updated_at };
+      });
+      for (let i = 0; i < results.length; i += 200) {
+        const { error } = await db.from("attempts").upsert(results.slice(i, i + 200), { onConflict: "user_id,id" });
+        if (error) throw error;
+      }
+      const gone = rows.filter(row => row.deleted).map(row => row.id);
+      if (gone.length) {
+        const { error } = await db.from("attempts").update({ deleted: true }).eq("user_id", uid).in("id", gone);
+        if (error) throw error;
+      }
       state.sync.pushedAt = startedAt;
+
+      // 2c. Athlete card (name, division, privacy) whenever it changed.
+      const athSig = JSON.stringify(state.athlete || null);
+      if (state.athlete && (firstSync || athSig !== state.sync.athleteSig)) {
+        const a = state.athlete;
+        const { error } = await db.from("athletes").upsert({
+          user_id: uid, handle: a.handle || null, display_name: a.displayName || null, birth_year: a.birthYear || null,
+          category: a.category || "open", division: a.division || "open", visibility: a.visibility || "private",
+          leaderboards: !!a.leaderboards, updated_at: new Date().toISOString(),
+        });
+        if (error) throw error.code === "23505" ? new Error("That handle is already taken. Pick another in your athlete profile.") : error;
+        state.sync.athleteSig = athSig;
+      }
 
       // 3. Settings: whichever side changed last wins.
       const { data: prof, error: pErr } = await db.from("profiles").select("data, updated_at").eq("user_id", uid).maybeSingle();
@@ -151,6 +181,14 @@ const Sync = {
     } catch (e) {
       this.fail(e);
     }
+  },
+
+  /* Ranked best results for one challenge. Returns [] when not signed in. */
+  async leaderboard(params) {
+    if (!this.client || !this.user) return [];
+    const { data, error } = await this.client.rpc("leaderboard", params);
+    if (error) throw error;
+    return data || [];
   },
 
   fail(e) {
