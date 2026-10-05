@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.05.3";
+const APP_VERSION = "2026.10.05.4";
 const STORE_KEY = "vyra_v1";
 /* Beeps, spoken cues and vibration are switched off for now. Set to true to bring them back. */
 const CUES_ENABLED = false;
@@ -139,6 +139,7 @@ function loadState() {
     const raw = localStorage.getItem(STORE_KEY);
     if (!raw) return fresh;
     const s = JSON.parse(raw);
+    s.history = (s.history || []).filter(h => !h.demo);   // sample workouts from older versions
     return { ...fresh, ...s, swaps: s.swaps || {}, settings: { ...fresh.settings, ...(s.settings || {}) },
       profile: { ...fresh.profile, ...(s.profile || {}), onboarded: s.profile?.onboarded ?? (s.history?.length > 0) } };
   } catch { return fresh; }
@@ -742,7 +743,6 @@ function renderProgress() {
       ${ringSVG(0, { size: 96, stroke: 8, label: "No workouts yet" })}
       <p>Every workout you finish is saved here automatically: your weekly goal, streak, training calendar, movement balance, benchmark trends and badges.</p>
       <button class="btn-primary" data-go="today"><i class="ti ti-player-play"></i> Pick today's workout</button>
-      <button class="text-btn text-btn--center" data-act="sample-on">Preview with sample data</button>
     </div>`;
   }
   const now = Date.now();
@@ -797,7 +797,7 @@ function renderProgress() {
   return `
   ${topbar()}
   <section class="hero">
-    <div class="hero-daycount">Since ${fmtDate(h[h.length - 1].date)}${h.some(x => x.demo) ? " · includes sample data" : ""}</div>
+    <div class="hero-daycount">Since ${fmtDate(h[h.length - 1].date)}</div>
     <div class="hero-titlebar"><h1 class="hero-name">Progress</h1></div>
   </section>
   <button class="text-btn" data-go="history"><i class="ti ti-history"></i> All workouts</button>
@@ -867,7 +867,7 @@ function historyRow(h) {
   return `
     <button class="cl-row" data-history="${h.id}">
       <i class="ti ${c ? c.icon : h.bench ? "ti-trophy" : h.early ? "ti-flag" : "ti-check"} cl-ic ${h.attempt?.pr ? "is-done" : ""}" aria-hidden="true"></i>
-      <span class="cl-main"><span class="cl-name">${esc(h.name)}${h.demo ? ` <span class="tag tag--sample">Sample</span>` : ""}${h.attempt?.pr ? ` <span class="tag tag--live">PR</span>` : ""}</span>
+      <span class="cl-main"><span class="cl-name">${esc(h.name)}${h.attempt?.pr ? ` <span class="tag tag--live">PR</span>` : ""}</span>
         <span class="cl-meta">${fmtDay(h.date)} · ${c ? (h.attempt.dnf ? "DNF" : esc(formatScore(c, h.attempt.score))) : fmtClock(h.stats.totalSec)}${!c && h.bench ? ` · ${h.bench.totalMi.toFixed(2)} mi` : !c && h.stats.distance ? ` · ${h.stats.distance.toFixed(2)} mi` : ""}</span>
         ${h.rating ? starsSVG(h.rating, { size: 13 }) : ""}</span>
       <i class="ti ti-chevron-right cl-go" aria-hidden="true"></i>
@@ -899,7 +899,6 @@ function renderHistory() {
 /* ── Profile ──────────────────────────────────────────────────────────────── */
 function renderProfile() {
   const p = state.profile;
-  const hasSample = state.history.some(h => h.demo);
   return `
   ${topbar()}
   <section class="hero">
@@ -948,9 +947,6 @@ function renderProfile() {
 
   ${sectionLabel("Data")}
   <div class="set-list">
-    <button class="set-row" data-act="${hasSample ? "sample-off" : "sample-on"}">
-      <i class="ti ti-sparkles set-ic"></i><span class="set-label">${hasSample ? "Remove sample data" : "Load sample data"}
-      <span class="set-unit">${hasSample ? "keeps your real workouts" : "6 weeks of example workouts to preview Progress"}</span></span></button>
     <button class="set-row set-row--danger" data-act="erase">
       <i class="ti ti-trash set-ic"></i><span class="set-label">${ui.confirm === "erase" ? "Tap again to erase everything" : "Erase all data"}
       <span class="set-unit">history, settings and benchmarks on this device${Sync.user ? " · you'll be signed out; your cloud copy stays" : ""}</span></span></button>
@@ -1366,7 +1362,7 @@ function renderSummary() {
   return `
   ${topbar("", fromHistory ? backButton("history", "History") : "")}
   <section class="done-hero">
-    <div class="hero-daycount">${esc(s.name)} · ${fmtDate(s.date)}${s.demo ? " · sample" : ""}</div>
+    <div class="hero-daycount">${esc(s.name)} · ${fmtDate(s.date)}</div>
     <div class="done-top">
       <h1 class="done-title">${s.early ? "Workout<br>ended" : "Workout<br>complete"}</h1>
       <div class="ring-wrap ring-wrap--sm">
@@ -1414,35 +1410,6 @@ function renderSummary() {
          <button class="btn-secondary" data-act="repeat"><i class="ti ti-repeat"></i> Repeat workout</button>
          ${s.saved ? `<button class="text-btn text-btn--center" data-act="delete-history">${ui.confirm === "delete" ? "Tap again to discard" : "Discard this workout"}</button>` : ""}`}
   </div>`;
-}
-
-/* ── Sample data (clearly marked, removable) ──────────────────────────────── */
-function sampleHistory() {
-  const ids = ["vyra-8", "engine-builder", "the-forge", "tri-15", "carry-me-home", "db-destroyer", "sprint-20", "tri-15", "bike-bells", "gauntlet"];
-  const out = [];
-  const now = Date.now();
-  let triMi = 2.6;
-  for (let d = 41; d >= 1; d--) {
-    const dow = new Date(now - d * DAY_MS).getDay();
-    if (![1, 3, 5, 6].includes(dow) || (d % 9 === 0)) continue;
-    const id = ids[out.length % ids.length];
-    const workout = createWorkout(id, {});
-    const timeline = compile(workout, {}, { warmup: true, cooldown: false });
-    const visits = timeline.map((iv, i) => ({ index: i, type: iv.type, round: iv.round, ms: planSec(iv) * 1000, outcome: "complete" }));
-    const e = new IntervalEngine(timeline); e.visits = visits;
-    const stats = e.stats();
-    const date = startOfDay(now - d * DAY_MS) + 18 * 3600000;
-    const rec = { id: uid(), demo: true, date, name: workout.name, templateId: id, params: workout.params, swaps: {}, stats, early: false,
-      patterns: visitPatterns(timeline, visits), rating: 3 + (out.length % 3), feel: ["right", "right", "hard", "easy"][out.length % 4], saved: true, bench: null };
-    if (id === "tri-15") {
-      triMi += 0.12;
-      rec.bench = { legs: [{ id: "row", name: "Row", unit: "m", value: Math.round(1150 + triMi * 20) }, { id: "bike", name: "Bike", unit: "mi", value: 1.45 + (triMi - 2.6) / 2 },
-        { id: "run", name: "Treadmill Run", unit: "mi", value: 0.58 }], bikeCal: "", totalMi: 0 };
-      rec.bench.totalMi = benchTotalMi(rec.bench);
-    }
-    out.unshift(rec);
-  }
-  return out;
 }
 
 /* ── Events ────────────────────────────────────────────────────────────────── */
@@ -1611,7 +1578,7 @@ app.addEventListener("click", async ev => {
     case "delete-history":
       if (ui.confirm !== "delete") { ui.confirm = "delete"; return rerender(); }
       state.history = state.history.filter(h => h.id !== ui.summary.id);
-      if (!ui.summary.demo) state.deleted = { ...state.deleted, [ui.summary.id]: deletionStamp(ui.summary) };
+      state.deleted = { ...state.deleted, [ui.summary.id]: deletionStamp(ui.summary) };
       save();
       ui.confirm = null;
       return go(ui.viewingHistory ? "history" : "today");
@@ -1623,11 +1590,6 @@ app.addEventListener("click", async ev => {
       Object.assign(state, loadState());
       ui.confirm = null; ui.ob = { goal: 3, level: "intermediate", equipment: [...ALL_EQUIPMENT] };
       return go("onboarding");
-    case "sample-on":
-      state.history = [...state.history.filter(h => !h.demo), ...sampleHistory()].sort((a, b) => b.date - a.date);
-      save(); toast("Sample data loaded"); return go("progress");
-    case "sample-off":
-      state.history = state.history.filter(h => !h.demo); save(); toast("Sample data removed"); return rerender();
     case "ob-done":
       if (!ui.ob.ack) return;
       Object.assign(state.profile, { goal: ui.ob.goal, level: ui.ob.level, equipment: [...ui.ob.equipment], onboarded: true, healthAck: Date.now() });
