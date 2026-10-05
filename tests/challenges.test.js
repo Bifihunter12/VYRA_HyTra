@@ -91,3 +91,19 @@ test("age groups", () => {
   assert.equal(V.ageGroup(2000, new Date(2026, 0, 1)), "u30");
   assert.equal(V.ageGroup(null), null);
 });
+
+test("no-equipment athletes can enter bodyweight and outdoor benchmarks", () => {
+  const open = V.BENCHMARKS.filter(b => !V.gearMissing(b, ["outdoors"]).length).map(b => b.id);
+  for (const id of ["the-hundred", "the-shield", "the-clearing", "the-hunt"]) assert.ok(open.includes(id), id);
+  assert.deepEqual([...V.gearMissing(V.challengeById("the-hunt"), ["treadmill"])], []);
+  assert.deepEqual([...V.gearMissing(V.challengeById("the-river"), ["outdoors"])], ["rower"]);
+});
+
+test("benchmark runs move outdoors only when there's no treadmill", () => {
+  assert.deepEqual({ ...V.outdoorSwaps(["outdoors"]) }, { run: "run-outside", "incline-walk": "walk-outside" });
+  assert.deepEqual({ ...V.outdoorSwaps(["outdoors", "treadmill"]) }, {});
+  const w = V.challengeWorkout(V.challengeById("the-clearing"), "standard", "open");
+  const tl = V.compile(w, V.outdoorSwaps(["outdoors"]), {});
+  assert.deepEqual([...tl.map(iv => iv.exId || iv.exercises[0].id)], ["run-outside", "burpee", "run-outside"]);
+  assert.ok(tl.every(iv => iv.openEnded));
+});

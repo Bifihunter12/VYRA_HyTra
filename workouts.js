@@ -12,17 +12,25 @@
 const EXERCISES = {
   // ── Cardio ──────────────────────────────────────────────────────────────
   "run":          { name: "Treadmill Run", cue: "Run", state: "RUN", cardio: true, speed: true, equipment: ["treadmill"],
-                    subs: ["incline-walk", "bike", "row"], instruction: "Steady, controlled pace." },
+                    subs: ["run-outside", "incline-walk", "bike", "row", "jog-in-place"], instruction: "Steady, controlled pace." },
   "row":          { name: "Row", cue: "Row", state: "ROW", cardio: true, equipment: ["rower"], effort: "Steady · 22–26 strokes/min",
-                    subs: ["bike", "run", "incline-walk"], instruction: "Legs, then hips, then arms. Long, controlled strokes." },
+                    subs: ["bike", "run", "incline-walk", "run-outside", "jog-in-place"], instruction: "Legs, then hips, then arms. Long, controlled strokes." },
   "bike":         { name: "Bike", cue: "Bike", state: "BIKE", cardio: true, equipment: ["bike"], effort: "Steady · 80–90 rpm",
                     subs: ["row", "run", "step-ups"], instruction: "Smooth cadence, light grip, breathe through the nose when you can." },
   "incline-walk": { name: "Brisk Incline Walk", cue: "Incline walk", state: "WALK", cardio: true, equipment: ["treadmill"], effort: "Brisk walk",
-                    instruction: "Steep incline, brisk pace, hands off the rails." },
+                    subs: ["walk-outside", "march-in-place"], instruction: "Steep incline, brisk pace, hands off the rails." },
   "step-ups":     { name: "Step-ups", cue: "Step ups", state: "CARDIO", cardio: true, equipment: [], effort: "Steady rhythm",
                     instruction: "Box or bench. Drive through the whole foot, alternate legs." },
   "cardio-choice":{ name: "Athlete's Choice", cue: "Cardio, your choice", state: "CARDIO", cardio: true, equipment: [], effort: "Your choice",
                     subs: ["run", "row", "bike"], instruction: "Pick any machine and hold a strong, steady pace." },
+  "run-outside":  { name: "Run", cue: "Run", state: "RUN", cardio: true, equipment: ["outdoors"], effort: "Steady · you can talk in short sentences",
+                    subs: ["run", "jog-in-place"], instruction: "Outside on a flat route. Run by feel: relaxed shoulders, quick light steps." },
+  "walk-outside": { name: "Brisk Walk", cue: "Brisk walk", state: "WALK", cardio: true, equipment: ["outdoors"], effort: "Brisk · breathing harder, still chatty",
+                    subs: ["incline-walk", "march-in-place"], instruction: "Walk with purpose, arms swinging. Find a hill if you can." },
+  "jog-in-place": { name: "Jog in Place", cue: "Jog in place", state: "CARDIO", cardio: true, bodyweightCardio: true, equipment: [],
+                    effort: "Steady · you can talk in short sentences", instruction: "Light, quick steps on the balls of your feet. Pump the arms." },
+  "march-in-place": { name: "March in Place", cue: "March in place", state: "WALK", cardio: true, bodyweightCardio: true, equipment: [],
+                    effort: "Brisk · knees up", instruction: "Lift the knees to hip height and swing the arms. No impact." },
 
   // ── Battle ropes + replacements ─────────────────────────────────────────
   "battle-ropes":  { name: "Battle Ropes", cue: "Battle ropes", equipment: ["battle-ropes"],
@@ -37,11 +45,11 @@ const EXERCISES = {
   "rapid-step-ups":{ name: "Rapid Step-ups", cue: "Rapid step ups", equipment: [], instruction: "Low box, quick alternating steps." },
 
   // ── Kettlebell ──────────────────────────────────────────────────────────
-  "kb-swing":      { name: "KB Swings", cue: "Kettlebell swings", equipment: ["kettlebell"], subs: ["db-swing", "kb-deadlift", "db-rdl"],
+  "kb-swing":      { name: "KB Swings", cue: "Kettlebell swings", equipment: ["kettlebell"], subs: ["db-swing", "kb-deadlift", "db-rdl", "hinge-jump", "glute-bridge"],
                      instruction: "Hinge, hike the bell back, snap the hips. Arms are ropes." },
   "db-swing":      { name: "DB Swings", cue: "Dumbbell swings", equipment: ["dumbbell"], instruction: "Hold one dumbbell by the head. Hinge and snap the hips." },
   "kb-deadlift":   { name: "KB Deadlifts", cue: "Kettlebell deadlifts", equipment: ["kettlebell"], instruction: "Bell between the feet, flat back, stand tall." },
-  "kb-clean":      { name: "KB Cleans", cue: "Kettlebell cleans", equipment: ["kettlebell"], subs: ["db-clean", "high-pull", "deadlift-front-rack"],
+  "kb-clean":      { name: "KB Cleans", cue: "Kettlebell cleans", equipment: ["kettlebell"], subs: ["db-clean", "high-pull", "deadlift-front-rack", "hinge-jump"],
                      instruction: "Keep the bell close, let it roll around the wrist into the rack. Switch sides as needed." },
   "db-clean":      { name: "DB Cleans", cue: "Dumbbell cleans", equipment: ["dumbbell"], instruction: "Pull from the hip, catch at the shoulder with soft knees." },
   "high-pull":     { name: "High Pulls", cue: "High pulls", equipment: ["kettlebell"], instruction: "Drive the hips, pull the elbow high and back." },
@@ -50,8 +58,8 @@ const EXERCISES = {
   "kb-push-press": { name: "KB Push Press", cue: "Push press", equipment: ["kettlebell"], instruction: "Small dip, drive with the legs, lock out overhead. Switch sides as needed." },
   "kb-row":        { name: "One-arm KB Rows", cue: "One arm rows", equipment: ["kettlebell"], instruction: "Hinge, flat back, pull the bell to the hip." },
   "kb-reverse-lunge": { name: "KB Reverse Lunges", cue: "Reverse lunges", equipment: ["kettlebell"], instruction: "Bell in the rack or at your side. Step back, alternate legs." },
-  "kb-suitcase-carry": { name: "KB Suitcase Carry", cue: "Suitcase carry", equipment: ["kettlebell"], subs: ["farmer-march"], instruction: "One bell at your side. Stay tall, don't lean. Switch sides halfway." },
-  "clean-thruster":{ name: "Clean + Thruster", cue: "Clean and thruster", equipment: ["kettlebell"], subs: ["db-thruster", "squat-press", "goblet-squat"],
+  "kb-suitcase-carry": { name: "KB Suitcase Carry", cue: "Suitcase carry", equipment: ["kettlebell"], subs: ["farmer-march", "side-plank"], instruction: "One bell at your side. Stay tall, don't lean. Switch sides halfway." },
+  "clean-thruster":{ name: "Clean + Thruster", cue: "Clean and thruster", equipment: ["kettlebell"], subs: ["db-thruster", "squat-press", "goblet-squat", "air-squat", "burpee"],
                      instruction: "Clean to the rack, front squat, drive straight into the press." },
   "db-thruster":   { name: "DB Thrusters", cue: "Dumbbell thrusters", equipment: ["dumbbell"], instruction: "Squat with the dumbbells at your shoulders, drive up into a press." },
   "squat-press":   { name: "Squat + Press", cue: "Squat and press", equipment: ["dumbbell"], instruction: "Full squat, stand, then press. Two separate movements." },
@@ -66,27 +74,27 @@ const EXERCISES = {
   "shoulder-press":{ name: "DB Shoulder Press", cue: "Shoulder press", equipment: ["dumbbell"], instruction: "Brace, ribs down, press straight overhead." },
   "push-press":    { name: "DB Push Press", cue: "Push press", equipment: ["dumbbell"], instruction: "Small dip, drive with the legs, lock out overhead." },
   "reverse-lunge": { name: "Reverse Lunges", cue: "Reverse lunges", equipment: ["dumbbell"], instruction: "Step back, lower the back knee toward the floor, alternate legs." },
-  "squat-to-press":{ name: "Squat to Press", cue: "Squat to press", equipment: ["dumbbell"], subs: ["db-thruster", "goblet-squat"], instruction: "Squat with dumbbells at the shoulders, stand and press in one motion." },
-  "farmer-carry":  { name: "Farmer Carry", cue: "Farmer carry", equipment: ["dumbbell"], subs: ["farmer-march"], instruction: "Heavy weights at your sides. Shoulders down, short quick steps." },
+  "squat-to-press":{ name: "Squat to Press", cue: "Squat to press", equipment: ["dumbbell"], subs: ["db-thruster", "goblet-squat", "air-squat", "burpee"], instruction: "Squat with dumbbells at the shoulders, stand and press in one motion." },
+  "farmer-carry":  { name: "Farmer Carry", cue: "Farmer carry", equipment: ["dumbbell"], subs: ["farmer-march", "bear-crawl"], instruction: "Heavy weights at your sides. Shoulders down, short quick steps." },
   "farmer-march":  { name: "Farmer March", cue: "Farmer march", equipment: ["dumbbell"], instruction: "Heavy weights at your sides, march in place, knees high." },
-  "suitcase-carry":{ name: "Suitcase Carry", cue: "Suitcase carry", equipment: ["dumbbell"], subs: ["farmer-march"], instruction: "One heavy weight at your side. Stay tall, don't lean. Switch sides halfway." },
-  "suitcase-left": { name: "Suitcase Carry · Left", cue: "Suitcase carry, left hand", equipment: ["dumbbell"], subs: ["farmer-march"], instruction: "Weight in the left hand. Stay tall, resist the lean." },
-  "suitcase-right":{ name: "Suitcase Carry · Right", cue: "Suitcase carry, right hand", equipment: ["dumbbell"], subs: ["farmer-march"], instruction: "Weight in the right hand. Stay tall, resist the lean." },
-  "front-rack-carry": { name: "Front-rack Carry", cue: "Front rack carry", equipment: ["dumbbell"], subs: ["farmer-carry", "farmer-march"], instruction: "Weights at the shoulders, elbows up, ribs down." },
-  "overhead-carry":{ name: "Overhead Carry", cue: "Overhead carry", equipment: ["dumbbell"], subs: ["front-rack-carry", "farmer-carry"],
+  "suitcase-carry":{ name: "Suitcase Carry", cue: "Suitcase carry", equipment: ["dumbbell"], subs: ["farmer-march", "side-plank"], instruction: "One heavy weight at your side. Stay tall, don't lean. Switch sides halfway." },
+  "suitcase-left": { name: "Suitcase Carry · Left", cue: "Suitcase carry, left hand", equipment: ["dumbbell"], subs: ["farmer-march", "side-plank"], instruction: "Weight in the left hand. Stay tall, resist the lean." },
+  "suitcase-right":{ name: "Suitcase Carry · Right", cue: "Suitcase carry, right hand", equipment: ["dumbbell"], subs: ["farmer-march", "side-plank"], instruction: "Weight in the right hand. Stay tall, resist the lean." },
+  "front-rack-carry": { name: "Front-rack Carry", cue: "Front rack carry", equipment: ["dumbbell"], subs: ["farmer-carry", "farmer-march", "bear-crawl"], instruction: "Weights at the shoulders, elbows up, ribs down." },
+  "overhead-carry":{ name: "Overhead Carry", cue: "Overhead carry", equipment: ["dumbbell"], subs: ["front-rack-carry", "farmer-carry", "plank-shoulder-taps"],
                      instruction: "Lock the weight overhead, biceps by the ear. Only if your shoulders are happy overhead." },
   "core-finish":   { name: "Knee Drives / Dead Bugs", cue: "Knee drives or dead bugs", equipment: [], instruction: "Standing knee drives or dead bugs on the floor. Slow and braced." },
 };
 
 const EQUIPMENT_LABEL = {
   "treadmill": "Treadmill", "rower": "Rower", "bike": "Bike", "kettlebell": "Kettlebell",
-  "dumbbell": "Dumbbell", "battle-ropes": "Battle ropes",
+  "dumbbell": "Dumbbell", "battle-ropes": "Battle ropes", "outdoors": "Outside (run & walk)",
 };
 const MACHINES = ["treadmill", "rower", "bike"];
 const LEVELS = ["beginner", "intermediate", "advanced"];
 const FOCUS_LABEL = {
   "low-impact": "Low impact", "strength-heavy": "Strength heavy", "cardio-heavy": "Cardio heavy",
-  "minimal": "Minimal equipment", "benchmark": "Benchmark",
+  "minimal": "Minimal equipment", "benchmark": "Benchmark", "bodyweight": "No equipment", "outdoor": "Outdoor",
 };
 
 /* ── Builders ──────────────────────────────────────────────────────────── */
@@ -252,21 +260,21 @@ const TEMPLATES = [
   },
   {
     id: "tri-15", name: "Mini Triathlon 15", tagline: "Row → Bike → Run", category: "benchmark",
-    level: "beginner", focus: ["cardio-heavy", "benchmark"], equipment: ["rower", "bike", "treadmill"], roundWord: "Leg",
+    level: "beginner", focus: ["cardio-heavy", "benchmark"], equipment: ["rower", "bike", "treadmill"], machinesOnly: true, roundWord: "Leg",
     about: "Five minutes on each machine. Record your distances at the end and try to beat your total next month.",
     params: [P.time("legSec", "Each leg", 300, "ti-clock", 60, 60, 1800), P.time("transSec", "Transition", 0, "ti-clock-pause", 15), P.speed(7.0)],
     build(p) { return triathlon(p, 1); },
   },
   {
     id: "tri-30", name: "Mini Triathlon 30", tagline: "Longer engine test", category: "benchmark",
-    level: "intermediate", focus: ["cardio-heavy", "benchmark"], equipment: ["rower", "bike", "treadmill"], roundWord: "Leg",
+    level: "intermediate", focus: ["cardio-heavy", "benchmark"], equipment: ["rower", "bike", "treadmill"], machinesOnly: true, roundWord: "Leg",
     about: "Ten minutes each of row, bike and run. Pace it evenly. Don't blow up in the first ten minutes.",
     params: [P.time("legSec", "Each leg", 600, "ti-clock", 60, 60, 1800), P.time("transSec", "Transition", 60, "ti-clock-pause", 15), P.speed(7.0)],
     build(p) { return triathlon(p, 1); },
   },
   {
     id: "tri-intervals", name: "Triathlon Intervals", tagline: "Row / bike / run repeats", category: "benchmark",
-    level: "advanced", focus: ["cardio-heavy", "benchmark"], equipment: ["rower", "bike", "treadmill"],
+    level: "advanced", focus: ["cardio-heavy", "benchmark"], equipment: ["rower", "bike", "treadmill"], machinesOnly: true,
     about: "Three minutes on each machine, three times through: 27 minutes of work. Advanced athletes go for four rounds.",
     params: [P.rounds(3, 2, 4), P.time("legSec", "Each leg", 180, "ti-clock", 30, 60, 600), P.time("transSec", "Transition", 30, "ti-clock-pause", 15),
              P.time("roundRest", "Rest between rounds", 60, "ti-clock"), P.speed(7.0)],
@@ -322,6 +330,87 @@ const TEMPLATES = [
       ])) };
     },
   },
+
+  // ── No equipment & outdoor ──────────────────────────────────────────────
+  {
+    id: "anywhere-20", name: "Anywhere 20", tagline: "No equipment, any room", category: "bodyweight",
+    level: "intermediate", focus: ["bodyweight", "minimal"], equipment: [],
+    about: "Six bodyweight moves, 40 seconds on and 20 off. A living room, a hotel, a park: if you can lie down, you can do it.",
+    params: [P.rounds(3, 1, 6), P.time("workSec", "Work", 40, "ti-bolt", 5), P.time("restSec", "Rest", 20, "ti-clock-pause", 5),
+             P.time("roundRest", "Rest between rounds", 60, "ti-clock")],
+    build(p) {
+      const moves = ["air-squat", "push-up", "mountain-climbers", "bw-lunge", "plank-shoulder-taps", "burpee"];
+      return { rounds: Array.from({ length: p.rounds }, (_, i) => round([
+        withGaps(moves.map(m => station([m], p.workSec)), p.restSec), i < p.rounds - 1 && rest(p.roundRest),
+      ])) };
+    },
+  },
+  {
+    id: "park-hybrid", name: "Park Hybrid", tagline: "Outdoor run + bodyweight", category: "bodyweight",
+    level: "intermediate", focus: ["bodyweight", "outdoor"], equipment: ["outdoors"],
+    about: "VYRA 8 without a gym. Run a loop, stop, do one bodyweight station, run again. Pick a flat path or a quiet corner of a park.",
+    params: [P.rounds(8, 4, 10), P.time("runSec", "Run", 90, "ti-run"), P.time("restSec", "Rest / transition", 15, "ti-clock-pause", 5),
+             P.time("stationSec", "Bodyweight station", 60, "ti-bolt")],
+    build(p) {
+      const moves = ["jump-squat", "push-up", "bw-lunge", "burpee", "mountain-climbers", "pike-push-up", "hinge-jump", "plank-shoulder-taps"];
+      return { rounds: Array.from({ length: p.rounds }, (_, i) => round([
+        cardio("run-outside", p.runSec, { effort: "Strong · short sentences only" }), rest(p.restSec), station([moves[i % moves.length]], p.stationSec),
+        i < p.rounds - 1 && rest(p.restSec),
+      ])) };
+    },
+  },
+  {
+    id: "quiet-room", name: "Quiet Room", tagline: "No jumping, no noise", category: "bodyweight",
+    level: "beginner", focus: ["bodyweight", "low-impact", "minimal"], equipment: [],
+    about: "Full body without a single jump. Made for apartments, hotel rooms and sore knees. The neighbours won't hear a thing.",
+    params: [P.rounds(3, 1, 5), P.time("workSec", "Work", 45, "ti-bolt", 5), P.time("restSec", "Rest", 15, "ti-clock-pause", 5),
+             P.time("roundRest", "Rest between rounds", 60, "ti-clock")],
+    build(p) {
+      const moves = ["air-squat", "push-up", "glute-bridge", "split-squat", "prone-ytw", "wall-sit", "core-finish"];
+      return { rounds: Array.from({ length: p.rounds }, (_, i) => round([
+        withGaps(moves.map(m => station([m], p.workSec)), p.restSec), i < p.rounds - 1 && rest(p.roundRest),
+      ])) };
+    },
+  },
+  {
+    id: "first-steps", name: "First Steps", tagline: "A gentle start, no equipment", category: "bodyweight",
+    level: "beginner", focus: ["bodyweight", "low-impact"], equipment: [],
+    about: "For day one, or coming back after a long break. Easier versions of every move, plenty of rest, and nothing that needs the floor to be quiet.",
+    params: [P.rounds(2, 1, 4), P.time("workSec", "Work", 30, "ti-bolt", 5), P.time("restSec", "Rest", 30, "ti-clock-pause", 5),
+             P.time("roundRest", "Rest between rounds", 90, "ti-clock")],
+    build(p) {
+      const moves = ["march-in-place", "sit-to-stand", "wall-push-up", "glute-bridge", "bird-dog", "bw-lunge"];
+      return { rounds: Array.from({ length: p.rounds }, (_, i) => round([
+        withGaps(moves.map(m => (EXERCISES[m].cardio ? cardio(m, p.workSec) : station([m], p.workSec))), p.restSec),
+        i < p.rounds - 1 && rest(p.roundRest),
+      ])) };
+    },
+  },
+  {
+    id: "run-walk", name: "Run/Walk Builder", tagline: "Outdoor intervals for new runners", category: "bodyweight",
+    level: "beginner", focus: ["outdoor", "bodyweight", "cardio-heavy", "low-impact"], equipment: ["outdoors"],
+    about: "Jog a minute, walk to recover, repeat. Each week, add a round or a little more running. The fastest way to your first 5 km.",
+    params: [P.rounds(8, 4, 12), P.time("runSec", "Jog", 60, "ti-run"), P.time("walkSec", "Walk", 90, "ti-walk")],
+    build(p) {
+      return { rounds: Array.from({ length: p.rounds }, () => round([
+        cardio("run-outside", p.runSec, { effort: "Easy jog · you can still talk" }), cardio("walk-outside", p.walkSec),
+      ])) };
+    },
+  },
+  {
+    id: "tabata-burner", name: "Tabata Burner", tagline: "20 on, 10 off, no equipment", category: "bodyweight",
+    level: "advanced", focus: ["bodyweight", "cardio-heavy", "minimal"], equipment: [],
+    about: "Four-minute Tabatas: eight rounds of 20 seconds all-out, 10 seconds rest, on one move. A minute off, then the next move.",
+    params: [P.rounds(4, 2, 6), P.time("blockRest", "Rest between Tabatas", 60, "ti-clock")],
+    build(p) {
+      const moves = ["burpee", "jump-squat", "mountain-climbers", "push-up", "skater-jumps", "high-knees"];
+      const tabata = { pattern: [{ label: "WORK", tone: "hard", duration: 20 }, { label: "REST", tone: "easy", duration: 10 }], repeat: 8 };
+      return { rounds: Array.from({ length: p.rounds }, (_, i) => round([
+        station([moves[i % moves.length]], null, { segments: tabata, note: "Eight rounds of 20 seconds on, 10 seconds off." }),
+        i < p.rounds - 1 && rest(p.blockRest),
+      ])) };
+    },
+  },
 ];
 
 function triathlon(p, rounds) {
@@ -336,6 +425,7 @@ function triathlon(p, rounds) {
 const CATEGORIES = [
   { id: "hybrid", label: "Hybrid" },
   { id: "kb-db", label: "Kettlebell & dumbbell" },
+  { id: "bodyweight", label: "No equipment & outdoor" },
   { id: "benchmark", label: "Benchmarks" },
 ];
 
@@ -363,6 +453,53 @@ Object.entries(PATTERN_OF).forEach(([p, ids]) => ids.forEach(id => { EXERCISES[i
  "front-rack-carry", "overhead-carry", "db-rdl", "push-press", "shoulder-press", "squat-to-press"]
   .forEach(id => { EXERCISES[id].equipment = ["dumbbell|kettlebell"]; });
 
+/* ── Bodyweight: no equipment, any room, any park ──────────────────────── */
+Object.assign(EXERCISES, {
+  "air-squat":      { name: "Air Squats", cue: "Air squats", equipment: [], pattern: "squat", instruction: "Feet shoulder width, sit back and down, chest up. Stand all the way up." },
+  "jump-squat":     { name: "Jump Squats", cue: "Jump squats", equipment: [], pattern: "squat", subs: ["air-squat"], instruction: "Squat, then jump. Land soft and sink straight into the next one." },
+  "sit-to-stand":   { name: "Sit to Stand", cue: "Sit to stand", equipment: [], pattern: "squat", subs: ["air-squat"], instruction: "Sit on a chair, stand up without using your hands. Slow on the way down." },
+  "wall-sit":       { name: "Wall Sit", cue: "Wall sit", equipment: [], pattern: "squat", subs: ["air-squat"], instruction: "Back flat on a wall, thighs level with the floor. Breathe and hold." },
+  "hinge-jump":     { name: "Hip-hinge Jumps", cue: "Hip hinge jumps", equipment: [], pattern: "hinge", subs: ["glute-bridge"], instruction: "Hinge back with a flat back, swing the arms, jump tall. Land soft." },
+  "single-leg-rdl": { name: "Single-leg RDLs", cue: "Single leg R D Ls", equipment: [], pattern: "hinge", subs: ["glute-bridge"], instruction: "Reach down as one leg lifts behind you, hips square. Hold a wall if you wobble. Switch legs halfway." },
+  "glute-bridge":   { name: "Glute Bridges", cue: "Glute bridges", equipment: [], pattern: "hinge", instruction: "On your back, feet flat. Drive the hips up, squeeze, lower slowly." },
+  "bw-lunge":       { name: "Bodyweight Lunges", cue: "Lunges", equipment: [], pattern: "lunge", subs: ["split-squat"], instruction: "Step back, lower the back knee toward the floor, alternate legs. Hold a wall if you need to." },
+  "split-squat":    { name: "Split Squats", cue: "Split squats", equipment: [], pattern: "lunge", subs: ["bw-lunge"], instruction: "One foot forward, one back. Lower straight down. Switch legs halfway." },
+  "push-up":        { name: "Push-ups", cue: "Push ups", equipment: [], pattern: "push", subs: ["knee-push-up", "wall-push-up"], instruction: "Hands under the shoulders, body in one line. Drop to the knees whenever form slips." },
+  "knee-push-up":   { name: "Knee Push-ups", cue: "Knee push ups", equipment: [], pattern: "push", subs: ["wall-push-up", "push-up"], instruction: "Knees down, hips in line with the shoulders. Chest to the floor, press away." },
+  "wall-push-up":   { name: "Wall Push-ups", cue: "Wall push ups", equipment: [], pattern: "push", subs: ["knee-push-up"], instruction: "Hands on a wall, body straight. Bend the elbows and press away." },
+  "pike-push-up":   { name: "Pike Push-ups", cue: "Pike push ups", equipment: [], pattern: "push", subs: ["push-up"], instruction: "Hips high, lower the head toward the floor between the hands, press back up." },
+  "prone-ytw":      { name: "Prone Y-T-W Raises", cue: "Y T W raises", equipment: [], pattern: "pull", subs: ["backpack-row"], instruction: "Face down. Lift the arms into a Y, a T, then a W. Squeeze the shoulder blades." },
+  "backpack-row":   { name: "Backpack Rows", cue: "Backpack rows", equipment: [], pattern: "pull", subs: ["prone-ytw"], instruction: "Fill a backpack or shopping bag. Hinge with a flat back and row it to the ribs." },
+  "bear-crawl":     { name: "Bear Crawl", cue: "Bear crawl", equipment: [], pattern: "core", subs: ["plank-shoulder-taps"], instruction: "Hands and feet, knees just off the ground. Crawl forward and back, hips low." },
+  "side-plank":     { name: "Side Plank", cue: "Side plank", equipment: [], pattern: "core", instruction: "Elbow under the shoulder, hips high. Switch sides halfway." },
+  "plank-shoulder-taps": { name: "Plank Shoulder Taps", cue: "Plank shoulder taps", equipment: [], pattern: "core", instruction: "High plank, feet wide. Tap each shoulder without rocking the hips." },
+  "bird-dog":       { name: "Bird Dogs", cue: "Bird dogs", equipment: [], pattern: "core", instruction: "On hands and knees, reach the opposite arm and leg long. Slow, alternate sides." },
+  "burpee":         { name: "Burpees", cue: "Burpees", equipment: [], pattern: "conditioning", subs: ["squat-thrust"], instruction: "Hands down, jump or step back to a plank, back up and jump. Step it out if you need to." },
+  "squat-thrust":   { name: "Step-back Burpees", cue: "Step back burpees", equipment: [], pattern: "conditioning", instruction: "Hands down, step back to a plank one foot at a time, step in, stand. No jump." },
+  "mountain-climbers": { name: "Mountain Climbers", cue: "Mountain climbers", equipment: [], pattern: "conditioning", subs: ["high-knees"], instruction: "High plank, drive the knees to the chest one at a time. Hips level." },
+  "skater-jumps":   { name: "Skater Jumps", cue: "Skater jumps", equipment: [], pattern: "conditioning", subs: ["high-knees"], instruction: "Leap side to side, land on one leg with a soft knee. Step instead of jump to go easier." },
+  "high-knees":     { name: "High Knees", cue: "High knees", equipment: [], pattern: "conditioning", subs: ["march-in-place"], instruction: "Run in place, knees to hip height, quick arms." },
+  "jumping-jacks":  { name: "Jumping Jacks", cue: "Jumping jacks", equipment: [], pattern: "conditioning", subs: ["march-in-place"], instruction: "Light and quick on the balls of the feet." },
+});
+EXERCISES["run-outside"].pattern = EXERCISES["walk-outside"].pattern = "cardio";
+EXERCISES["jog-in-place"].pattern = EXERCISES["march-in-place"].pattern = "cardio";
+
+/* No weights? Every loaded movement falls back to a bodyweight version (listed
+   last, so owned equipment is always preferred). */
+const BODYWEIGHT_SUBS = {
+  squat: ["air-squat", "jump-squat"], hinge: ["single-leg-rdl", "glute-bridge"], power: ["hinge-jump", "glute-bridge"],
+  lunge: ["bw-lunge", "split-squat"], press: ["pike-push-up", "push-up"], floor: ["push-up", "knee-push-up"],
+  pull: ["prone-ytw", "backpack-row"], carry: ["bear-crawl"],
+};
+Object.entries({
+  squat: ["goblet-squat", "db-squat", "kb-front-squat", "db-thruster", "squat-press"],
+  hinge: ["kb-deadlift", "db-rdl"], power: ["db-swing", "db-clean", "high-pull", "deadlift-front-rack"],
+  lunge: ["kb-reverse-lunge", "reverse-lunge"], press: ["kb-push-press", "push-press", "shoulder-press"], floor: ["db-floor-press"],
+  pull: ["kb-row", "db-row", "bent-over-row"], carry: ["farmer-march"],
+}).forEach(([kind, ids]) => ids.forEach(id => {
+  EXERCISES[id].subs = [...(EXERCISES[id].subs || []), ...BODYWEIGHT_SUBS[kind]];
+}));
+
 /* ── Warm-up and cool-down (bodyweight, no equipment) ──────────────────── */
 Object.assign(EXERCISES, {
   "wu-march":      { name: "Easy March or Light Jog", cue: "Warm up. Easy march", equipment: [], pattern: "mobility", instruction: "Get the blood moving. Easy pace, relaxed shoulders." },
@@ -380,7 +517,7 @@ const WARMUP = [["wu-march", 60], ["wu-arm-circles", 30], ["wu-hinge", 45], ["wu
 const COOLDOWN = [["cd-walk", 60], ["cd-hip-flexor", 60], ["cd-hamstring", 30], ["cd-chest", 30]];
 
 /* Workouts that are kind to sore legs and joints. */
-const LOW_IMPACT_IDS = ["carry-me-home", "engine-builder", "tri-15", "bike-bells"];
+const LOW_IMPACT_IDS = ["carry-me-home", "engine-builder", "tri-15", "bike-bells", "quiet-room", "first-steps", "run-walk"];
 
 /* ── Programs: 4-week plans built from the templates ───────────────────────
    Each session names a template and optional adjustments, applied as deltas
@@ -415,6 +552,16 @@ const PROGRAMS = [
       [{ t: "tri-intervals" }, { t: "sprint-20" }, { t: "carry-me-home" }],
       [{ t: "tri-intervals", adj: { rounds: 1 } }, { t: "the-mixer" }, { t: "engine-builder", adj: { rounds: 1 } }],
       [{ t: "carry-me-home" }, { t: "tri-15" }],
+    ],
+  },
+  {
+    id: "no-gear-base", name: "No-Gear Base", tagline: "Get fit with nothing but you", level: "beginner",
+    about: "Three sessions a week, no equipment and no gym. Bodyweight strength, outdoor run/walk intervals, and a lighter week 4 to lock it in.",
+    weeks: [
+      [{ t: "first-steps" }, { t: "run-walk" }, { t: "quiet-room" }],
+      [{ t: "quiet-room" }, { t: "run-walk", adj: { rounds: 1 } }, { t: "anywhere-20" }],
+      [{ t: "anywhere-20" }, { t: "run-walk", adj: { rounds: 2, runSec: 15 } }, { t: "park-hybrid", adj: { rounds: -2 } }],
+      [{ t: "quiet-room", adj: { rounds: -1 } }, { t: "run-walk", adj: { runSec: 30 } }],
     ],
   },
   {

@@ -14,7 +14,7 @@ const EXPORTS = [
   "stampChanges", "profileBlob", "mergeRemoteWorkouts", "pendingWorkoutRows", "deletionStamp",
   "BENCHMARKS", "SCORING", "DIVISIONS", "challengeById", "variantOf", "challengeWorkout", "scoreFromInputs", "formatScore",
   "ATHLETE_CATEGORIES", "activityRow", "competitionContext", "challengeFromSpec", "registerChallenge", "scoredSegments", "checkpointsFromVisits",
-  "ghostFromTotal", "ghostStatus", "ghostText", "placementPoints", "eventPhase", "eventLine", "formatDelta", "prCheck", "bestAttempt", "rankEntries", "monthlyChallenge", "ageGroup", "EVENTS",
+  "ghostFromTotal", "ghostStatus", "ghostText", "placementPoints", "eventPhase", "eventLine", "formatDelta", "prCheck", "bestAttempt", "rankEntries", "monthlyChallenge", "ageGroup", "EVENTS", "outdoorSwaps", "gearMissing",
 ];
 
 module.exports = function load() {

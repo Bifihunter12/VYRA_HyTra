@@ -59,10 +59,13 @@ function resolveExercise(ref, swaps) {
 }
 
 function exerciseIcon(e) {
-  if (e.cardio) return { run: "ti-run", row: "ti-ripple", bike: "ti-bike", "incline-walk": "ti-walk", "step-ups": "ti-stairs-up" }[e.id] || "ti-heartbeat";
+  if (e.cardio) return { run: "ti-run", "run-outside": "ti-run", "jog-in-place": "ti-run", row: "ti-ripple", bike: "ti-bike", "incline-walk": "ti-walk",
+    "walk-outside": "ti-walk", "march-in-place": "ti-walk", "step-ups": "ti-stairs-up" }[e.id] || "ti-heartbeat";
   if (/rope|punch|boxing|sprint/.test(e.id)) return "ti-wave-sine";
+  if (/burpee|thrust|climber|skater|knees|jack|jump/.test(e.id)) return "ti-bolt";
   if (/carry|march/.test(e.id)) return "ti-weight";
-  if (/lunge|step/.test(e.id)) return "ti-stairs";
+  if (/lunge|step|split/.test(e.id)) return "ti-stairs";
+  if (!(e.equipment || []).length) return "ti-stretching";      // bodyweight strength
   return "ti-barbell";
 }
 
@@ -383,8 +386,11 @@ function allExerciseIds(workout) {
   }));
   return ids;
 }
-/* Manual swaps win; otherwise anything the athlete can't do is swapped for the first doable substitute. */
+/* Manual swaps win; otherwise anything the athlete can't do is swapped for the first doable substitute.
+   Machine benchmarks (machinesOnly) never auto-swap to on-the-spot bodyweight cardio. */
 function gearPlan(workout, manual, equipment) {
+  const machinesOnly = TEMPLATES.find(t => t.id === workout.templateId)?.machinesOnly;
+  const usable = sid => hasGear(EXERCISES[sid], equipment) && !(machinesOnly && EXERCISES[sid].bodyweightCardio);
   const auto = {};
   const missing = new Set();
   const need = e => (e.equipment || []).forEach(q => { if (!q.split("|").some(x => equipment.includes(x))) missing.add(q.split("|")[0]); });
@@ -393,7 +399,7 @@ function gearPlan(workout, manual, equipment) {
     const chosen = manual[id] && (manual[id] === id || base.subs?.includes(manual[id])) ? manual[id] : null;
     if (chosen) { need(EXERCISES[chosen]); return; }
     if (hasGear(base, equipment)) return;
-    const sub = (base.subs || []).find(sid => hasGear(EXERCISES[sid], equipment));
+    const sub = (base.subs || []).find(usable);
     if (sub) auto[id] = sub; else need(base);
   });
   return { swaps: { ...auto, ...manual }, auto, missing: [...missing], doable: missing.size === 0 };

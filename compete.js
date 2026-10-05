@@ -108,7 +108,7 @@ function renderChallenge() {
   const best = bestAttempt(allAttempts(), c, v.id, division);
   const prIds = new Set();
   [...mine].reverse().reduce((b, a) => { if (isBetter(c, a.score, b) && !a.dnf) { prIds.add(a.id); return a.score; } return b; }, null);
-  const missing = c.equipment.filter(e => !state.profile.equipment.includes(e));
+  const missing = gearMissing(c, state.profile.equipment);
   const series = [...mine].reverse().filter(a => !a.dnf).map(a => a.score);
 
   return `
@@ -129,7 +129,7 @@ function renderChallenge() {
       <span class="cl-meta">${best ? `${fmtDate(best.date)} · ${mine.length} attempt${mine.length === 1 ? "" : "s"}` : "Your first attempt sets the mark."}</span></div>
     ${series.length > 1 ? `<div class="pr-spark">${sparklineSVG(c.better === "lower" ? series.map(x => -x) : series, { W: 160, H: 56 }).replace(/<title>[^<]*<\/title>/g, "")}</div>` : ""}
   </div>
-  ${missing.length ? `<div class="gear-note gear-note--warn"><i class="ti ti-alert-triangle"></i> Needs ${missing.map(e => EQUIPMENT_LABEL[e]).join(", ")}. Benchmarks keep the same equipment so results stay comparable.</div>` : ""}
+  ${missing.length ? `<div class="gear-note gear-note--warn"><i class="ti ti-alert-triangle"></i> Needs ${missing.map(q => q.split("|").map(e => EQUIPMENT_LABEL[e]).join(" or ")).join(", ")}. Benchmarks keep the same equipment so results stay comparable.</div>` : ""}
   ${targetBanner(c, v.id, division)}
   <button class="btn-primary btn-inline-start" data-act="challenge-start" data-id="${c.id}" data-variant="${v.id}" data-division="${division}"><i class="ti ti-player-play"></i> Start ${esc(c.name)}</button>
 
@@ -233,7 +233,7 @@ function startChallenge(id, variantId, division) {
   const workout = challengeWorkout(c, variantId, div);
   const t = ui.target;
   if (t && t.challengeId === c.id && t.variant === workout.challenge.variant && t.division === div) workout.challenge.target = { name: t.name, score: t.score };
-  const timeline = compile(workout, {}, { warmup: state.profile.warmup, cooldown: state.profile.cooldown });
+  const timeline = compile(workout, outdoorSwaps(state.profile.equipment), { warmup: state.profile.warmup, cooldown: state.profile.cooldown });
   startWorkout(workout.templateId, { workout, timeline, swaps: {}, ghost: buildGhost(c, workout.challenge.variant, div, timeline) });
 }
 

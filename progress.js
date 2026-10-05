@@ -175,6 +175,8 @@ function recommend({ history, candidates, checkin, level, now = Date.now() }) {
     }
     if (checkin === "fresh" && c.t.level === "advanced" && level !== "beginner") score += 1;
     if (c.patterns.has(weakest) && history.length) { score += 2; reasons.push(`Builds your least-trained pattern: ${PATTERNS.find(p => p.id === weakest).label.toLowerCase()}`); }
+    // Prefer sessions built for the athlete's kit over ones that need many swaps (e.g. bodyweight sessions when there's no gear).
+    if (c.gear) score += Object.keys(c.gear.auto || {}).length ? -Math.min(3, Object.keys(c.gear.auto).length * 0.5) : 1;
     const lastRating = history.find(h => h.templateId === c.t.id)?.rating || 0;
     if (lastRating >= 4) { score += 1; reasons.push(`You rated it ${lastRating} stars last time`); }
     return { ...c, score, reason: reasons[0] || "A balanced session for today" };
@@ -194,7 +196,7 @@ function progressionAdvice(template, params, feel) {
   const clamp = (p, v) => Math.min(p.max, Math.max(p.min, Math.round(v * 10) / 10));
   const speed = find("speed");
   const rounds = find("rounds");
-  const workKey = ["stationSec", "workSec", "strengthSec", "carrySec", "circuitSec", "legSec", "machineSec", "cardioSec"].find(find);
+  const workKey = ["stationSec", "workSec", "strengthSec", "carrySec", "circuitSec", "legSec", "machineSec", "cardioSec", "runSec"].find(find);
   let change = null;
   if (speed && clamp(speed, params.speed + dir * 0.3) !== params.speed) {
     const v = clamp(speed, params.speed + dir * 0.3);
