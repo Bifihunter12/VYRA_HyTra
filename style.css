@@ -432,7 +432,6 @@ body[data-screen="history"] .app-shell, body[data-screen="profile"] .app-shell {
 .set-row--danger .set-ic, .set-row--danger .set-label { color: var(--secondary); }
 .cl-chip--off { border-style: dashed; color: var(--text-faint); }
 .cl-row.is-locked { opacity: .55; }
-.tag--sample { font-size: 9.5px; padding: 2px 5px; vertical-align: 2px; color: var(--secondary); border-color: rgba(224,147,95,.35); }
 .mini-track { display: block; height: 3px; background: var(--track); border-radius: 2px; overflow: hidden; margin-top: 7px; }
 .mini-track span { display: block; height: 100%; background: var(--accent); }
 
