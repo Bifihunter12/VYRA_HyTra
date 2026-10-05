@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.05.2";
+const APP_VERSION = "2026.10.05.3";
 const STORE_KEY = "vyra_v1";
 /* Beeps, spoken cues and vibration are switched off for now. Set to true to bring them back. */
 const CUES_ENABLED = false;
@@ -199,7 +199,8 @@ function programSession(key) {
   return { ...s, template: t, params: sessionParams(t, paramsFor(t.id), s), status: st };
 }
 function adjText(adj) {
-  const words = { rounds: "round", speed: " mph", workSec: "s work", carrySec: "s carry", cardioSec: "s cardio" };
+  const words = { rounds: "round", speed: " mph", workSec: "s work", carrySec: "s carry", cardioSec: "s cardio", stationSec: "s per station",
+    strengthSec: "s strength", runSec: "s run", walkSec: "s walk", rowSec: "s row", bikeSec: "s bike", legSec: "s per leg" };
   return Object.entries(adj || {}).map(([k, v]) => k === "rounds" ? `${v > 0 ? "+" : ""}${v} round${Math.abs(v) === 1 ? "" : "s"}`
     : `${v > 0 ? "+" : ""}${v}${words[k] || ` ${k}`}`).join(", ");
 }
@@ -1478,7 +1479,7 @@ app.addEventListener("input", ev => {
 });
 
 app.addEventListener("click", async ev => {
-  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility],[data-ath-activity],[data-compete-view],[data-athlete],[data-comments],[data-react],[data-follow],[data-del-comment],[data-event],[data-event-division],[data-standings-division],[data-ghost],[data-review],[data-club],[data-club-join],[data-club-kind],[data-club-open],[data-battle-scope],[data-board-where],[data-pd-day],[data-pd-goal],[data-pd-min],[data-slot-change],[data-slot-remove],[data-pick],[data-pick-mine],[data-mine]");
+  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility],[data-ath-activity],[data-compete-view],[data-athlete],[data-comments],[data-react],[data-follow],[data-del-comment],[data-event],[data-event-division],[data-standings-division],[data-ghost],[data-review],[data-club],[data-club-join],[data-club-kind],[data-club-open],[data-battle-scope],[data-board-where],[data-pd-day],[data-pd-goal],[data-pd-min],[data-slot-change],[data-slot-remove],[data-pick],[data-pick-mine],[data-mine],[data-remind-at],[data-remind-day]");
   if (!el) return;
   const d = el.dataset;
   if (!["erase", "delete-history", "program-join", "program-leave", "sync-delete", "plan-delete", "mine-delete"].includes(d.act)) ui.confirm = null;

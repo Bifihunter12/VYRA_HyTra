@@ -1051,3 +1051,7 @@ button.b-name { text-align: left; color: inherit; }
 .slot-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; }
 .slot-main .cl-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #plan-name { margin-top: 6px; }
+a.cl-row { color: inherit; text-decoration: none; }
+a.cl-row .day-tag { flex: none; }
+.cl-go.is-done { color: var(--accent); }
+.remind-time { max-width: 160px; margin-top: 10px; }

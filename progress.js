@@ -428,3 +428,57 @@ function planProgram(plan) {
   return { ...plan, weeks, level: plan.level || "intermediate",
     about: `Your own plan${g ? ` to ${g.aim}` : ""}: ${slots.map(s => WEEKDAYS[s.day]).join(", ")}${plan.minutes ? `, about ${plan.minutes} minutes each` : ""}. Weeks 2 and 3 build a little, week 4 is lighter so your body can absorb the work.` };
 }
+
+/* ── Plan reminders: calendar events with an alert on every plan day ─────────
+   Works with the phone's own calendar, so reminders arrive even when VYRA is
+   closed. One weekly event per plan day, repeating for the four plan weeks.  */
+
+const REMINDER_TIMES = ["07:00", "12:00", "17:30", "19:00"];
+
+/* First date on/after `from` for each plan day, at the reminder time. */
+function reminderStarts(slots, time, from = Date.now()) {
+  const [h, m] = String(time || "18:00").split(":").map(Number);
+  const start = new Date(from); start.setHours(0, 0, 0, 0);
+  return slots.map(s => {
+    const d = new Date(start);
+    d.setDate(d.getDate() + ((s.day - d.getDay() + 7) % 7));
+    d.setHours(h, m, 0, 0);
+    return { ...s, start: d };
+  });
+}
+
+const icsStamp = d => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;   // local time
+const icsUtc = d => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+const icsText = s => String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+/* Lines longer than 75 octets are folded (RFC 5545). */
+const icsFold = line => line.length <= 74 ? line : line.match(/.{1,73}/g).join("\r\n ");
+
+/* items: [{ day, name, minutes, start: Date }] → .ics text */
+function planIcs(plan, items, { url = "", weeks = PLAN_WEEKS, now = Date.now() } = {}) {
+  const events = items.map(it => [
+    "BEGIN:VEVENT",
+    `UID:${plan.id}-${it.day}@vyra`,
+    `DTSTAMP:${icsUtc(new Date(now))}`,
+    `DTSTART:${icsStamp(it.start)}`,
+    `DURATION:PT${Math.max(10, Math.round(it.minutes || 30))}M`,
+    `RRULE:FREQ=WEEKLY;COUNT=${weeks}`,
+    `SUMMARY:${icsText(`VYRA · ${it.name}`)}`,
+    `DESCRIPTION:${icsText(`${plan.name}: ${it.name}, about ${Math.round(it.minutes || 30)} min.${url ? ` Open VYRA: ${url}` : ""}`)}`,
+    ...(url ? [`URL:${url}`] : []),
+    "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${icsText(`Time to train: ${it.name}`)}`, "TRIGGER:PT0M", "END:VALARM",
+    "END:VEVENT",
+  ]).flat();
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//VYRA//Training plan//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", ...events, "END:VCALENDAR"]
+    .map(icsFold).join("\r\n") + "\r\n";
+}
+
+/* "Add to Google Calendar" link for one plan day, repeating weekly for the plan. */
+function googleCalendarUrl(plan, it, { url = "", weeks = PLAN_WEEKS, timeZone = "" } = {}) {
+  const end = new Date(it.start.getTime() + Math.max(10, Math.round(it.minutes || 30)) * 60000);
+  const q = new URLSearchParams({
+    action: "TEMPLATE", text: `VYRA · ${it.name}`, dates: `${icsStamp(it.start)}/${icsStamp(end)}`,
+    details: `${plan.name}: ${it.name}, about ${Math.round(it.minutes || 30)} min.${url ? `\nOpen VYRA: ${url}` : ""}`,
+    recur: `RRULE:FREQ=WEEKLY;COUNT=${weeks}`, ...(timeZone ? { ctz: timeZone } : {}),
+  });
+  return `https://calendar.google.com/calendar/render?${q}`;
+}

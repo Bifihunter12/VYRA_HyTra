@@ -14,11 +14,11 @@ const EXPORTS = [
   "stampChanges", "profileBlob", "mergeRemoteWorkouts", "pendingWorkoutRows", "deletionStamp",
   "BENCHMARKS", "SCORING", "DIVISIONS", "challengeById", "variantOf", "challengeWorkout", "scoreFromInputs", "formatScore",
   "ATHLETE_CATEGORIES", "activityRow", "competitionContext", "challengeFromSpec", "registerChallenge", "scoredSegments", "checkpointsFromVisits",
-  "ghostFromTotal", "ghostStatus", "ghostText", "placementPoints", "eventPhase", "eventLine", "formatDelta", "prCheck", "bestAttempt", "rankEntries", "monthlyChallenge", "ageGroup", "EVENTS", "outdoorSwaps", "gearMissing", "makePlan", "planProgram", "planCandidates", "fitToMinutes", "sessionParams", "USER_PROGRAMS", "PLAN_GOALS", "WEEKDAYS", "planTotals", "templateById",
+  "ghostFromTotal", "ghostStatus", "ghostText", "placementPoints", "eventPhase", "eventLine", "formatDelta", "prCheck", "bestAttempt", "rankEntries", "monthlyChallenge", "ageGroup", "EVENTS", "outdoorSwaps", "gearMissing", "makePlan", "planProgram", "planCandidates", "fitToMinutes", "sessionParams", "USER_PROGRAMS", "PLAN_GOALS", "WEEKDAYS", "reminderStarts", "planIcs", "googleCalendarUrl", "planTotals", "templateById",
 ];
 
 module.exports = function load() {
   const source = FILES.map(f => fs.readFileSync(path.join(__dirname, "..", f), "utf8")).join("\n;\n");
-  const context = vm.createContext({ console, performance, Math, Date, JSON });
+  const context = vm.createContext({ console, performance, Math, Date, JSON, URLSearchParams });
   return vm.runInContext(`${source}\n;({ ${EXPORTS.join(", ")} })`, context);
 };
