@@ -34,9 +34,46 @@ test("a manual choice of the original keeps it and reports what is missing", () 
   assert.equal(g.doable, false);
 });
 
-test("dumbbell-only workouts are not doable without weights", () => {
+test("without weights, dumbbell workouts swap every loaded move for a bodyweight one", () => {
   const w = V.createWorkout("db-destroyer", {});
-  assert.equal(V.gearPlan(w, {}, ["treadmill"]).doable, false);
+  const g = V.gearPlan(w, {}, ["treadmill"]);
+  assert.equal(g.doable, true);
+  Object.values(g.auto).forEach(id => assert.deepEqual([...V.EXERCISES[id].equipment], [], id));
+  assert.equal(g.auto["db-floor-press"], "push-up");
+});
+
+test("owned gear always wins over the bodyweight fallback", () => {
+  const w = V.createWorkout("db-destroyer", {});
+  assert.deepEqual(Object.keys(V.gearPlan(w, {}, ["dumbbell"]).auto), []);
+  assert.equal(V.gearPlan(V.createWorkout("vyra-8", {}), {}, ["kettlebell"]).auto["goblet-squat"], undefined);
+});
+
+test("every workout can be done with no equipment, except the machine triathlons", () => {
+  for (const t of V.TEMPLATES) {
+    const g = V.gearPlan(V.createWorkout(t.id, {}), {}, []);
+    assert.equal(g.doable, !t.machinesOnly, t.id);
+  }
+});
+
+test("running moves outdoors when there's no treadmill but space outside", () => {
+  const g = V.gearPlan(V.createWorkout("vyra-8", {}), {}, ["outdoors", "dumbbell"]);
+  assert.equal(g.auto.run, "run-outside");
+  const tl = V.compile(V.createWorkout("vyra-8", {}), g.swaps, {});
+  const run = tl.find(iv => iv.exId === "run-outside");
+  assert.equal(run.speed, null);
+  assert.ok(!/MPH/.test(run.instruction));
+  assert.match(run.effort, /talk/);
+});
+
+test("no-equipment sessions build valid timelines", () => {
+  for (const id of ["anywhere-20", "park-hybrid", "quiet-room", "first-steps", "run-walk", "tabata-burner"]) {
+    const t = V.TEMPLATES.find(x => x.id === id);
+    assert.ok(t.equipment.every(e => e === "outdoors"), id);
+    const tl = V.compile(V.createWorkout(id, {}), {}, {});
+    tl.forEach(iv => assert.ok(iv.duration > 0, `${id}: ${iv.title}`));
+  }
+  const quiet = V.compile(V.createWorkout("quiet-room", {}), {}, {});
+  assert.ok(!quiet.some(iv => /jump|burpee|skater/i.test(iv.exId || iv.exercises?.[0]?.id || "")), "Quiet Room has no jumping");
 });
 
 test("kettlebell owners can do dumbbell-or-kettlebell movements", () => {

@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.04.4";
+const APP_VERSION = "2026.10.05.1";
 const STORE_KEY = "vyra_v1";
 /* Beeps, spoken cues and vibration are switched off for now. Set to true to bring them back. */
 const CUES_ENABLED = false;
@@ -261,7 +261,7 @@ const chips = (attr, options, current, multi = false) => `<div class="cl-filters
 }).join("")}</div>`;
 
 const EQUIP_SHORT = { treadmill: "Treadmill", rower: "Rower", bike: "Bike", kettlebell: "KB", dumbbell: "DB", "battle-ropes": "Ropes" };
-const CATEGORY_ICON = { hybrid: "ti-run", "kb-db": "ti-barbell", benchmark: "ti-trophy" };
+const CATEGORY_ICON = { hybrid: "ti-run", "kb-db": "ti-barbell", bodyweight: "ti-trees", benchmark: "ti-trophy" };
 
 function templateMeta(t) {
   const plan = planFor(t.id);
@@ -274,11 +274,12 @@ function templateMeta(t) {
 function renderOnboarding() {
   const o = ui.ob;
   const noWeights = !o.equipment.includes("dumbbell") && !o.equipment.includes("kettlebell");
+  const nothing = !o.equipment.some(e => e !== "outdoors");
   return `
   ${topbar()}
   <section class="ob">
     <h1 class="ob-title">Your guided hybrid workout player.</h1>
-    <p class="about">Treadmill, rower, bike and strength circuits in one guided timer. No whiteboard, no stopwatch juggling, no wondering what's next. Three quick questions so we can pick the right sessions for you.</p>
+    <p class="about">Gym, home or outside: treadmill, rower, bike, weights or just your body, in one guided timer. No whiteboard, no stopwatch juggling, no wondering what's next. Three quick questions so we can pick the right sessions for you.</p>
     <div class="ob-q">
       <div class="ob-label"><span>01</span> Workouts per week</div>
       ${chips("data-ob-goal", [2, 3, 4, 5].map(n => [n, `${n} × week`]), o.goal)}
@@ -291,7 +292,9 @@ function renderOnboarding() {
     <div class="ob-q">
       <div class="ob-label"><span>03</span> Equipment you have</div>
       ${chips("data-ob-equip", ALL_EQUIPMENT.map(e => [e, EQUIPMENT_LABEL[e]]), o.equipment, true)}
-      <p class="hint ${noWeights ? "hint--warn" : ""}">${noWeights ? "Most workouts need at least one dumbbell or kettlebell." : "Missing something? VYRA swaps in an alternative automatically."}</p>
+      <button class="text-btn" data-act="ob-no-equipment"><i class="ti ti-stretching"></i> I have no equipment</button>
+      <p class="hint">${nothing ? "No problem. Every workout switches to bodyweight moves, and there's a full set of no-equipment sessions."
+        : noWeights ? "No weights? VYRA swaps in bodyweight versions of every loaded move." : "Missing something? VYRA swaps in an alternative automatically."}</p>
     </div>
     <div class="ob-q">
       <div class="ob-label"><span>04</span> Before you start</div>
@@ -511,7 +514,7 @@ function renderProgram() {
 /* ── Library ──────────────────────────────────────────────────────────────── */
 const TYPE_FILTERS = [
   ["all", "Any"], ["low-impact", "Low impact"], ["strength-heavy", "Strength"], ["cardio-heavy", "Cardio"],
-  ["minimal", "Minimal kit"], ["no-machines", "No machines"], ["benchmark", "Benchmark"],
+  ["minimal", "Minimal kit"], ["no-machines", "No machines"], ["bodyweight", "No equipment"], ["outdoor", "Outdoor"], ["benchmark", "Benchmark"],
 ];
 function filterHits(m) {
   const f = ui.filters;
@@ -689,7 +692,7 @@ function renderSetup() {
   ${benchBlock}
 
   ${sectionLabel("Setup")}
-  <div class="set-list">${t.params.map(paramRow).join("")}</div>
+  <div class="set-list">${t.params.filter(p => p.kind !== "speed" || timeline.some(iv => iv.speed)).map(paramRow).join("")}</div>
   ${Object.keys(state.params[t.id] || {}).length ? `<button class="text-btn" data-act="reset-params"><i class="ti ti-restore"></i> Reset to defaults</button>` : ""}
 
   ${sectionLabel("Warm-up & safety")}
@@ -910,7 +913,7 @@ function renderProfile() {
 
   ${sectionLabel("My equipment")}
   <div class="pad-y">${chips("data-p-equip", ALL_EQUIPMENT.map(e => [e, EQUIPMENT_LABEL[e]]), p.equipment, true)}
-    <p class="hint">Workouts swap in alternatives for anything you don't have.</p></div>
+    <p class="hint">Workouts swap in alternatives for anything you don't have, down to bodyweight. "Outside" lets runs and walks happen outdoors.</p></div>
 
   ${sectionLabel("Safety")}
   <div class="set-list">
@@ -1524,6 +1527,7 @@ app.addEventListener("click", async ev => {
       if (ui.confirm !== "leave") { ui.confirm = "leave"; return rerender(); }
       state.program = null; ui.confirm = null; save(); toast("Plan ended"); return rerender();
     case "ob-ack": ui.ob.ack = !ui.ob.ack; return rerender();
+    case "ob-no-equipment": ui.ob.equipment = ui.ob.equipment.includes("outdoors") ? ["outdoors"] : []; return rerender();
     case "sync-email":
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ui.auth.email)) { ui.auth.msg = "Enter a valid email address."; ui.auth.error = true; return rerender(); }
       return authAction(async () => { await Sync.sendEmail(ui.auth.email); ui.auth.sent = true; });

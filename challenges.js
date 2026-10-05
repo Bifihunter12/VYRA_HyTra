@@ -80,8 +80,8 @@ const BENCHMARKS = [
     id: "the-hunt", name: "The Hunt", tagline: "Run for time", scoring: "time", icon: "ti-run",
     story: "Pure running. Treadmill at 1% or outdoors on flat ground.",
     variants: [{ id: "3k", name: "3 km", m: 3000 }, { id: "5k", name: "5 km", m: 5000 }, { id: "10k", name: "10 km", m: 10000 }],
-    defaultVariant: "5k", equipment: ["treadmill"], level: "beginner",
-    rules: ["Treadmill incline ≥ 1%, or outdoors on a flat route.", "Tap DONE when your distance reads the target."],
+    defaultVariant: "5k", equipment: ["treadmill|outdoors"], level: "beginner",
+    rules: ["Treadmill incline ≥ 1%, or outdoors on a flat route measured by a watch or phone.", "Tap DONE when your distance reads the target."],
     build: v => ({ rounds: [round([toDistance("run", v.m, v.m * 0.33)])] }),
   },
   {
@@ -114,8 +114,8 @@ const BENCHMARKS = [
   {
     id: "the-chase", name: "The Chase", tagline: "Intervals for distance", scoring: "distance", icon: "ti-bolt",
     story: "Ten hard minutes hidden inside twenty. Chase the distance on the hard ones.",
-    variants: [{ id: "standard", name: "10 × 1:00" }], defaultVariant: "standard", equipment: ["treadmill"], level: "intermediate",
-    rules: ["1:00 hard, 1:00 easy, ten times.", "Score is the total distance on the treadmill after 20 minutes."],
+    variants: [{ id: "standard", name: "10 × 1:00" }], defaultVariant: "standard", equipment: ["treadmill|outdoors"], level: "intermediate",
+    rules: ["1:00 hard, 1:00 easy, ten times.", "Score is the total distance after 20 minutes, from the treadmill or your watch/phone outdoors."],
     inputs: () => [{ key: "run", label: "Total distance", unit: "km" }],
     build: () => ({ rounds: Array.from({ length: 10 }, () => round([cardio("run", 60, { effort: "Hard" }), cardio("incline-walk", 60, { title: "Easy", effort: "Easy jog or walk" })])) }),
   },
@@ -123,7 +123,7 @@ const BENCHMARKS = [
     id: "the-long-march", name: "The Long March", tagline: "Walk for distance", scoring: "distance", icon: "ti-walk",
     story: "Steady, loaded or not. The march rewards patience.",
     variants: [{ id: "30", name: "30 min", min: 30 }, { id: "60", name: "60 min", min: 60 }],
-    defaultVariant: "60", equipment: ["treadmill"], level: "beginner",
+    defaultVariant: "60", equipment: ["treadmill|outdoors"], level: "beginner",
     divisions: { open: "Walk or jog", competitive: "Incline ≥ 5%", elite: "Incline ≥ 5% + 10 kg pack" },
     rules: ["Walking only for Competitive and Elite.", "Score is total distance."],
     inputs: () => [{ key: "run", label: "Distance", unit: "km" }],
@@ -139,7 +139,7 @@ const BENCHMARKS = [
   {
     id: "iron-mile", name: "Iron Mile", tagline: "The hybrid mile", scoring: "time", icon: "ti-flame",
     story: "Four 400 m runs with work in between. Short, honest, painful.",
-    variants: [{ id: "standard", name: "Standard" }], defaultVariant: "standard", equipment: ["treadmill", "kettlebell", "dumbbell"], level: "intermediate",
+    variants: [{ id: "standard", name: "Standard" }], defaultVariant: "standard", equipment: ["treadmill|outdoors", "kettlebell", "dumbbell"], level: "intermediate",
     divisions: { open: `KB ${loadText("open", "kb")} · DB ${loadText("open", "db")}`, competitive: `KB ${loadText("competitive", "kb")} · DB ${loadText("competitive", "db")}`, elite: `KB ${loadText("elite", "kb")} · DB ${loadText("elite", "db")}` },
     rules: ["400 m run · 20 KB swings · 400 m run · 20 goblet squats · 400 m run · 20 DB push press · 400 m run."],
     build: () => ({ rounds: [round([toDistance("run", 400, 120), forReps("kb-swing", 20, 50), toDistance("run", 400, 120), forReps("goblet-squat", 20, 60), toDistance("run", 400, 120), forReps("push-press", 20, 60), toDistance("run", 400, 120)])] }),
@@ -214,6 +214,32 @@ const BENCHMARKS = [
     inputs: () => [{ key: "run", label: "Run (both legs)", unit: "km" }, { key: "row", label: "Row (both legs)", unit: "m" }, { key: "bike", label: "Bike (both legs)", unit: "km" }],
     build: () => ({ rounds: [round(["run", "row", "bike", "run", "row", "bike"].map(m => cardio(m, 600)))] }),
   },
+  // ── No equipment: anyone, anywhere can compete ─────────────────────────
+  {
+    id: "the-clearing", name: "The Clearing", tagline: "Run · burpees · run", scoring: "time", icon: "ti-trees",
+    story: "Out, through, and back. No gym needed, just a measured kilometre and a patch of ground.",
+    variants: [{ id: "standard", name: "1 km · 50 · 1 km" }], defaultVariant: "standard", equipment: ["treadmill|outdoors"], level: "intermediate",
+    divisions: { open: "Step-back burpees allowed", competitive: "Chest to the floor, jump at the top", elite: "Chest to the floor, jump over a line" },
+    rules: ["1 km run · 50 burpees · 1 km run, for time.", "Outdoors on a measured route or treadmill ≥ 1%.", "The clock runs through transitions."],
+    build: () => ({ rounds: [round([toDistance("run", 1000, 330), forReps("burpee", 50, 180), toDistance("run", 1000, 330)])] }),
+  },
+  {
+    id: "the-hundred", name: "The Hundred", tagline: "Bodyweight for time", scoring: "time", icon: "ti-stretching",
+    story: "One hundred squats, fifty push-ups, twenty-five burpees. Break them up however you like.",
+    variants: [{ id: "standard", name: "100 · 50 · 25" }], defaultVariant: "standard", equipment: [], level: "beginner",
+    divisions: { open: "Knee push-ups and step-back burpees allowed", competitive: "Full push-ups and burpees", elite: "Hand-release push-ups, jumping burpees" },
+    rules: ["100 air squats, then 50 push-ups, then 25 burpees.", "Squats: hip crease below the knee. Push-ups: chest to a fist-height target."],
+    build: () => ({ rounds: [round([forReps("air-squat", 100, 180), forReps("push-up", 50, 150), forReps("burpee", 25, 100)])] }),
+  },
+  {
+    id: "the-shield", name: "The Shield", tagline: "Push-ups for reps", scoring: "reps", icon: "ti-shield",
+    story: "Two minutes. As many good push-ups as you can hold together.",
+    variants: [{ id: "2", name: "2 min", min: 2 }], defaultVariant: "2", equipment: [], level: "beginner",
+    divisions: { open: "Knee push-ups", competitive: "Full push-ups", elite: "Hand-release push-ups" },
+    rules: ["Body in one line, chest to a fist-height target, arms locked at the top.", "Rest in the plank or on the knees; the clock keeps running."],
+    inputs: () => [{ key: "reps", label: "Push-ups", unit: "reps" }],
+    build: v => ({ rounds: [round([station([ex("push-up")], v.min * 60, { name: "The Shield", cue: "Push ups" })])] }),
+  },
 ];
 BENCHMARKS.forEach(b => { b.kind = "benchmark"; b.better = b.better || SCORING[b.scoring].better; });
 
@@ -221,7 +247,7 @@ BENCHMARKS.forEach(b => { b.kind = "benchmark"; b.better = b.better || SCORING[b
 const MONTHLY_ROTATION = [
   ["three-rivers", "standard"], ["the-storm", "20"], ["iron-mile", "standard"], ["the-burden", "5"], ["the-hunt", "5k"],
   ["the-forge", "standard"], ["the-river", "2k"], ["the-chase", "standard"], ["the-stand", "5"], ["the-mill", "standard"],
-  ["the-mountain", "20"], ["the-crossing", "standard"],
+  ["the-hundred", "standard"], ["the-clearing", "standard"],
 ];
 function monthlyChallenge(now = new Date()) {
   const idx = (now.getFullYear() * 12 + now.getMonth()) % MONTHLY_ROTATION.length;
@@ -252,6 +278,12 @@ function challengeWorkout(c, variantId, division = "open") {
   const v = variantOf(c, variantId);
   return { id: uid(), templateId: `challenge:${c.id}`, name: `${c.name}${c.variants.length > 1 ? ` · ${v.name}` : ""}`, params: {}, challenge: { id: c.id, variant: v.id, division }, ...c.build(v, division) };
 }
+
+/* Benchmarks keep their movements, but a run or walk may happen outdoors instead of on a treadmill. */
+function outdoorSwaps(equipment) {
+  return !equipment.includes("treadmill") && equipment.includes("outdoors") ? { run: "run-outside", "incline-walk": "walk-outside" } : {};
+}
+const gearMissing = (c, equipment) => (c.equipment || []).filter(q => !q.split("|").some(x => equipment.includes(x)));
 
 /* ── Scores ─────────────────────────────────────────────────────────────────── */
 

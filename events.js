@@ -160,7 +160,7 @@ function startTrial(trialId) {
   workout.challenge.eventId = d.ev.id;
   workout.challenge.trialId = t.trial_id;
   workout.name = `${d.ev.name}: ${t.name}`;
-  const timeline = compile(workout, {}, { warmup: state.profile.warmup, cooldown: state.profile.cooldown });
+  const timeline = compile(workout, outdoorSwaps(state.profile.equipment), { warmup: state.profile.warmup, cooldown: state.profile.cooldown });
   startWorkout(workout.templateId, { workout, timeline, swaps: {} });
 }
 
