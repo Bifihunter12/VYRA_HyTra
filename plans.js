@@ -71,7 +71,44 @@ function customPlanTools(p) {
   <div class="plan-tools">
     <button class="btn-secondary btn-sm" data-act="plan-edit"><i class="ti ti-pencil"></i> Edit plan</button>
     <button class="text-btn" data-act="plan-delete">${ui.confirm === "plan-delete" ? "Tap again to delete" : "Delete plan"}</button>
-  </div>`;
+  </div>
+  ${planReminders(customPlanById(p.id))}`;
+}
+
+/* ── Reminders: the phone's calendar alerts on every plan day ─────────────── */
+const APP_URL = () => `${location.origin}/`;
+const reminderSig = plan => JSON.stringify([plan.remindAt || "17:30", plan.slots.map(x => [x.day, x.t, x.name || ""])]);
+
+function reminderItems(plan) {
+  const items = plan.slots.map(x => {
+    const t = templateById(x.t);
+    const minutes = planFor(t.id, sessionParams(t, paramsFor(t.id), { set: x.set })).totals.main / 60;
+    return { day: x.day, name: x.name || t.name, minutes };
+  });
+  return reminderStarts(items, plan.remindAt || "17:30");
+}
+
+function planReminders(plan) {
+  if (!plan?.slots.length) return "";
+  const time = plan.remindAt || "17:30";
+  const other = ui.remindOther || !REMINDER_TIMES.includes(time);
+  const tz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return ""; } })();
+  const added = plan.reminders || {};
+  const stale = added.sig && added.sig !== reminderSig(plan);
+  return `
+  ${sectionLabel("Reminders", `<span class="cl-cat-count">${esc(time)}</span>`)}
+  <div class="pad-y">${chips("data-remind-at", [...REMINDER_TIMES.map(x => [x, x]), ["other", "Other"]], other ? "other" : time)}
+    ${other ? `<div class="field-row"><input class="text-input remind-time" id="remind-time" type="time" value="${esc(time)}" aria-label="Reminder time"></div>` : ""}
+    <p class="hint">Your phone's calendar alerts you at this time on every plan day, for all four weeks, even when VYRA is closed.</p></div>
+  ${stale ? `<div class="gear-note gear-note--warn"><i class="ti ti-alert-triangle"></i> You changed the plan or the time since adding reminders. Add them again and delete the old ones in your calendar.</div>` : ""}
+  <div class="cl-list">${reminderItems(plan).map(it => `
+    <a class="cl-row" href="${esc(googleCalendarUrl(plan, it, { url: APP_URL(), timeZone: tz }))}" target="_blank" rel="noopener" data-remind-day="${it.day}">
+      <span class="day-tag">${WEEKDAYS[it.day]}</span>
+      <span class="cl-main"><span class="cl-name">${esc(it.name)}</span>
+        <span class="cl-meta">${!stale && added.days?.includes(it.day) ? "Added · tap to add again" : "Add to Google Calendar"}</span></span>
+      <i class="ti ${!stale && added.days?.includes(it.day) ? "ti-circle-check is-done" : "ti-calendar-plus"} cl-go" aria-hidden="true"></i>
+    </a>`).join("")}</div>
+  <button class="btn-secondary btn-sm btn-inline-start" data-act="remind-ics"><i class="ti ti-download"></i> Apple / Outlook calendar</button>`;
 }
 
 function renderPlanEdit() {
@@ -200,6 +237,20 @@ function handlePlansClick(d) {
     });
     ui.screen = "plan-edit"; return render(), true;
   }
+  if (d.remindAt) {
+    if (d.remindAt === "other") { ui.remindOther = true; return rerender(), true; }
+    ui.remindOther = false;
+    updatePlan(ui.programId, p => ({ ...p, remindAt: d.remindAt }));
+    return rerender(), true;
+  }
+  if (d.remindDay) {                                   // the link itself opens Google Calendar
+    updatePlan(ui.programId, p => {
+      const r = p.reminders?.sig === reminderSig(p) ? p.reminders : { sig: reminderSig(p), days: [] };
+      return { ...p, reminders: { ...r, days: [...new Set([...r.days, Number(d.remindDay)])] } };
+    });
+    setTimeout(rerender, 300);
+    return true;
+  }
   if (d.mine) { ui.mineId = d.mine; ui.mineName = null; ui.programKey = null; ui.templateId = mineById(d.mine).templateId; ui.screen = "setup"; return render(), true; }
   switch (d.act) {
     case "plan-make": {
@@ -228,6 +279,17 @@ function handlePlansClick(d) {
         .find(c => !plan.slots.some(s => s.t === c.t.id && !s.mine)) || null;
       if (day == null || !best) return true;
       updatePlan(plan.id, p => { p.slots.push({ day, t: best.t.id, set: best.set }); p.slots.sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day)); return p; });
+      return rerender(), true;
+    }
+    case "remind-ics": {
+      const plan = customPlanById(ui.programId);
+      const blob = new Blob([planIcs(plan, reminderItems(plan), { url: APP_URL() })], { type: "text/calendar" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = `${plan.name.replace(/[^\w -]+/g, "").trim() || "VYRA plan"}.ics`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      updatePlan(plan.id, p => ({ ...p, reminders: { sig: reminderSig(p), days: p.slots.map(x => x.day) } }));
+      toast("Open the file to add the reminders to your calendar");
       return rerender(), true;
     }
     case "mine-new": ui.mineName = `My ${templateById(ui.templateId).name}`; return rerender(), true;
@@ -271,10 +333,15 @@ function handlePlansInput(ev) {
     return true;
   }
   if (ev.target.id === "mine-name") { ui.mineName = ev.target.value; return true; }
+  if (ev.target.id === "remind-time" && /^\d{2}:\d{2}$/.test(ev.target.value)) {
+    updatePlan(ui.programId, p => ({ ...p, remindAt: ev.target.value }));
+    return true;
+  }
   return false;
 }
 
 function handlePlansChange(ev) {
+  if (ev.target.id === "remind-time") { rerender(); return true; }
   const i = ev.target.dataset?.slotDay;
   if (i == null) return false;
   updatePlan(ui.programId, p => {

@@ -85,3 +85,32 @@ test("own plans run through the program engine", () => {
   assert.equal(st.next.day, 4);
   V.USER_PROGRAMS.length = 0;
 });
+
+test("reminders start on the next plan day at the chosen time", () => {
+  const monday9am = new Date(2026, 9, 5, 9, 0).getTime();
+  const r = V.reminderStarts([{ day: 1 }, { day: 3 }, { day: 0 }], "17:30", monday9am);
+  assert.deepEqual(r.map(x => [x.start.getDay(), x.start.getDate(), x.start.getHours(), x.start.getMinutes()]).map(plain), [[1, 5, 17, 30], [3, 7, 17, 30], [0, 11, 17, 30]]);
+});
+
+test("calendar file: one weekly event per plan day for four weeks, each with an alert", () => {
+  const plan = { id: "my-x", name: "Caro, Engine; plan" };
+  const items = V.reminderStarts([{ day: 1, name: "Quiet Room", minutes: 38 }, { day: 3, name: "Run/Walk Builder", minutes: 30 }], "07:00", new Date(2026, 9, 5).getTime());
+  const ics = V.planIcs(plan, items, { url: "https://example.app/", now: Date.UTC(2026, 9, 5) });
+  assert.equal((ics.match(/BEGIN:VEVENT/g) || []).length, 2);
+  assert.equal((ics.match(/RRULE:FREQ=WEEKLY;COUNT=4/g) || []).length, 2);
+  assert.equal((ics.match(/BEGIN:VALARM/g) || []).length, 2);
+  assert.match(ics, /DTSTART:20261005T070000\r\n/);
+  assert.match(ics, /DURATION:PT38M/);
+  assert.ok(ics.includes("Caro\\, Engine\\; plan"), "commas and semicolons escaped");
+  assert.ok(ics.split("\r\n").every(l => l.length <= 75), "lines folded");
+  assert.ok(ics.endsWith("END:VCALENDAR\r\n"));
+});
+
+test("Google Calendar link repeats weekly for the plan", () => {
+  const [it] = V.reminderStarts([{ day: 1, name: "Quiet Room", minutes: 38 }], "17:30", new Date(2026, 9, 5).getTime());
+  const u = new URL(V.googleCalendarUrl({ name: "Plan" }, it, { url: "https://example.app/", timeZone: "Europe/Berlin" }));
+  assert.equal(u.searchParams.get("dates"), "20261005T173000/20261005T180800");
+  assert.equal(u.searchParams.get("recur"), "RRULE:FREQ=WEEKLY;COUNT=4");
+  assert.equal(u.searchParams.get("ctz"), "Europe/Berlin");
+  assert.match(u.searchParams.get("text"), /Quiet Room/);
+});
