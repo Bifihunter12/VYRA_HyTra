@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.05.4";
+const APP_VERSION = "2026.10.05.5";
 const STORE_KEY = "vyra_v1";
 /* Beeps, spoken cues and vibration are switched off for now. Set to true to bring them back. */
 const CUES_ENABLED = false;
@@ -220,7 +220,7 @@ function render() {
   document.body.dataset.screen = ui.screen;
   if (ui.screen === "player") return renderPlayer();
   const views = {
-    program: renderProgram, "plan-make": renderPlanMake, "plan-edit": renderPlanEdit, "plan-pick": renderPlanPick, compete: renderCompete, activity: renderActivity, "athlete-view": renderAthleteView,
+    program: renderProgram, hall: renderHall, "plan-make": renderPlanMake, "plan-edit": renderPlanEdit, "plan-pick": renderPlanPick, compete: renderCompete, activity: renderActivity, "athlete-view": renderAthleteView,
     event: renderEvent, verify: renderVerify, review: renderReview, club: renderClub, "club-new": renderClubNew, challenge: renderChallenge, athlete: renderAthlete, "athlete-edit": renderAthleteEdit,
     onboarding: renderOnboarding, today: renderToday, library: renderLibrary, progress: renderProgress,
     history: renderHistory, profile: renderProfile, setup: renderSetup, summary: renderSummary,
@@ -1446,13 +1446,14 @@ app.addEventListener("input", ev => {
 });
 
 app.addEventListener("click", async ev => {
-  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility],[data-ath-activity],[data-compete-view],[data-athlete],[data-comments],[data-react],[data-follow],[data-del-comment],[data-event],[data-event-division],[data-standings-division],[data-ghost],[data-review],[data-club],[data-club-join],[data-club-kind],[data-club-open],[data-battle-scope],[data-board-where],[data-pd-day],[data-pd-goal],[data-pd-min],[data-slot-change],[data-slot-remove],[data-pick],[data-pick-mine],[data-mine],[data-remind-at],[data-remind-day]");
+  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility],[data-ath-activity],[data-compete-view],[data-athlete],[data-comments],[data-react],[data-follow],[data-del-comment],[data-event],[data-event-division],[data-standings-division],[data-ghost],[data-review],[data-club],[data-club-join],[data-club-kind],[data-club-open],[data-battle-scope],[data-board-where],[data-pd-day],[data-pd-goal],[data-pd-min],[data-slot-change],[data-slot-remove],[data-pick],[data-pick-mine],[data-mine],[data-remind-at],[data-remind-day],[data-hall-division],[data-month-time],[data-month-remind]");
   if (!el) return;
   const d = el.dataset;
   if (!["erase", "delete-history", "program-join", "program-leave", "sync-delete", "plan-delete", "mine-delete"].includes(d.act)) ui.confirm = null;
 
   if (d.go) return go(d.go);
   if (handlePlansClick(d)) return;
+  if (handleMonthlyClick(d)) return;
   if (handleCompeteClick(d)) return;
   if (await handleCommunityClick(d)) return;
   if (await handleEventsClick(d)) return;

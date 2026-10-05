@@ -80,6 +80,18 @@ Scoring types: time (lower or higher wins), distance, reps, load, rounds, points
 - **Partner gyms** (staff-flagged) and **in-person events** hosted by a club, with
   a venue and capacity
 
+## Monthly challenges
+
+- A new challenge every month from a fixed 12-month rotation (`MONTHLY_ROTATION`
+  in challenges.js, mirrored in `supabase/006_monthly.sql`; a test keeps them equal).
+  Months run in UTC, the same window everywhere.
+- The last 5 days are highlighted ("log your best") with a preview of next month's challenge.
+- **Monthly winners:** `monthly_hall()` freezes each finished month one day after it
+  ends (lazily, on first view) into `monthly_closings` / `monthly_results`: the
+  full ranking per division. Shows the podium and the athlete's own place.
+- **Reminders:** two calendar alerts a month ("5 days left" and "new challenge is
+  live"), via Google Calendar links or an .ics file for the next 12 months.
+
 ## Next
 
 - Event admin screen (today events are added with SQL; see the seed in 004)

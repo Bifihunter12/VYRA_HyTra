@@ -453,32 +453,82 @@ const icsText = s => String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;").repla
 /* Lines longer than 75 octets are folded (RFC 5545). */
 const icsFold = line => line.length <= 74 ? line : line.match(/.{1,73}/g).join("\r\n ");
 
-/* items: [{ day, name, minutes, start: Date }] → .ics text */
-function planIcs(plan, items, { url = "", weeks = PLAN_WEEKS, now = Date.now() } = {}) {
-  const events = items.map(it => [
+/* events: [{ uid, start: Date, minutes, title, desc, rrule?, alarm }] → .ics text */
+function icsCalendar(events, { url = "", now = Date.now() } = {}) {
+  const lines = events.flatMap(ev => [
     "BEGIN:VEVENT",
-    `UID:${plan.id}-${it.day}@vyra`,
+    `UID:${ev.uid}`,
     `DTSTAMP:${icsUtc(new Date(now))}`,
-    `DTSTART:${icsStamp(it.start)}`,
-    `DURATION:PT${Math.max(10, Math.round(it.minutes || 30))}M`,
-    `RRULE:FREQ=WEEKLY;COUNT=${weeks}`,
-    `SUMMARY:${icsText(`VYRA · ${it.name}`)}`,
-    `DESCRIPTION:${icsText(`${plan.name}: ${it.name}, about ${Math.round(it.minutes || 30)} min.${url ? ` Open VYRA: ${url}` : ""}`)}`,
+    `DTSTART:${icsStamp(ev.start)}`,
+    `DURATION:PT${Math.max(10, Math.round(ev.minutes || 30))}M`,
+    ...(ev.rrule ? [`RRULE:${ev.rrule}`] : []),
+    `SUMMARY:${icsText(ev.title)}`,
+    `DESCRIPTION:${icsText(`${ev.desc}${url ? ` Open VYRA: ${url}` : ""}`)}`,
     ...(url ? [`URL:${url}`] : []),
-    "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${icsText(`Time to train: ${it.name}`)}`, "TRIGGER:PT0M", "END:VALARM",
+    "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${icsText(ev.alarm || ev.title)}`, "TRIGGER:PT0M", "END:VALARM",
     "END:VEVENT",
-  ]).flat();
-  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//VYRA//Training plan//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", ...events, "END:VCALENDAR"]
+  ]);
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//VYRA//Training//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", ...lines, "END:VCALENDAR"]
     .map(icsFold).join("\r\n") + "\r\n";
+}
+
+/* items: [{ day, name, minutes, start: Date }] → .ics text, one weekly event per plan day. */
+function planIcs(plan, items, { url = "", weeks = PLAN_WEEKS, now = Date.now() } = {}) {
+  return icsCalendar(items.map(it => ({
+    uid: `${plan.id}-${it.day}@vyra`, start: it.start, minutes: it.minutes, rrule: `FREQ=WEEKLY;COUNT=${weeks}`,
+    title: `VYRA · ${it.name}`, desc: `${plan.name}: ${it.name}, about ${Math.round(it.minutes || 30)} min.`, alarm: `Time to train: ${it.name}`,
+  })), { url, now });
+}
+
+/* Google Calendar "add event" link. */
+function googleEventUrl({ title, start, minutes = 30, details = "", recur = "", timeZone = "" }) {
+  const end = new Date(start.getTime() + Math.max(10, Math.round(minutes)) * 60000);
+  const q = new URLSearchParams({ action: "TEMPLATE", text: title, dates: `${icsStamp(start)}/${icsStamp(end)}`, details,
+    ...(recur ? { recur } : {}), ...(timeZone ? { ctz: timeZone } : {}) });
+  return `https://calendar.google.com/calendar/render?${q}`;
 }
 
 /* "Add to Google Calendar" link for one plan day, repeating weekly for the plan. */
 function googleCalendarUrl(plan, it, { url = "", weeks = PLAN_WEEKS, timeZone = "" } = {}) {
-  const end = new Date(it.start.getTime() + Math.max(10, Math.round(it.minutes || 30)) * 60000);
-  const q = new URLSearchParams({
-    action: "TEMPLATE", text: `VYRA · ${it.name}`, dates: `${icsStamp(it.start)}/${icsStamp(end)}`,
+  return googleEventUrl({ title: `VYRA · ${it.name}`, start: it.start, minutes: it.minutes || 30, timeZone,
     details: `${plan.name}: ${it.name}, about ${Math.round(it.minutes || 30)} min.${url ? `\nOpen VYRA: ${url}` : ""}`,
-    recur: `RRULE:FREQ=WEEKLY;COUNT=${weeks}`, ...(timeZone ? { ctz: timeZone } : {}),
-  });
-  return `https://calendar.google.com/calendar/render?${q}`;
+    recur: `RRULE:FREQ=WEEKLY;COUNT=${weeks}` });
+}
+
+/* ── Monthly challenge reminders ──────────────────────────────────────────────
+   Two alerts a month: when the final five days start ("log your best") and on
+   the 1st when the new challenge goes live. Dates follow the UTC competition
+   month; the alert fires at the chosen local time. */
+function monthlyReminderEvents(time = "18:00", { from = Date.now(), months = 12 } = {}) {
+  const [h, mi] = String(time).split(":").map(Number);
+  const at = utcDay => { const d = new Date(utcDay); return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), h, mi); };
+  const out = [];
+  for (let i = 0; i < months; i++) {
+    const ref = new Date(from); ref.setUTCDate(1); ref.setUTCMonth(ref.getUTCMonth() + i);
+    const m = monthlyStatus(ref.getTime() + DAY_MS);
+    const c = challengeById(m.challengeId), n = challengeById(m.next.challengeId);
+    const finalAt = at(m.end - MONTHLY_FINAL_DAYS * DAY_MS);
+    const liveAt = at(m.start);
+    if (i > 0 || liveAt.getTime() > from) out.push({ kind: "live", key: m.key, uid: `vyra-month-${m.key}-live@vyra`, start: liveAt, minutes: 15,
+      title: `VYRA · ${m.monthName} challenge is live: ${c.name}`, desc: `The ${m.monthName} challenge is ${c.name} (${c.tagline}). You have all month to log your best.`,
+      alarm: `New VYRA challenge: ${c.name}` });
+    if (finalAt.getTime() > from) out.push({ kind: "final", key: m.key, uid: `vyra-month-${m.key}-final@vyra`, start: finalAt, minutes: 15,
+      title: `VYRA · 5 days left: ${c.name}`, desc: `5 days left to log your best ${c.name} for ${m.monthName}. Next up on the 1st: ${n.name}.`,
+      alarm: `5 days left in the ${m.monthName} challenge` });
+  }
+  return out;
+}
+
+/* Recurring Google Calendar links for the two monthly alerts (generic titles, since the challenge changes). */
+function monthlyGoogleUrls(time = "18:00", { from = Date.now(), url = "", timeZone = "" } = {}) {
+  const evs = monthlyReminderEvents(time, { from, months: 2 });
+  const first = kind => evs.find(e => e.kind === kind);
+  return {
+    final: googleEventUrl({ title: "VYRA · 5 days left in this month's challenge", start: first("final").start, minutes: 15, timeZone,
+      details: `Log your best result before the month ends. A new challenge starts on the 1st.${url ? `\nOpen VYRA: ${url}` : ""}`,
+      recur: "RRULE:FREQ=MONTHLY;BYMONTHDAY=-5;COUNT=12" }),
+    live: googleEventUrl({ title: "VYRA · New monthly challenge is live", start: first("live").start, minutes: 15, timeZone,
+      details: `A new VYRA challenge starts today. You have all month to log your best.${url ? `\nOpen VYRA: ${url}` : ""}`,
+      recur: "RRULE:FREQ=MONTHLY;BYMONTHDAY=1;COUNT=12" }),
+  };
 }

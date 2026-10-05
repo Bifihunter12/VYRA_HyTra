@@ -33,7 +33,12 @@ values, sign-in is hidden and nothing leaves the device.
 6. **Clubs, gyms & teams:** **New query** with `supabase/005_clubs.sql`, then **Run**.
    It adds clubs, invite codes, gym-vs-gym and local leaderboards.
 
-Always run the files in this order (schema, 002, 003, 004, 005). Every file is safe
+7. **Monthly winners:** **New query** with `supabase/006_monthly.sql`, then **Run**.
+   It stores who won each monthly challenge. Results freeze automatically one day
+   after a month ends (the first time anyone opens Monthly winners); no scheduled
+   job is needed.
+
+Always run the files in this order (schema, 002, 003, 004, 005, 006). Every file is safe
 to run again. All of them are tested against a real Postgres database on every push
 (`npm run test:sql`, see `tests/sql/`).
 

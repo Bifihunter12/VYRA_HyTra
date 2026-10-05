@@ -107,3 +107,42 @@ test("benchmark runs move outdoors only when there's no treadmill", () => {
   assert.deepEqual([...tl.map(iv => iv.exId || iv.exercises[0].id)], ["run-outside", "burpee", "run-outside"]);
   assert.ok(tl.every(iv => iv.openEnded));
 });
+
+test("months run in UTC; the final five days are flagged with next month's challenge", () => {
+  const mid = V.monthlyStatus(Date.UTC(2026, 9, 15, 12));
+  assert.equal(mid.start, Date.UTC(2026, 9, 1));
+  assert.equal(mid.end, Date.UTC(2026, 10, 1));
+  assert.equal(mid.final, false);
+  const late = V.monthlyStatus(Date.UTC(2026, 9, 27, 18));
+  assert.equal(late.daysLeft, 5);
+  assert.equal(late.final, true);
+  assert.equal(late.challengeId, "the-mill");
+  assert.equal(late.next.challengeId, "the-hundred");
+  assert.equal(V.monthlyStatus(Date.UTC(2026, 9, 31, 23, 59)).daysLeft, 1);
+  assert.equal(V.monthlyStatus(Date.UTC(2026, 10, 1, 0, 1)).challengeId, "the-hundred");
+});
+
+test("monthly reminders: '5 days left' on the 27th/26th and 'live' on the 1st, for 12 months", () => {
+  const evs = V.monthlyReminderEvents("18:00", { from: Date.UTC(2026, 9, 5, 9) });
+  const fin = evs.filter(e => e.kind === "final"), live = evs.filter(e => e.kind === "live");
+  assert.equal(fin.length, 12);
+  assert.equal(live.length, 11, "October is already live");
+  assert.equal(fin[0].start.getDate(), 27); assert.equal(fin[0].start.getMonth(), 9); assert.equal(fin[0].start.getHours(), 18);
+  assert.match(fin[0].title, /5 days left: The Mill/);
+  assert.match(fin[0].desc, /Next up on the 1st: The Hundred/);
+  assert.equal(live[0].start.getDate(), 1); assert.equal(live[0].start.getMonth(), 10);
+  assert.match(live[0].title, /November challenge is live: The Hundred/);
+  assert.equal(fin[1].start.getDate(), 26, "November has 30 days");
+  const ics = V.icsCalendar(evs, { url: "https://example.app/" });
+  assert.equal((ics.match(/BEGIN:VEVENT/g) || []).length, 23);
+  assert.equal(new Set(evs.map(e => e.uid)).size, 23, "stable, unique ids");
+});
+
+test("monthly Google Calendar links repeat every month", () => {
+  const g = V.monthlyGoogleUrls("08:00", { from: Date.UTC(2026, 9, 5, 9), timeZone: "Europe/Berlin" });
+  const fin = new URL(g.final), live = new URL(g.live);
+  assert.equal(fin.searchParams.get("recur"), "RRULE:FREQ=MONTHLY;BYMONTHDAY=-5;COUNT=12");
+  assert.equal(fin.searchParams.get("dates").slice(0, 15), "20261027T080000");
+  assert.equal(live.searchParams.get("recur"), "RRULE:FREQ=MONTHLY;BYMONTHDAY=1;COUNT=12");
+  assert.equal(live.searchParams.get("dates").slice(0, 15), "20261101T080000");
+});

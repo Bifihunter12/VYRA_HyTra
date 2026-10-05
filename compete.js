@@ -60,18 +60,20 @@ function renderCompete() {
 }
 
 function monthlyCard(full = false) {
-  const m = monthlyChallenge();
+  const m = monthlyStatus();
   const c = challengeById(m.challengeId);
   const v = variantOf(c, m.variant);
-  const daysLeft = Math.max(0, Math.ceil((m.end - Date.now()) / DAY_MS));
+  const daysLeft = m.daysLeft;
+  const nextC = challengeById(m.next.challengeId);
+  const endsAt = new Date(m.end).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   const ath = athlete();
   const best = bestAttempt(allAttempts(), c, v.id, ath.division, { since: m.start, until: m.end });
   const board = ui.boards?.[boardKey(c.id, v.id, ath.division, "month")];
   const me = board?.rows?.find(r => r.is_me);
   if (full && Sync.user && ath.leaderboards && !board) loadBoard(c, v.id, ath.division, "month");
   return `
-  <div class="pick monthly">
-    <div class="pick-eyebrow"><i class="ti ti-calendar-event"></i> ${esc(m.monthName)} challenge · ${daysLeft} day${daysLeft === 1 ? "" : "s"} left</div>
+  <div class="pick monthly ${m.final ? "monthly--final" : ""}">
+    <div class="pick-eyebrow"><i class="ti ${m.final ? "ti-hourglass-high" : "ti-calendar-event"}"></i> ${esc(m.monthName)} challenge · ${m.final ? `<b>${daysLeft} day${daysLeft === 1 ? "" : "s"} left: log your best</b>` : `${daysLeft} days left`}</div>
     <button class="pick-main" data-challenge="${c.id}" data-variant="${v.id}">
       <span class="pick-name">${esc(c.name)}${c.variants.length > 1 ? `: ${esc(v.name)}` : ""}</span>
       <span class="pick-meta">${esc(c.tagline)}</span>
@@ -81,6 +83,11 @@ function monthlyCard(full = false) {
       ${me ? `<div><span class="stat-label">Monthly rank</span><b>#${me.rank}<small> of ${me.total}</small></b></div>` : ""}
     </div>
     <button class="btn-primary" data-act="challenge-start" data-id="${c.id}" data-variant="${v.id}"><i class="ti ti-player-play"></i> ${best ? "Try to beat it" : "Take the challenge"}</button>
+    ${m.final ? `<div class="monthly-next"><i class="ti ti-arrow-right"></i> Ends ${esc(endsAt)}. Next up on the 1st: <b>${esc(nextC.name)}</b> · ${esc(nextC.tagline)}</div>` : ""}
+    <div class="monthly-links">
+      <button class="text-btn" data-go="hall"><i class="ti ti-crown"></i> Past winners</button>
+      <button class="text-btn" data-act="hall-reminders"><i class="ti ti-bell"></i> Reminders</button>
+    </div>
   </div>`;
 }
 
