@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.05.1";
+const APP_VERSION = "2026.10.05.2";
 const STORE_KEY = "vyra_v1";
 /* Beeps, spoken cues and vibration are switched off for now. Set to true to bring them back. */
 const CUES_ENABLED = false;
@@ -132,7 +132,7 @@ function loadState() {
   const fresh = {
     settings: { sound: true, voice: true, vibrate: true },
     profile: { onboarded: false, goal: 3, level: "intermediate", equipment: [...ALL_EQUIPMENT], warmup: true, cooldown: true },
-    params: {}, swaps: {}, history: [], checkin: null, lastTemplate: null, program: null,
+    params: {}, swaps: {}, history: [], checkin: null, lastTemplate: null, program: null, customPlans: [], myWorkouts: [],
     deleted: {}, sync: defaultSyncState(), profileUpdatedAt: 0, profileSig: null, athlete: null,
   };
   try {
@@ -157,11 +157,22 @@ function save({ silent = false } = {}) {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch { /* storage unavailable */ }
 }
 
+/* Settings and swaps of a workout: the open "My workout" if there is one, otherwise the template's own. */
 function paramsFor(templateId) {
   const t = templateById(templateId);
-  return { ...defaultParams(t), ...(state.params[templateId] || {}) };
+  const m = activeMine(templateId);
+  return { ...defaultParams(t), ...(m ? m.params : state.params[templateId] || {}) };
 }
-function swapsFor(templateId) { return state.swaps[templateId] || {}; }
+function swapsFor(templateId) { const m = activeMine(templateId); return m ? m.swaps || {} : state.swaps[templateId] || {}; }
+function writeParams(templateId, patch) {
+  const m = activeMine(templateId);
+  if (m) m.params = { ...m.params, ...patch };
+  else state.params[templateId] = { ...(state.params[templateId] || {}), ...patch };
+}
+function writeSwaps(templateId, swaps) {
+  const m = activeMine(templateId);
+  if (m) m.swaps = swaps; else state.swaps[templateId] = swaps;
+}
 
 /* ── Equipment (athlete's profile) ─────────────────────────────────────────── */
 
@@ -185,7 +196,7 @@ function programSession(key) {
   const s = st && key ? st.sessions.find(x => x.key === key) : null;
   if (!s) return null;
   const t = templateById(s.t);
-  return { ...s, template: t, params: programParams(t, paramsFor(t.id), s.adj), status: st };
+  return { ...s, template: t, params: sessionParams(t, paramsFor(t.id), s), status: st };
 }
 function adjText(adj) {
   const words = { rounds: "round", speed: " mph", workSec: "s work", carrySec: "s carry", cardioSec: "s cardio" };
@@ -203,10 +214,11 @@ const app = document.getElementById("app");
 const TAB_SCREENS = TABS.map(t => t.id);
 
 function render() {
+  refreshUserPrograms();
   document.body.dataset.screen = ui.screen;
   if (ui.screen === "player") return renderPlayer();
   const views = {
-    program: renderProgram, compete: renderCompete, activity: renderActivity, "athlete-view": renderAthleteView,
+    program: renderProgram, "plan-make": renderPlanMake, "plan-edit": renderPlanEdit, "plan-pick": renderPlanPick, compete: renderCompete, activity: renderActivity, "athlete-view": renderAthleteView,
     event: renderEvent, verify: renderVerify, review: renderReview, club: renderClub, "club-new": renderClubNew, challenge: renderChallenge, athlete: renderAthlete, "athlete-edit": renderAthleteEdit,
     onboarding: renderOnboarding, today: renderToday, library: renderLibrary, progress: renderProgress,
     history: renderHistory, profile: renderProfile, setup: renderSetup, summary: renderSummary,
@@ -221,6 +233,7 @@ function rerender() { const y = window.scrollY; ui.quiet = true; render(); ui.qu
 function go(screen) {
   if (TAB_SCREENS.includes(screen)) ui.tab = screen;
   ui.screen = screen; ui.confirm = null;
+  if (screen !== "setup") ui.mineId = null;
   render();
 }
 
@@ -381,7 +394,7 @@ function renderToday() {
 
   ${state.profile.healthAck ? "" : `<div class="pick plan"><div class="pick-eyebrow"><i class="ti ti-shield-check"></i> Before you train</div>
     <p class="pick-reason">${HEALTH_NOTE}</p><button class="btn-secondary" data-act="health-ack"><i class="ti ti-check"></i> I understand</button></div>`}
-  ${programCard()}
+  ${programCard() || (state.history.length ? `<div class="cl-list cl-list--nudge">${makePlanCard()}</div>` : "")}
   ${monthlyCard()}
   ${pickCard}
 
@@ -435,14 +448,14 @@ function programCard() {
     <div class="pick plan">
       <div class="pick-eyebrow"><i class="ti ti-calendar-event"></i> ${esc(st.prog.name)} · week ${n.week} of ${st.prog.weeks.length}</div>
       <button class="pick-main" data-session="${n.key}">
-        <span class="pick-name">${esc(t.name)}</span>
-        <span class="pick-meta">Session ${n.index} of ${n.perWeek} this week · ${minutes} min${n.adj ? ` · ${esc(adjText(n.adj))}` : ""}</span>
+        <span class="pick-name">${esc(n.name || t.name)}</span>
+        <span class="pick-meta">${n.day != null ? `${n.day === new Date().getDay() ? "Planned for today" : `Planned for ${WEEKDAYS[n.day]}`} · ` : ""}Session ${n.index} of ${n.perWeek} this week · ${minutes} min${n.adj ? ` · ${esc(adjText(n.adj))}` : ""}</span>
       </button>
       <div class="plan-track" aria-label="${st.doneCount} of ${st.total} sessions done">
         ${st.sessions.map(s => `<span class="${st.done[s.key] ? "done" : s.key === n.key ? "now" : ""} ${s.index === 1 && s.week > 1 ? "wk" : ""}"></span>`).join("")}
       </div>
       <div class="cl-meta">${st.doneCount} of ${st.total} sessions done</div>
-      <button class="btn-primary" data-act="plan-start" data-id="${t.id}" data-key="${n.key}"><i class="ti ti-player-play"></i> Start ${esc(t.name)}</button>
+      <button class="btn-primary" data-act="plan-start" data-id="${t.id}" data-key="${n.key}"><i class="ti ti-player-play"></i> Start ${esc(n.name || t.name)}</button>
     </div>`;
 }
 
@@ -454,7 +467,7 @@ function programRow(p) {
     <button class="cl-row" data-program="${p.id}">
       <i class="ti ti-calendar-event cl-ic" aria-hidden="true"></i>
       <span class="cl-main">
-        <span class="cl-name">${esc(p.name)}${active ? ` <span class="tag tag--live">${st.complete ? "Done" : "Active"}</span>` : ""}</span>
+        <span class="cl-name">${esc(p.name)}${p.custom ? ` <span class="tag">Yours</span>` : ""}${active ? ` <span class="tag tag--live">${st.complete ? "Done" : "Active"}</span>` : ""}</span>
         <span class="cl-sub">${esc(p.tagline)}</span>
         <span class="cl-meta">${p.weeks.length} weeks · ${total} sessions · ${cap(p.level)}${active && !st.complete ? ` · <b>${st.doneCount}/${st.total} done</b>` : ""}</span>
       </span>
@@ -467,7 +480,7 @@ function renderProgram() {
   const st = activeProgram();
   const active = st && st.prog.id === p.id ? st : null;
   const sessions = programSessions(p);
-  const totalMin = sessions.reduce((a, s) => a + planFor(s.t, programParams(templateById(s.t), paramsFor(s.t), s.adj)).totals.main, 0) / 60;
+  const totalMin = sessions.reduce((a, s) => a + planFor(s.t, sessionParams(templateById(s.t), paramsFor(s.t), s)).totals.main, 0) / 60;
   const kit = [...new Set(sessions.flatMap(s => templateById(s.t).equipment))];
   const weeks = p.weeks.map((week, wi) => `
     <div class="cl-cat"><span class="cl-cat-name">Week ${wi + 1}${wi === p.weeks.length - 1 ? " · lighter" : ""}</span>
@@ -480,7 +493,7 @@ function renderProgram() {
       const icon = done ? "ti-circle-check" : isNext ? "ti-player-play" : "ti-circle";
       const inner = `
         <i class="ti ${icon} cl-ic ${done ? "is-done" : isNext ? "is-next" : ""}" aria-hidden="true"></i>
-        <span class="cl-main"><span class="cl-name">${esc(t.name)}</span>
+        <span class="cl-main"><span class="cl-name">${s.day != null ? `<span class="day-tag">${WEEKDAYS[s.day]}</span>` : ""}${esc(s.name || t.name)}</span>
           <span class="cl-meta">${esc(t.tagline)}${s.adj ? ` · ${esc(adjText(s.adj))}` : ""}${done ? " · done" : isNext ? " · up next" : ""}</span></span>`;
       return active ? `<button class="cl-row" data-session="${key}">${inner}<i class="ti ti-chevron-right cl-go" aria-hidden="true"></i></button>`
         : `<button class="cl-row" data-template="${t.id}">${inner}<i class="ti ti-chevron-right cl-go" aria-hidden="true"></i></button>`;
@@ -490,7 +503,7 @@ function renderProgram() {
   return `
   ${topbar("", backButton(ui.tab === "today" ? "today" : "library", ui.tab === "today" ? "Today" : "Library"))}
   <section class="hero">
-    <div class="hero-daycount">${p.weeks.length}-week program · ${cap(p.level)}</div>
+    <div class="hero-daycount">${p.weeks.length}-week ${p.custom ? "plan · made by you" : `program · ${cap(p.level)}`}</div>
     <div class="hero-titlebar"><i class="ti ti-calendar-event hero-ic" aria-hidden="true"></i><h1 class="hero-name">${esc(p.name)}</h1></div>
     <p class="about">${esc(p.about)}</p>
     <div class="tag-row"><span class="tag">${sessions.length} sessions</span><span class="tag">~${Math.round(totalMin / sessions.length)} min each</span>
@@ -507,6 +520,7 @@ function renderProgram() {
     </div>
     ${active.next ? `<button class="btn-primary btn-inline-start" data-act="plan-start" data-id="${active.next.t}" data-key="${active.next.key}"><i class="ti ti-player-play"></i> Start next: ${esc(templateById(active.next.t).name)}</button>` : ""}`
     : `<button class="btn-primary btn-inline-start" data-act="program-join" data-id="${p.id}"><i class="ti ti-calendar-plus"></i> ${switching && ui.confirm === "switch" ? `Tap again to replace ${esc(st.prog.name)}` : switching ? "Switch to this plan" : "Start this plan"}</button>`}
+  ${customPlanTools(p)}
   ${weeks}
   ${active ? `<button class="text-btn text-btn--center" data-act="program-leave">${ui.confirm === "leave" ? "Tap again to end this plan" : "End this plan"}</button>` : ""}`;
 }
@@ -547,8 +561,10 @@ function renderLibrary() {
     <div class="hero-daycount">${metas.length} of ${TEMPLATES.length} workouts fit your equipment</div>
     <div class="hero-titlebar"><h1 class="hero-name">Library</h1></div>
   </section>
-  ${sectionLabel("4-week programs", `<span class="cl-cat-count">${PROGRAMS.length} plans</span>`)}
-  <div class="cl-list">${PROGRAMS.map(programRow).join("")}</div>
+  ${myWorkouts().length ? `${sectionLabel("My workouts", `<span class="cl-cat-count">${myWorkouts().length}</span>`)}
+  <div class="cl-list">${myWorkouts().map(mineRow).join("")}</div>` : ""}
+  ${sectionLabel("4-week programs", `<span class="cl-cat-count">${USER_PROGRAMS.length + PROGRAMS.length} plans</span>`)}
+  <div class="cl-list">${makePlanCard()}${[...USER_PROGRAMS, ...PROGRAMS].map(programRow).join("")}</div>
   ${sectionLabel("Single workouts")}
   <section class="filters" aria-label="Filters">
     <div class="filter-group"><span class="filter-label">Time</span>${chips("data-f-time", [["all", "Any"], ["20", "20 min"], ["30", "30 min"], ["45", "45+ min"]], ui.filters.time)}</div>
@@ -670,8 +686,8 @@ function renderSetup() {
   return `
   ${topbar("", backButton(ui.tab, cap(ui.tab)))}
   <section class="hero">
-    <div class="hero-daycount">${esc(t.tagline)}</div>
-    <div class="hero-titlebar"><i class="ti ${CATEGORY_ICON[t.category]} hero-ic" aria-hidden="true"></i><h1 class="hero-name">${esc(t.name)}</h1></div>
+    <div class="hero-daycount">${activeMine(t.id) && !inPlan ? `My workout · based on ${esc(t.name)}` : esc(t.tagline)}</div>
+    <div class="hero-titlebar"><i class="ti ${activeMine(t.id) && !inPlan ? "ti-bookmark" : CATEGORY_ICON[t.category]} hero-ic" aria-hidden="true"></i><h1 class="hero-name">${esc(activeMine(t.id) && !inPlan ? activeMine(t.id).name : inPlan?.name || t.name)}</h1></div>
     <div class="journey-track"><div class="journey-fill" style="width:100%"></div></div>
     <div class="hero-stats">
       <span><i class="ti ti-clock"></i> ${fmtClock(totals.total)}${totals.openEnded ? "+" : ""}</span>
@@ -693,7 +709,8 @@ function renderSetup() {
 
   ${sectionLabel("Setup")}
   <div class="set-list">${t.params.filter(p => p.kind !== "speed" || timeline.some(iv => iv.speed)).map(paramRow).join("")}</div>
-  ${Object.keys(state.params[t.id] || {}).length ? `<button class="text-btn" data-act="reset-params"><i class="ti ti-restore"></i> Reset to defaults</button>` : ""}
+  ${!activeMine(t.id) && Object.keys(state.params[t.id] || {}).length ? `<button class="text-btn" data-act="reset-params"><i class="ti ti-restore"></i> Reset to defaults</button>` : ""}
+  ${inPlan ? "" : mineTools(t)}
 
   ${sectionLabel("Warm-up & safety")}
   <div class="set-list">
@@ -1019,8 +1036,11 @@ function startWorkout(templateId = ui.templateId, custom = null, programKey = nu
     const plan = planFor(templateId, inPlan ? inPlan.params : paramsFor(templateId));
     ({ workout, timeline } = plan); swaps = plan.gear.swaps;
   }
+  const mine = !custom && !inPlan ? activeMine(templateId) : null;
+  if (mine) workout.name = mine.name;
+  else if (inPlan?.name) workout.name = inPlan.name;
   ui.returnTo = ui.screen === "summary" ? ui.tab : ui.screen;
-  session = { workout, timeline, swaps, startedAt: Date.now(), programKey: inPlan ? inPlan.key : null, ghost: custom?.ghost || null };
+  session = { workout, timeline, swaps, startedAt: Date.now(), programKey: inPlan ? inPlan.key : null, ghost: custom?.ghost || null, mineId: mine?.id || null };
   engine = new IntervalEngine(timeline, { countdown: 3 });
   wireCues(engine);
   engine
@@ -1058,7 +1078,7 @@ function finishWorkout(early) {
   const t = TEMPLATES.find(x => x.id === session.workout.templateId);
   const before = new Set(badgeStatus(state.history, state.profile.goal).filter(b => b.earned).map(b => b.id));
   const rec = {
-    id: uid(), date: session.startedAt, name: session.workout.name, templateId: session.workout.templateId,
+    id: uid(), date: session.startedAt, name: session.workout.name, templateId: session.workout.templateId, ...(session.mineId ? { mineId: session.mineId } : {}),
     params: session.workout.params, swaps: session.swaps, stats, early, challenge: session.workout.challenge || null,
     checkpoints: session.workout.challenge ? checkpointsFromVisits(session.timeline, engine.visits) : undefined,
     patterns: visitPatterns(session.timeline, engine.visits), rating: 0, feel: null,
@@ -1426,7 +1446,10 @@ function sampleHistory() {
 
 /* ── Events ────────────────────────────────────────────────────────────────── */
 
+app.addEventListener("change", ev => { handlePlansChange(ev); });
+
 app.addEventListener("input", ev => {
+  if (handlePlansInput(ev)) return;
   if (ev.target.id === "athlete-search") { searchAthletes(ev.target.value.trim()); return; }
   if (ev.target.id === "club-search") { searchClubs(ev.target.value.trim()); return; }
   if (ev.target.id === "ghost-target") { ui.ghost = { ...(ui.ghost || {}), target: ev.target.value }; return; }
@@ -1455,19 +1478,20 @@ app.addEventListener("input", ev => {
 });
 
 app.addEventListener("click", async ev => {
-  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility],[data-ath-activity],[data-compete-view],[data-athlete],[data-comments],[data-react],[data-follow],[data-del-comment],[data-event],[data-event-division],[data-standings-division],[data-ghost],[data-review],[data-club],[data-club-join],[data-club-kind],[data-club-open],[data-battle-scope],[data-board-where]");
+  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility],[data-ath-activity],[data-compete-view],[data-athlete],[data-comments],[data-react],[data-follow],[data-del-comment],[data-event],[data-event-division],[data-standings-division],[data-ghost],[data-review],[data-club],[data-club-join],[data-club-kind],[data-club-open],[data-battle-scope],[data-board-where],[data-pd-day],[data-pd-goal],[data-pd-min],[data-slot-change],[data-slot-remove],[data-pick],[data-pick-mine],[data-mine]");
   if (!el) return;
   const d = el.dataset;
-  if (!["erase", "delete-history", "program-join", "program-leave", "sync-delete"].includes(d.act)) ui.confirm = null;
+  if (!["erase", "delete-history", "program-join", "program-leave", "sync-delete", "plan-delete", "mine-delete"].includes(d.act)) ui.confirm = null;
 
   if (d.go) return go(d.go);
+  if (handlePlansClick(d)) return;
   if (handleCompeteClick(d)) return;
   if (await handleCommunityClick(d)) return;
   if (await handleEventsClick(d)) return;
   if (await handleClubsClick(d)) return;
   if (d.step) return stepParam(d.step, Number(d.dir));
   if (d.paramToggle) {
-    state.params[ui.templateId] = { ...(state.params[ui.templateId] || {}), [d.paramToggle]: !paramsFor(ui.templateId)[d.paramToggle] };
+    writeParams(ui.templateId, { [d.paramToggle]: !paramsFor(ui.templateId)[d.paramToggle] });
     save(); return rerender();
   }
   if (d.profileToggle) { state.profile[d.profileToggle] = !state.profile[d.profileToggle]; save(); return rerender(); }
@@ -1495,18 +1519,18 @@ app.addEventListener("click", async ev => {
     save(); return rerender();
   }
   if (d.swap) {
-    const sw = { ...swapsFor(ui.templateId), [d.swap]: d.to };
-    state.swaps[ui.templateId] = sw; save();
+    writeSwaps(ui.templateId, { ...swapsFor(ui.templateId), [d.swap]: d.to }); save();
     return rerender();
   }
   if (d.program) { ui.programId = d.program; ui.screen = "program"; return render(); }
   if (d.session) {
+    ui.mineId = null;
     const ps = programSession(d.session);
     if (ps) { ui.templateId = ps.t; ui.programKey = ps.key; ui.screen = "setup"; render(); }
     return;
   }
   if (d.template) {
-    ui.programKey = null;
+    ui.programKey = null; ui.mineId = null;
     ui.templateId = d.template; state.lastTemplate = ui.templateId; save();
     ui.screen = "setup"; return render();
   }
@@ -1518,7 +1542,7 @@ app.addEventListener("click", async ev => {
 
   switch (d.act) {
     case "start": return startWorkout(ui.templateId, null, d.key || null);
-    case "plan-start": return startWorkout(d.id, null, d.key);
+    case "plan-start": ui.mineId = null; return startWorkout(d.id, null, d.key);
     case "program-join":
       if (state.program && state.program.id !== d.id && !state.program.completedAt && ui.confirm !== "switch") { ui.confirm = "switch"; return rerender(); }
       state.program = { id: d.id, startedAt: Date.now(), done: {} }; ui.confirm = null; save();
@@ -1544,7 +1568,7 @@ app.addEventListener("click", async ev => {
       try { await Sync.deleteAccount(); toast("Account deleted"); } catch (e) { toast(`Couldn't delete: ${e.message}`); }
       return rerender();
     case "health-ack": state.profile.healthAck = Date.now(); save(); return rerender();
-    case "quick-start": return startWorkout(d.id);
+    case "quick-start": ui.mineId = null; return startWorkout(d.id);
     case "start-recovery": return startWorkout("recovery", recoveryWorkout());
     case "pause": return engine?.toggle();
     case "skip": return engine?.next();
@@ -1577,6 +1601,7 @@ app.addEventListener("click", async ev => {
       const s = ui.summary;
       if (s.templateId === "recovery") return startWorkout("recovery", recoveryWorkout());
       if (s.challenge) return startChallenge(s.challenge.id, s.challenge.variant, s.attempt?.division || s.challenge.division);
+      if (s.mineId && mineById(s.mineId)) { ui.mineId = s.mineId; return startWorkout(s.templateId); }
       state.params[s.templateId] = { ...(state.params[s.templateId] || {}), ...s.params };
       if (s.swaps) state.swaps[s.templateId] = { ...s.swaps };
       save();
@@ -1623,7 +1648,7 @@ function stepParam(key, dir) {
   const cur = paramsFor(t.id)[key];
   let v = Math.round((cur + dir * p.step) * 10) / 10;
   v = Math.min(p.max, Math.max(p.min, v));
-  state.params[t.id] = { ...(state.params[t.id] || {}), [key]: v };
+  writeParams(t.id, { [key]: v });
   save();
   rerender();
 }
