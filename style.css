@@ -1031,3 +1031,23 @@ button.b-name { text-align: left; color: inherit; }
 .invite b { flex: 1; font-size: 22px; letter-spacing: 4px; font-variant-numeric: tabular-nums; }
 .join-code { margin-top: 10px; }
 .avatar .ti { font-size: 28px; }
+
+/* ── Own plans & My workouts ──────────────────────────────────────────────── */
+.day-tag {
+  display: inline-block; min-width: 38px; margin-right: 8px; padding: 2px 8px; border-radius: var(--pill, 999px);
+  background: var(--surface-3); color: var(--text); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; text-align: center;
+}
+.plan-tools { display: flex; align-items: center; gap: 14px; margin: 12px 2px 4px; }
+.save-mine { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.save-mine .text-input { flex: 1; min-width: 0; }
+.cl-list--nudge { margin-top: 14px; }
+.cl-row.is-current { background: var(--surface-2); }
+.slot-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.slot-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-md, 16px); background: var(--surface); }
+.slot-day {
+  flex: none; width: 84px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--pill, 999px);
+  background: var(--surface-2); color: var(--text); font: inherit; font-size: 14px;
+}
+.slot-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.slot-main .cl-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#plan-name { margin-top: 6px; }

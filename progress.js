@@ -305,3 +305,126 @@ function competitionContext(history) {
     verifiedResults: done.filter(h => h.attempt.verification === "verified").length,
   };
 }
+
+/* ── Make my plan: a 4-week plan for the athlete's own days, goal and time ──
+   Plans are stored as weekly slots { day, t, set } (day 0 = Sunday … 6 = Saturday,
+   set = absolute settings such as rounds). The four weeks are derived from the
+   slots: same sessions every week, a little more in weeks 2–3, lighter week 4. */
+
+const PLAN_GOALS = [
+  { id: "fit",      label: "Get fit",         plan: "My Fitness Plan",  aim: "get fit",                 desc: "A balanced mix of cardio and full-body strength." },
+  { id: "engine",   label: "Build an engine", plan: "My Engine Plan",   aim: "build your engine",       desc: "More cardio: run, row, bike or outdoors." },
+  { id: "strength", label: "Get stronger",    plan: "My Strength Plan", aim: "get stronger",            desc: "Strength-first sessions with short conditioning." },
+  { id: "run",      label: "Run better",      plan: "My Running Plan",  aim: "run better",              desc: "Sessions built around running, toward your first or fastest 5 km." },
+  { id: "nogear",   label: "No equipment",    plan: "My No-Gear Plan",  aim: "get fit with no equipment", desc: "Bodyweight and outdoor sessions only." },
+];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const PLAN_WEEKS = 4;
+const LEVEL_RANK = { beginner: 0, intermediate: 1, advanced: 2 };
+
+/* How hard a session is, so two hard ones don't land on back-to-back days. */
+const isHardTemplate = t => !t.focus.includes("low-impact") && (t.level === "advanced" || t.focus.includes("strength-heavy") || t.focus.includes("cardio-heavy"));
+const isNativeNoGear = t => t.equipment.every(e => e === "outdoors");
+
+/* The settings that make a session last about `minutes` (main part, no warm-up). */
+function fitToMinutes(t, minutes, equipment) {
+  const rp = t.params.find(p => p.key === "rounds");
+  if (!rp) return {};
+  let best = null;
+  for (let r = rp.min; r <= rp.max; r++) {
+    const w = createWorkout(t.id, { rounds: r });
+    const main = planTotals(compile(w, gearPlan(w, {}, equipment).swaps, {})).main;
+    const off = Math.abs(main - minutes * 60);
+    if (!best || off < best.off) best = { r, off };
+  }
+  return { rounds: best.r };
+}
+
+/* Score each doable workout for a goal; higher is a better fit. */
+function planCandidates({ goal, level, equipment, minutes }) {
+  const rank = LEVEL_RANK[level] ?? 1;
+  return TEMPLATES.filter(t => t.category !== "benchmark").map(t => {
+    if ((LEVEL_RANK[t.level] ?? 1) - rank >= 2) return null;            // never two levels above
+    if (goal === "nogear" && !isNativeNoGear(t)) return null;
+    const w = createWorkout(t.id, fitToMinutes(t, minutes, equipment));
+    const gear = gearPlan(w, {}, equipment);
+    if (!gear.doable) return null;
+    const tl = compile(w, gear.swaps, {});
+    const tot = planTotals(tl);
+    const main = tot.main || 1;
+    const runShare = tl.filter(iv => ["run", "run-outside"].includes(iv.exId)).reduce((a, iv) => a + (iv.duration || iv.estimate || 0), 0) / main;
+    let score = 0;
+    if (goal === "fit") score = 1 + (["hybrid", "bodyweight"].includes(t.category) ? 1 : 0) + Math.min(tot.cardio, tot.work) / main * 2;
+    if (goal === "engine") score = (tot.cardio / main) * 4 + (t.focus.includes("cardio-heavy") ? 1 : 0);
+    if (goal === "strength") score = (tot.work / main) * 4 + (t.focus.includes("strength-heavy") ? 1 : 0) + (t.category === "kb-db" ? 0.5 : 0);
+    if (goal === "run") { if (runShare < 0.15) return null; score = runShare * 5 + (t.id === "run-walk" && rank === 0 ? 2 : 0); }
+    if (goal === "nogear") score = 2 + (t.focus.includes("outdoor") && equipment.includes("outdoors") ? 0.5 : 0);
+    score -= Math.abs((LEVEL_RANK[t.level] ?? 1) - rank) * 1.2;
+    score -= Object.keys(gear.auto).length * 0.6;                        // prefer sessions made for your kit
+    score -= Object.values(gear.auto).filter(id => EXERCISES[id].bodyweightCardio).length;  // jogging in place instead of a machine is a poor stand-in
+    score -= Math.abs(main - minutes * 60) / 600;                         // and close to your time
+    return { t, score, set: fitToMinutes(t, minutes, equipment), hard: isHardTemplate(t), easy: t.focus.includes("low-impact") };
+  }).filter(Boolean).sort((a, b) => b.score - a.score);
+}
+
+const backToBack = (a, b) => (b - a + 7) % 7 === 1;
+
+/* Choose one workout per training day: best fits first, no repeats while there's choice,
+   and an easier session after a hard one on consecutive days. */
+function pickSlots(days, cands) {
+  const order = [...new Set(days)].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));   // Monday first
+  const used = new Map();
+  const slots = [];
+  order.forEach((day, i) => {
+    const prev = slots[i - 1];
+    const needEasy = prev && prev.hard && backToBack(prev.day, day);
+    const pool = cands.filter(c => !needEasy || !c.hard);
+    const pick = [...(pool.length ? pool : cands)].sort((a, b) => (used.get(a.t.id) || 0) - (used.get(b.t.id) || 0) || b.score - a.score)[0];
+    if (!pick) return;
+    used.set(pick.t.id, (used.get(pick.t.id) || 0) + 1);
+    slots.push({ day, t: pick.t.id, set: pick.set, hard: pick.hard });
+  });
+  // The week wraps around: last day → first day next week.
+  if (slots.length > 2) {
+    const last = slots[slots.length - 1], first = slots[0];
+    if (last.hard && first.hard && backToBack(last.day, first.day)) {
+      const easy = cands.find(c => !c.hard && !slots.some(s => s.t === c.t.id)) || cands.find(c => !c.hard);
+      if (easy) Object.assign(last, { t: easy.t.id, set: easy.set, hard: false });
+    }
+  }
+  return slots.map(({ hard, ...s }) => s);
+}
+
+function makePlan({ goal = "fit", days = [1, 3, 5], minutes = 30, level = "intermediate", equipment = [], now = Date.now() }) {
+  const g = PLAN_GOALS.find(x => x.id === goal) || PLAN_GOALS[0];
+  // Nowhere to run (no treadmill, not outside)? Build the engine instead.
+  let cands = planCandidates({ goal: g.id, level, equipment, minutes });
+  if (!cands.length && g.id === "run") cands = planCandidates({ goal: "engine", level, equipment, minutes });
+  const slots = cands.length ? pickSlots(days, cands) : [];
+  return {
+    id: `my-${now.toString(36)}`, custom: true, createdAt: now, goal: g.id, minutes, level,
+    name: g.plan, tagline: `${slots.length}× a week · ~${minutes} min · ${g.label.toLowerCase()}`, slots,
+  };
+}
+
+/* Settings tweak for a week of a plan: build in weeks 2–3, back off in week 4. */
+function planWeekAdj(t, week) {
+  const has = k => t.params.some(p => p.key === k);
+  const timeKey = ["workSec", "stationSec", "strengthSec", "runSec", "cardioSec", "carrySec"].find(has);
+  if (week === 1) return null;
+  if (week === 4) return has("rounds") ? { rounds: -1 } : timeKey ? { [timeKey]: -10 } : null;
+  if (has("rounds")) return week === 2 ? { rounds: 1 } : { rounds: 1, ...(timeKey ? { [timeKey]: 5 } : {}) };
+  return timeKey ? { [timeKey]: week === 2 ? 5 : 10 } : null;
+}
+
+/* Full program (same shape as PROGRAMS) from a stored plan. */
+function planProgram(plan) {
+  const slots = (plan.slots || []).filter(s => TEMPLATES.some(t => t.id === s.t));
+  const g = PLAN_GOALS.find(x => x.id === plan.goal);
+  const weeks = Array.from({ length: PLAN_WEEKS }, (_, wi) => slots.map(s => {
+    const adj = planWeekAdj(templateById(s.t), wi + 1);
+    return { t: s.t, day: s.day, ...(s.set && Object.keys(s.set).length ? { set: s.set } : {}), ...(adj ? { adj } : {}), ...(s.name ? { name: s.name } : {}) };
+  }));
+  return { ...plan, weeks, level: plan.level || "intermediate",
+    about: `Your own plan${g ? ` to ${g.aim}` : ""}: ${slots.map(s => WEEKDAYS[s.day]).join(", ")}${plan.minutes ? `, about ${plan.minutes} minutes each` : ""}. Weeks 2 and 3 build a little, week 4 is lighter so your body can absorb the work.` };
+}

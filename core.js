@@ -483,11 +483,18 @@ function benchTotalMi(bench) {
 
 /* ── Programs ───────────────────────────────────────────────────────────────── */
 
-const programById = id => PROGRAMS.find(p => p.id === id) || null;
+/* The athlete's own plans ("Make my plan"), kept in sync with state by the app. */
+const USER_PROGRAMS = [];
+const programById = id => PROGRAMS.find(p => p.id === id) || USER_PROGRAMS.find(p => p.id === id) || null;
 
 /* Flat, ordered list of a program's sessions. key = "week-session" (1-based). */
 function programSessions(prog) {
   return prog.weeks.flatMap((week, wi) => week.map((s, si) => ({ ...s, week: wi + 1, index: si + 1, perWeek: week.length, key: `${wi + 1}-${si + 1}` })));
+}
+
+/* A session's settings: the athlete's own, then the plan's fixed values (set), then this week's change (adj). */
+function sessionParams(template, base, s) {
+  return programParams(template, { ...base, ...(s.set || {}) }, s.adj);
 }
 
 /* Apply a session's adjustments as deltas to the athlete's own settings, clamped to each setting's range. */
@@ -517,7 +524,7 @@ function programStatus(active) {
    Deleted workouts leave a tombstone { [id]: deletedAt } so the deletion
    reaches other devices. The newest edit of each workout wins.            */
 
-const SYNC_PROFILE_KEYS = ["profile", "settings", "params", "swaps", "program", "lastTemplate", "athlete"];
+const SYNC_PROFILE_KEYS = ["profile", "settings", "params", "swaps", "program", "lastTemplate", "athlete", "customPlans", "myWorkouts"];
 
 /* Bump updatedAt on any workout whose content changed since it was last stamped. */
 function stampChanges(history, now = Date.now()) {
