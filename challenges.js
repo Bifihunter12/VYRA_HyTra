@@ -249,13 +249,23 @@ const MONTHLY_ROTATION = [
   ["the-forge", "standard"], ["the-river", "2k"], ["the-chase", "standard"], ["the-stand", "5"], ["the-mill", "standard"],
   ["the-hundred", "standard"], ["the-clearing", "standard"],
 ];
+/* Months run in UTC, the same window everywhere in the world (and in supabase/006_monthly.sql). */
 function monthlyChallenge(now = new Date()) {
-  const idx = (now.getFullYear() * 12 + now.getMonth()) % MONTHLY_ROTATION.length;
-  const [id, variant] = MONTHLY_ROTATION[idx];
-  const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
-  const name = new Date(start).toLocaleDateString(undefined, { month: "long" });
-  return { challengeId: id, variant, start, end, monthName: name, key: `${new Date(start).getFullYear()}-${new Date(start).getMonth() + 1}` };
+  const y = now.getUTCFullYear(), mo = now.getUTCMonth();
+  const [id, variant] = MONTHLY_ROTATION[mo % MONTHLY_ROTATION.length];
+  const start = Date.UTC(y, mo, 1);
+  const end = Date.UTC(y, mo + 1, 1);
+  const name = new Date(start).toLocaleDateString(undefined, { month: "long", timeZone: "UTC" });
+  return { challengeId: id, variant, start, end, monthName: name, key: `${y}-${mo + 1}` };
+}
+
+const MONTHLY_FINAL_DAYS = 5;
+/* Where the month stands: days left, whether it's the final stretch, and what comes next. */
+function monthlyStatus(now = Date.now()) {
+  const m = monthlyChallenge(new Date(now));
+  const next = monthlyChallenge(new Date(m.end));
+  const daysLeft = Math.max(0, Math.ceil((m.end - now) / DAY_MS));
+  return { ...m, daysLeft, final: daysLeft <= MONTHLY_FINAL_DAYS, next };
 }
 
 /* Special events (Phase 3). Details stay secret until competition week. */

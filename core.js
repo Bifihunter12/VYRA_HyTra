@@ -524,7 +524,7 @@ function programStatus(active) {
    Deleted workouts leave a tombstone { [id]: deletedAt } so the deletion
    reaches other devices. The newest edit of each workout wins.            */
 
-const SYNC_PROFILE_KEYS = ["profile", "settings", "params", "swaps", "program", "lastTemplate", "athlete", "customPlans", "myWorkouts"];
+const SYNC_PROFILE_KEYS = ["profile", "settings", "params", "swaps", "program", "lastTemplate", "athlete", "customPlans", "myWorkouts", "monthlyReminders"];
 
 /* Bump updatedAt on any workout whose content changed since it was last stamped. */
 function stampChanges(history, now = Date.now()) {

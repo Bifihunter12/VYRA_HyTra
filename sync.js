@@ -226,6 +226,13 @@ const Sync = {
     if (error) throw error;
     return data;
   },
+  /* Past monthly winners. Public, so it works signed out too. */
+  async monthlyHall(months = 12) {
+    if (!this.client) throw new Error("Not connected");
+    const { data, error } = await this.client.rpc("monthly_hall", { p_months: months });
+    if (error) throw error;
+    return data;
+  },
   feed(before = null) { return this.call("feed", { p_limit: 30, p_before: before }); },
   comments(owner, id) { return this.call("activity_comments", { p_owner: owner, p_id: id }); },
   search(q) { return this.call("search_athletes", { p_query: q }); },
