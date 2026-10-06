@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.05.5";
+const APP_VERSION = "2026.10.06.1";
 const STORE_KEY = "vyra_v1";
 /* Beeps, spoken cues and vibration are switched off for now. Set to true to bring them back. */
 const CUES_ENABLED = false;
@@ -1037,13 +1037,14 @@ function startWorkout(templateId = ui.templateId, custom = null, programKey = nu
   if (mine) workout.name = mine.name;
   else if (inPlan?.name) workout.name = inPlan.name;
   ui.returnTo = ui.screen === "summary" ? ui.tab : ui.screen;
+  ui.gate = null; ui.gateCount = null;
   session = { workout, timeline, swaps, startedAt: Date.now(), programKey: inPlan ? inPlan.key : null, ghost: custom?.ghost || null, mineId: mine?.id || null };
   engine = new IntervalEngine(timeline, { countdown: 3 });
   wireCues(engine);
   engine
     .on("countdown", () => updatePlayer())
     .on("go", () => { ui.go = true; setTimeout(() => { ui.go = false; if (ui.screen === "player") renderPlayer(); }, 700); })
-    .on("interval", () => renderPlayer())
+    .on("interval", ({ reason, index }) => { gateCheck(index, reason); renderPlayer(); })
     .on("segment", () => renderPlayer())
     .on("extend", () => renderPlayer())
     .on("pause", () => renderPlayer())
@@ -1129,10 +1130,100 @@ function exList(exs) {
 }
 
 /* Player screen */
+/* ── Transitions: warm-up → workout → cool-down ────────────────────────────
+   The player stops between the parts. The workout (and a challenge's clock)
+   starts only when the athlete taps Start; warm-up time never counts. */
+function gateCheck(index, reason) {
+  const tl = engine.timeline, cur = tl[index], prev = tl[index - 1];
+  if (!prev || reason === "prev") return;
+  if (prev.type === "WARM" && prev.phase === "warm" && cur.type !== "WARM") ui.gate = "main";
+  else if (cur.type === "WARM" && cur.phase === "cool" && prev.type !== "WARM") ui.gate = "cool";
+  else return;
+  engine.pause();
+}
+const isChallengeSession = () => !!session?.workout?.challenge;
+const mainSecSoFar = () => engine.visits.filter(v => v.type !== "WARM").reduce((a, v) => a + v.ms, 0) / 1000;
+
+function gateGo() {
+  if (ui.gate === "cool") { ui.gate = null; engine.resume(); return; }
+  ui.gate = null; ui.gateCount = 3; renderPlayer();
+  const step = () => {
+    if (!engine || ui.gateCount == null) return;
+    ui.gateCount -= 1;
+    if (ui.gateCount > 0) { renderPlayer(); setTimeout(step, 1000); return; }
+    ui.gateCount = null; ui.go = true; renderPlayer();
+    setTimeout(() => { ui.go = false; if (engine) engine.resume(); }, 700);   // resume re-renders the player
+  };
+  setTimeout(step, 1000);
+}
+function skipCooldown() {
+  ui.gate = null;
+  engine.resume();
+  while (engine && engine.phase === "running" && engine.current.type === "WARM") engine.next("skipped");
+}
+
+function renderGate() {
+  const e = engine, iv = e.current;
+  const ch = isChallengeSession() ? challengeById(session.workout.challenge.id) : null;
+  const name = ch ? ch.name : session.workout.name;
+  if (ui.gateCount != null || ui.go) {
+    app.innerHTML = `
+    <div class="player tone-${toneFor(iv)} is-countdown">
+      <div class="pl-top"><span class="pl-round">${ch ? "Challenge" : "Workout"} starts</span>${soundButton()}</div>
+      <div class="cd-wrap"><div class="cd-num ${ui.go ? "cd-go" : ""}">${ui.go ? "GO" : ui.gateCount}</div>
+        <div class="cd-next">First up · <strong>${esc(iv.title)}</strong>${iv.target ? ` · ${esc(iv.target)}` : ""}</div></div>
+    </div>`;
+    return;
+  }
+  const main = ui.gate === "main";
+  const rounds = iv.rounds > 1 ? `${iv.rounds} rounds` : `${iv.parts} part${iv.parts === 1 ? "" : "s"}`;
+  app.innerHTML = `
+  <div class="player tone-work is-gate">
+    <div class="pl-top"><span class="pl-round">${main ? "Warm-up done" : ch ? "Challenge complete" : "Workout complete"}</span>${soundButton()}</div>
+    <div class="gate">
+      <i class="ti ${main ? "ti-flag-3" : "ti-trophy"} gate-ic" aria-hidden="true"></i>
+      <h1 class="gate-title">${main ? `Ready for ${esc(name)}?` : ch ? `${esc(name)} done` : "Nice work"}</h1>
+      ${main
+        ? `<p class="gate-text">${ch ? "The challenge clock starts when you tap Start. Your warm-up time doesn't count." : `${rounds}. Take a breath, set up your first station.`}</p>
+           <div class="gate-first">First up · <b>${esc(iv.title)}</b>${iv.target ? ` · ${esc(iv.target)}` : iv.duration ? ` · ${fmtShort(iv.duration)}` : ""}</div>`
+        : `${ch && ch.scoring === "time" ? `<div class="gate-time"><span>Your time</span><b>${fmtClock(mainSecSoFar())}</b></div>` : ""}
+           <p class="gate-text">Cool down for a few minutes: easy walking and stretching bring your heart rate down and help you recover.</p>`}
+    </div>
+    <div class="gate-actions">
+      <button class="btn-primary gate-go" data-act="gate-go"><i class="ti ${main ? "ti-player-play" : "ti-stretching"}"></i> ${main ? (ch ? "Start challenge" : "Start workout") : "Start cool-down"}</button>
+      ${main ? `<button class="btn-secondary" data-act="end"><i class="ti ti-x"></i> End</button>`
+        : `<button class="btn-secondary" data-act="gate-skip-cool"><i class="ti ti-flag-check"></i> Skip cool-down and finish</button>`}
+    </div>
+    ${ui.confirmEnd ? `
+    <div class="sheet-backdrop" data-act="end-cancel"></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="End workout">
+      <div class="sheet-title">End workout?</div>
+      <div class="sheet-text">Your progress so far will be shown on the summary.</div>
+      <button class="btn-primary" data-act="end-confirm">End workout</button>
+      <button class="btn-secondary" data-act="end-cancel">Keep going</button>
+    </div>` : ""}
+  </div>`;
+}
+
+/* "2 more rounds after this" / "Last round" */
+function toGoText(iv) {
+  if (iv.type === "WARM") return "";
+  const tl = engine.timeline;
+  if (iv.rounds > 1) {
+    const left = iv.rounds - iv.round;
+    return left === 0 ? "Last round" : `${left} more round${left === 1 ? "" : "s"} after this`;
+  }
+  const part = iv.part || tl.slice(engine.index).find(x => x.part)?.part;
+  if (!part || iv.parts < 2) return "";
+  const left = iv.parts - part;
+  return left === 0 ? "Last part" : `${left} more part${left === 1 ? "" : "s"} after this`;
+}
+
 function renderPlayer() {
   if (!engine) return;
   const e = engine;
   const tl = e.timeline;
+  if (ui.gate || ui.gateCount != null || (ui.go && e.phase === "running" && e.paused)) return renderGate();
 
   if (e.phase === "countdown" || ui.go) {
     const first = tl[0];
@@ -1165,6 +1256,9 @@ function renderPlayer() {
   if (iv.type === "CARDIO") metric = iv.speed ? `${fmtSpeed(iv.speed)} ${iv.speedUnit.toUpperCase()}` : iv.effort;
   else if (iv.type === "WORK" && iv.target) metric = `Target ${iv.target}`;
   else if (iv.type === "REST" && upcoming) metric = `Next · ${upcoming.title}`;
+  // To-target intervals: the target is the headline, the clock just counts up.
+  const goal = iv.openEnded && iv.target ? `<div class="pl-goal"><span>${iv.type === "CARDIO" ? `${esc(iv.cue || iv.title)} to` : "Do"}</span><b>${esc(iv.target)}</b></div>` : "";
+  const togo = toGoText(iv);
 
   // Sub-interval strip (HARD / EASY, Tabata WORK / REST)
   const segStrip = iv.segments.length ? `
@@ -1186,7 +1280,7 @@ function renderPlayer() {
         <div class="pl-v"><div class="pl-name">${esc(iv.title)}</div>
           ${iv.instruction ? `<div class="pl-instr">${esc(iv.instruction)}</div>` : ""}
           ${iv.exercises.length > 1 ? exList(iv.exercises) : ""}
-          ${iv.openEnded ? `<div class="pl-note">${iv.type === "WORK" ? "For reps, not speed. Tap DONE when the set is finished." : "Tap DONE when you reach the distance."}</div>` : ""}
+          ${iv.openEnded && iv.type === "WORK" ? `<div class="pl-note">For reps, not speed.</div>` : ""}
           ${iv.note ? `<div class="pl-note">${esc(iv.note)}</div>` : ""}</div>
       </div>`;
 
@@ -1198,7 +1292,7 @@ function renderPlayer() {
           <div class="pl-name pl-name--up"><i class="ti ${upcoming.icon}"></i> ${esc(upcoming.title)}</div>
           <div class="pl-instr">${esc(upcoming.instruction)}</div>
           ${upcoming.exercises.length > 1 ? exList(upcoming.exercises) : ""}
-          <div class="pl-tags">${upcoming.openEnded ? "For reps" : fmtShort(upcoming.duration || 0)}${upcoming.target ? ` · Target ${esc(upcoming.target)}` : ""}${upcoming.speed ? ` · ${fmtSpeed(upcoming.speed)} MPH` : ""}${upcoming.segments.length ? ` · ${esc(upcoming.segments.map(s => s.label).slice(0, 3).join(" / "))}${upcoming.segments.length > 3 ? "…" : ""}` : ""}</div>
+          <div class="pl-tags">${upcoming.openEnded ? (upcoming.type === "CARDIO" ? "To target" : "For reps") : fmtShort(upcoming.duration || 0)}${upcoming.target ? ` · Target ${esc(upcoming.target)}` : ""}${upcoming.speed ? ` · ${fmtSpeed(upcoming.speed)} MPH` : ""}${upcoming.segments.length ? ` · ${esc(upcoming.segments.map(s => s.label).slice(0, 3).join(" / "))}${upcoming.segments.length > 3 ? "…" : ""}` : ""}</div>
         </div>
       </div>`
     : `<div class="pl-row">
@@ -1224,21 +1318,25 @@ function renderPlayer() {
       ${ticks.map(i => `<span class="pl-tick" style="left:${tickPos(i)}%"></span>`).join("")}
     </div>
 
+    ${togo ? `<div class="pl-togo ${/^Last|^1 more/.test(togo) ? "is-close" : ""}">${togo}</div>` : ""}
     <div class="pl-state"><span>${e.paused ? "PAUSED" : iv.state}</span><i class="ti ${iv.icon}"></i></div>
+    ${goal}
     ${segStrip}
-    <div class="pl-timer" data-bind="timer">${timerText()}</div>
+    <div class="pl-timer ${goal ? "pl-timer--up" : ""}" data-bind="timer">${timerText()}</div>
     ${metric ? `<div class="pl-metric">${esc(metric)}</div>` : ""}
 
     <div class="pl-info">${nowBlock}${nextBlock}</div>
 
+    ${iv.openEnded && !e.paused ? `
+    <button class="done-big" data-act="done"><i class="ti ti-check"></i><span>Done</span><small>${iv.type === "CARDIO" ? `Tap when you reach ${esc(iv.target || "the target")}` : "Tap when the set is finished"}</small></button>` : ""}
     <div class="pl-controls">
       <button class="ctl" data-act="prev" aria-label="Previous interval"><i class="ti ti-player-skip-back"></i><span>Prev</span></button>
-      <button class="ctl ctl-main" data-act="pause" aria-label="${e.paused ? "Resume" : "Pause"}"><i class="ti ${e.paused ? "ti-player-play" : "ti-player-pause"}"></i><span>${e.paused ? "Resume" : "Pause"}</span></button>
+      <button class="ctl ${iv.openEnded && !e.paused ? "" : "ctl-main"}" data-act="pause" aria-label="${e.paused ? "Resume" : "Pause"}"><i class="ti ${e.paused ? "ti-player-play" : "ti-player-pause"}"></i><span>${e.paused ? "Resume" : "Pause"}</span></button>
       <button class="ctl" data-act="skip" aria-label="Skip interval"><i class="ti ti-player-skip-forward"></i><span>Skip</span></button>
     </div>
     <div class="pl-controls pl-controls--sub">
       ${iv.duration != null ? `<button class="ctl ctl-wide ${iv.type === "REST" ? "ctl-hot" : ""}" data-act="extend"><i class="ti ti-clock-plus"></i><span>+10 sec</span></button>` : ""}
-      ${showDone ? `<button class="ctl ctl-wide ${iv.openEnded ? "ctl-hot" : ""}" data-act="done"><i class="ti ti-check"></i><span>${iv.openEnded ? "Done" : "Reps done"}</span></button>` : ""}
+      ${showDone && !iv.openEnded ? `<button class="ctl ctl-wide" data-act="done"><i class="ti ti-check"></i><span>Reps done</span></button>` : ""}
       <button class="ctl ctl-wide ctl-ghost" data-act="end"><i class="ti ti-square"></i><span>End</span></button>
     </div>
     ${ui.confirmEnd ? `
@@ -1254,7 +1352,7 @@ function renderPlayer() {
 }
 
 function nextLabel(n) {
-  if (n.type === "CARDIO") return `${n.title} · ${fmtShort(n.duration)}${n.speed ? ` @ ${fmtSpeed(n.speed)} MPH` : ""}${n.roundStart && n.rounds > 1 ? ` · Round ${n.round}` : ""}`;
+  if (n.type === "CARDIO") return `${n.title} · ${n.duration ? fmtShort(n.duration) : n.target || "to target"}${n.speed ? ` @ ${fmtSpeed(n.speed)} MPH` : ""}${n.roundStart && n.rounds > 1 ? ` · Round ${n.round}` : ""}`;
   if (n.type === "REST") return `${n.title === "Rest / Transition" ? "Rest" : n.title} · ${fmtShort(n.duration)}`;
   return `${n.title}${n.duration ? ` · ${fmtShort(n.duration)}` : " · for reps"}`;
 }
@@ -1279,7 +1377,7 @@ function timerText() {
 }
 
 function updatePlayer() {
-  if (!engine || ui.screen !== "player") return;
+  if (!engine || ui.screen !== "player" || ui.gate || ui.gateCount != null) return;
   const e = engine;
   if (e.phase === "countdown") {
     const el = app.querySelector('[data-bind="cd"]');
@@ -1544,6 +1642,8 @@ app.addEventListener("click", async ev => {
     case "prev": return engine?.prev();
     case "extend": return engine?.extend(10);
     case "done": return engine?.done();
+    case "gate-go": return gateGo();
+    case "gate-skip-cool": return skipCooldown();
     case "end":
       if (engine?.phase === "countdown") { engine.end(); return; }
       ui.confirmEnd = true; return renderPlayer();

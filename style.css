@@ -1067,3 +1067,32 @@ a.cl-row .day-tag { flex: none; }
 .podium .b-rank .ti { font-size: 18px; color: var(--accent); }
 .podium li:nth-child(2) .b-rank .ti, .podium li:nth-child(3) .b-rank .ti { color: var(--text-dim); }
 .hall-me { margin-top: 8px; }
+
+/* ── Player: transitions, to-target goal, big DONE, rounds to go ──────────── */
+.pl-togo { margin: 10px 2px -4px; font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim); }
+.pl-togo.is-close { color: var(--accent); font-weight: 600; }
+.pl-goal { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin-top: 14px; }
+.pl-goal span { font-size: 15px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--text-dim); }
+.pl-goal b { font-size: clamp(40px, 13vw, 64px); font-weight: 600; line-height: 1; letter-spacing: 1px; }
+.pl-timer--up { font-size: clamp(56px, 18vw, 96px); opacity: .85; }
+.done-big {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 100%;
+  min-height: 96px; margin-top: auto; margin-bottom: 10px; border-radius: 22px; border: 0;
+  background: var(--accent); color: var(--accent-ink); font-size: 26px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  box-shadow: 0 10px 30px rgba(217,119,66,.35); cursor: pointer;
+}
+.done-big .ti { font-size: 34px; }
+.done-big small { font-size: 12px; font-weight: 500; letter-spacing: .5px; text-transform: none; opacity: .8; }
+.done-big:active { transform: scale(.98); }
+.done-big + .pl-controls { margin-top: 0; }
+.is-gate .gate { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; padding: 20px 8px; }
+.gate-ic { font-size: 48px; color: var(--accent); }
+.gate-title { font-size: clamp(30px, 9vw, 44px); font-weight: 600; line-height: 1.1; margin: 0; }
+.gate-text { color: var(--text-dim); max-width: 34ch; line-height: 1.5; margin: 0; }
+.gate-first { font-size: 15px; color: var(--text-dim); }
+.gate-first b { color: var(--text); font-weight: 500; }
+.gate-time { display: flex; flex-direction: column; align-items: center; }
+.gate-time span { font-size: 12px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--text-dim); }
+.gate-time b { font-size: 64px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.05; }
+.gate-actions { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+.gate-go { min-height: 72px; font-size: 20px; }
