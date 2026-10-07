@@ -15,6 +15,7 @@ const APP_FILES = [
   `/events.js?v=${APP_VERSION}`,
   `/clubs.js?v=${APP_VERSION}`,
   `/plans.js?v=${APP_VERSION}`,
+  `/coach.js?v=${APP_VERSION}`,
   `/monthly.js?v=${APP_VERSION}`,
   `/app.js?v=${APP_VERSION}`,
   `/app-version.json?v=${APP_VERSION}`,

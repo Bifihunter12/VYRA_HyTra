@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-const FILES = ["workouts.js", "core.js", "challenges.js", "progress.js", "sync.js"];
+const FILES = ["workouts.js", "core.js", "challenges.js", "progress.js", "coach.js", "sync.js"];
 const EXPORTS = [
   "EXERCISES", "TEMPLATES", "PROGRAMS", "WARMUP", "COOLDOWN", "LOW_IMPACT_IDS", "PATTERNS",
   "createWorkout", "compile", "resolveSegments", "swappableIds", "planTotals", "IntervalEngine",
@@ -14,7 +14,7 @@ const EXPORTS = [
   "stampChanges", "profileBlob", "mergeRemoteWorkouts", "pendingWorkoutRows", "deletionStamp",
   "BENCHMARKS", "SCORING", "DIVISIONS", "challengeById", "variantOf", "challengeWorkout", "scoreFromInputs", "formatScore",
   "ATHLETE_CATEGORIES", "activityRow", "competitionContext", "challengeFromSpec", "registerChallenge", "scoredSegments", "checkpointsFromVisits",
-  "ghostFromTotal", "ghostStatus", "ghostText", "placementPoints", "eventPhase", "eventLine", "formatDelta", "prCheck", "bestAttempt", "rankEntries", "monthlyChallenge", "ageGroup", "EVENTS", "outdoorSwaps", "gearMissing", "makePlan", "planProgram", "planCandidates", "fitToMinutes", "sessionParams", "USER_PROGRAMS", "PLAN_GOALS", "WEEKDAYS", "reminderStarts", "planIcs", "googleCalendarUrl", "monthlyStatus", "monthlyReminderEvents", "monthlyGoogleUrls", "icsCalendar", "planTotals", "templateById",
+  "ghostFromTotal", "ghostStatus", "ghostText", "placementPoints", "eventPhase", "eventLine", "formatDelta", "prCheck", "bestAttempt", "rankEntries", "monthlyChallenge", "ageGroup", "EVENTS", "outdoorSwaps", "gearMissing", "makePlan", "planProgram", "planCandidates", "fitToMinutes", "sessionParams", "USER_PROGRAMS", "PLAN_GOALS", "WEEKDAYS", "reminderStarts", "planIcs", "googleCalendarUrl", "monthlyStatus", "monthlyReminderEvents", "monthlyGoogleUrls", "icsCalendar", "CoachScript", "coachText", "coachCatalog", "coachFile", "timelineLines", "COACH_LINES", "COACH_VOICES", "challengeWorkout", "planTotals", "templateById",
 ];
 
 module.exports = function load() {
