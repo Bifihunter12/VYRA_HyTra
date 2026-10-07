@@ -1,0 +1,1852 @@
+[
+ {
+  "id": "c1",
+  "text": "One.",
+  "file": "11s3ljt18erx7b.mp3"
+ },
+ {
+  "id": "c2",
+  "text": "Two.",
+  "file": "10y4sgwajd2ku.mp3"
+ },
+ {
+  "id": "c3",
+  "text": "Three.",
+  "file": "1184e5v1bp29xh.mp3"
+ },
+ {
+  "id": "challenge-done",
+  "text": "Done! Clock's stopped. That was a big effort.",
+  "file": "1jqp0d1pykcqb.mp3"
+ },
+ {
+  "id": "cooldown",
+  "text": "Let's cool down. Slow it right down and breathe.",
+  "file": "114ybqgljhm92.mp3"
+ },
+ {
+  "id": "cooldown-done",
+  "text": "Nicely done. Drink some water, and I'll see you next time.",
+  "file": "1d5l6qzsioks1.mp3"
+ },
+ {
+  "id": "cue:Final full body station",
+  "text": "Final full body station.",
+  "file": "10v5tt91wt1ujj.mp3"
+ },
+ {
+  "id": "cue:Full body finisher",
+  "text": "Full body finisher.",
+  "file": "1gqs53j1xx8zh5.mp3"
+ },
+ {
+  "id": "cue:R D L and shoulder press",
+  "text": "R D L and shoulder press.",
+  "file": "15h46z4snlxs6.mp3"
+ },
+ {
+  "id": "cue:Strength circuit",
+  "text": "Strength circuit.",
+  "file": "p6mjicu1dwi.mp3"
+ },
+ {
+  "id": "cue:Suitcase carry and core",
+  "text": "Suitcase carry and core.",
+  "file": "1x3tohcofr44q.mp3"
+ },
+ {
+  "id": "cue:The Forge",
+  "text": "The Forge.",
+  "file": "1er9b46rihtas.mp3"
+ },
+ {
+  "id": "cue:The Storm. As many rounds as possible",
+  "text": "The Storm. As many rounds as possible.",
+  "file": "ny2mfdbkojtv.mp3"
+ },
+ {
+  "id": "cue:Up next, final full body station",
+  "text": "Up next, final full body station.",
+  "file": "nuxelv1ht9znh.mp3"
+ },
+ {
+  "id": "cue:Up next, full body finisher",
+  "text": "Up next, full body finisher.",
+  "file": "h0boxp1o6w5xb.mp3"
+ },
+ {
+  "id": "cue:Up next, r d l and shoulder press",
+  "text": "Up next, r d l and shoulder press.",
+  "file": "5ey0pu1vgjmcw.mp3"
+ },
+ {
+  "id": "cue:Up next, strength circuit",
+  "text": "Up next, strength circuit.",
+  "file": "kpakpef98v54.mp3"
+ },
+ {
+  "id": "cue:Up next, suitcase carry and core",
+  "text": "Up next, suitcase carry and core.",
+  "file": "vy6ghyp6cv48.mp3"
+ },
+ {
+  "id": "cue:Up next, upper body. floor press and rows",
+  "text": "Up next, upper body. floor press and rows.",
+  "file": "1a1lmj31vap725.mp3"
+ },
+ {
+  "id": "cue:Upper body. Floor press and rows",
+  "text": "Upper body. Floor press and rows.",
+  "file": "1v65k25g5rv5f.mp3"
+ },
+ {
+  "id": "enc-1",
+  "text": "You're doing great. Stay smooth.",
+  "file": "16c63a11mb7btn.mp3"
+ },
+ {
+  "id": "enc-2",
+  "text": "Strong. Keep breathing.",
+  "file": "15i7a74ofsh76.mp3"
+ },
+ {
+  "id": "enc-3",
+  "text": "Good form beats fast reps.",
+  "file": "15s6vw31plhojt.mp3"
+ },
+ {
+  "id": "enc-4",
+  "text": "Stay with it.",
+  "file": "1764wcyekxf0o.mp3"
+ },
+ {
+  "id": "enc-5",
+  "text": "Relax the shoulders. Keep moving.",
+  "file": "17g4i1x1fqmmdb.mp3"
+ },
+ {
+  "id": "enc-6",
+  "text": "That's it. Keep it steady.",
+  "file": "16m5oz0hv7rqu.mp3"
+ },
+ {
+  "id": "ended",
+  "text": "Workout ended. Good work today.",
+  "file": "79lwzfj3qg6h.mp3"
+ },
+ {
+  "id": "go",
+  "text": "Go!",
+  "file": "iciszv1hasd45.mp3"
+ },
+ {
+  "id": "go:air-squat",
+  "text": "Air squats. Feet shoulder width, sit back and down, chest up.",
+  "file": "zngf2a46kyf8.mp3"
+ },
+ {
+  "id": "go:backpack-row",
+  "text": "Backpack rows. Fill a backpack or shopping bag.",
+  "file": "5ql4dwapmrk6.mp3"
+ },
+ {
+  "id": "go:battle-ropes",
+  "text": "Battle ropes. Fast alternating waves.",
+  "file": "1ap2ic9dxq1wz.mp3"
+ },
+ {
+  "id": "go:bear-crawl",
+  "text": "Bear crawl. Hands and feet, knees just off the ground.",
+  "file": "4320xjsy5p19.mp3"
+ },
+ {
+  "id": "go:bent-over-row",
+  "text": "Bent over rows. Hinge to 45 degrees, flat back, row both dumbbells to the ribs.",
+  "file": "p2psmskjkema.mp3"
+ },
+ {
+  "id": "go:bike",
+  "text": "Bike. Smooth cadence, light grip, breathe through the nose when you can.",
+  "file": "ndznn21rwclx8.mp3"
+ },
+ {
+  "id": "go:bike-sprint",
+  "text": "Bike sprint. All-out cadence, then hold it.",
+  "file": "1wy8ky11t2rti7.mp3"
+ },
+ {
+  "id": "go:bird-dog",
+  "text": "Bird dogs. On hands and knees, reach the opposite arm and leg long.",
+  "file": "bh64f37xebit.mp3"
+ },
+ {
+  "id": "go:burpee",
+  "text": "Burpees. Hands down, jump or step back to a plank, back up and jump.",
+  "file": "yt6wny14g4nxw.mp3"
+ },
+ {
+  "id": "go:bw-lunge",
+  "text": "Lunges. Step back, lower the back knee toward the floor, alternate legs.",
+  "file": "139h2ta7a9izw.mp3"
+ },
+ {
+  "id": "go:cardio-choice",
+  "text": "Cardio, your choice. Pick any machine and hold a strong, steady pace.",
+  "file": "oxqcy7vsjzu9.mp3"
+ },
+ {
+  "id": "go:cd-chest",
+  "text": "Chest opener. Hands clasped behind you, lift the chest, shoulders down.",
+  "file": "188calk15lrimy.mp3"
+ },
+ {
+  "id": "go:cd-hamstring",
+  "text": "Hamstring fold. Soft knees, hang forward, let the head relax.",
+  "file": "3sq6marz6g9k.mp3"
+ },
+ {
+  "id": "go:cd-hip-flexor",
+  "text": "Hip flexor stretch. Half kneeling, squeeze the glute, lean forward gently.",
+  "file": "1kd4ic5z9fojn.mp3"
+ },
+ {
+  "id": "go:cd-walk",
+  "text": "Cool down. Easy walk. Bring the heart rate down.",
+  "file": "1y4raji1my7iug.mp3"
+ },
+ {
+  "id": "go:clean-thruster",
+  "text": "Clean and thruster. Clean to the rack, front squat, drive straight into the press.",
+  "file": "1fttl261gpnlmk.mp3"
+ },
+ {
+  "id": "go:core-finish",
+  "text": "Knee drives or dead bugs. Standing knee drives or dead bugs on the floor.",
+  "file": "33vjvc8dp2u.mp3"
+ },
+ {
+  "id": "go:db-clean",
+  "text": "Dumbbell cleans. Pull from the hip, catch at the shoulder with soft knees.",
+  "file": "embqshv4py83.mp3"
+ },
+ {
+  "id": "go:db-floor-press",
+  "text": "Floor press. Lie on the floor, elbows at 45 degrees, press to lockout.",
+  "file": "9uyqy0uegmai.mp3"
+ },
+ {
+  "id": "go:db-rdl",
+  "text": "Romanian deadlifts. Soft knees, push the hips back, weights close to the legs.",
+  "file": "1xg4jqg350hg.mp3"
+ },
+ {
+  "id": "go:db-row",
+  "text": "Dumbbell rows. Support on a bench or knee.",
+  "file": "3uirb01pby6km.mp3"
+ },
+ {
+  "id": "go:db-ski-punch",
+  "text": "Dumbbell ski punches. Light dumbbells, fast downward ski pulls into punches.",
+  "file": "ht0lpc1cubqo2.mp3"
+ },
+ {
+  "id": "go:db-squat",
+  "text": "Dumbbell squats. Dumbbells at your sides or shoulders.",
+  "file": "1yctqmy17doww8.mp3"
+ },
+ {
+  "id": "go:db-swing",
+  "text": "Dumbbell swings. Hold one dumbbell by the head.",
+  "file": "193hj1q18k6hbw.mp3"
+ },
+ {
+  "id": "go:db-thruster",
+  "text": "Dumbbell thrusters. Squat with the dumbbells at your shoulders, drive up into a press.",
+  "file": "15uakit5m0djf.mp3"
+ },
+ {
+  "id": "go:deadlift-front-rack",
+  "text": "Deadlift to front rack. Deadlift, pause, then guide the bell into the rack.",
+  "file": "5zr6yi1s3w350.mp3"
+ },
+ {
+  "id": "go:farmer-carry",
+  "text": "Farmer carry. Heavy weights at your sides.",
+  "file": "nhzr3ajjv178.mp3"
+ },
+ {
+  "id": "go:farmer-march",
+  "text": "Farmer march. Heavy weights at your sides, march in place, knees high.",
+  "file": "1ppbnnu1rpbj2w.mp3"
+ },
+ {
+  "id": "go:front-rack-carry",
+  "text": "Front rack carry. Weights at the shoulders, elbows up, ribs down.",
+  "file": "ykgp4gw0y9fu.mp3"
+ },
+ {
+  "id": "go:glute-bridge",
+  "text": "Glute bridges. On your back, feet flat.",
+  "file": "1k3rakq16fl7uo.mp3"
+ },
+ {
+  "id": "go:goblet-squat",
+  "text": "Goblet squats. One heavy weight at the chest.",
+  "file": "1e1br91cce05z.mp3"
+ },
+ {
+  "id": "go:high-knee-march",
+  "text": "High knee march. Drive knees to hip height, pump the arms hard.",
+  "file": "inm19v16mqlzh.mp3"
+ },
+ {
+  "id": "go:high-knees",
+  "text": "High knees. Run in place, knees to hip height, quick arms.",
+  "file": "1v407qy1o3t5b4.mp3"
+ },
+ {
+  "id": "go:high-pull",
+  "text": "High pulls. Drive the hips, pull the elbow high and back.",
+  "file": "3ewxp11gwh9dv.mp3"
+ },
+ {
+  "id": "go:hinge-jump",
+  "text": "Hip hinge jumps. Hinge back with a flat back, swing the arms, jump tall.",
+  "file": "12gshy91m7hesj.mp3"
+ },
+ {
+  "id": "go:incline-walk",
+  "text": "Incline walk. Steep incline, brisk pace, hands off the rails.",
+  "file": "6ofw6r1gcsm61.mp3"
+ },
+ {
+  "id": "go:jog-in-place",
+  "text": "Jog in place. Light, quick steps on the balls of your feet.",
+  "file": "11o2fgd1j6anz.mp3"
+ },
+ {
+  "id": "go:jump-squat",
+  "text": "Jump squats. Squat, then jump.",
+  "file": "e3bbrkchdsoa.mp3"
+ },
+ {
+  "id": "go:jumping-jacks",
+  "text": "Jumping jacks. Light and quick on the balls of the feet.",
+  "file": "1prh6ec1x6gnq2.mp3"
+ },
+ {
+  "id": "go:kb-clean",
+  "text": "Kettlebell cleans. Keep the bell close, let it roll around the wrist into the rack.",
+  "file": "19phbm1pkfhew.mp3"
+ },
+ {
+  "id": "go:kb-deadlift",
+  "text": "Kettlebell deadlifts. Bell between the feet, flat back, stand tall.",
+  "file": "nbjg66k26yqw.mp3"
+ },
+ {
+  "id": "go:kb-front-squat",
+  "text": "Front squats. Bell in the rack, elbow tucked, sit between the hips.",
+  "file": "y5fpwf162syn9.mp3"
+ },
+ {
+  "id": "go:kb-push-press",
+  "text": "Push press. Small dip, drive with the legs, lock out overhead.",
+  "file": "5j903n74bsj9.mp3"
+ },
+ {
+  "id": "go:kb-reverse-lunge",
+  "text": "Reverse lunges. Bell in the rack or at your side.",
+  "file": "5ca1sjtbydxl.mp3"
+ },
+ {
+  "id": "go:kb-row",
+  "text": "One arm rows. Hinge, flat back, pull the bell to the hip.",
+  "file": "1uq20xj12tb49p.mp3"
+ },
+ {
+  "id": "go:kb-suitcase-carry",
+  "text": "Suitcase carry. One bell at your side.",
+  "file": "cj3k9u3kbfbw.mp3"
+ },
+ {
+  "id": "go:kb-swing",
+  "text": "Kettlebell swings. Hinge, hike the bell back, snap the hips.",
+  "file": "albostj5gkjr.mp3"
+ },
+ {
+  "id": "go:kb-swing-fast",
+  "text": "Fast kettlebell swings. Snap the hips, quick tempo, bell to chest height.",
+  "file": "sl2soev9vheg.mp3"
+ },
+ {
+  "id": "go:knee-push-up",
+  "text": "Knee push ups. Knees down, hips in line with the shoulders.",
+  "file": "1whf7471fo4yyl.mp3"
+ },
+ {
+  "id": "go:march-in-place",
+  "text": "March in place. Lift the knees to hip height and swing the arms.",
+  "file": "gkkw01tc5pka.mp3"
+ },
+ {
+  "id": "go:mountain-climbers",
+  "text": "Mountain climbers. High plank, drive the knees to the chest one at a time.",
+  "file": "14gzicg1ftxcwe.mp3"
+ },
+ {
+  "id": "go:overhead-carry",
+  "text": "Overhead carry. Lock the weight overhead, biceps by the ear.",
+  "file": "7uicpxiu42q7.mp3"
+ },
+ {
+  "id": "go:pike-push-up",
+  "text": "Pike push ups. Hips high, lower the head toward the floor between the hands, press back up.",
+  "file": "icsjn1rvinnl.mp3"
+ },
+ {
+  "id": "go:plank-shoulder-taps",
+  "text": "Plank shoulder taps. High plank, feet wide.",
+  "file": "j4be011ftm0e7.mp3"
+ },
+ {
+  "id": "go:prone-ytw",
+  "text": "Y T W raises. Face down.",
+  "file": "80h6d419qttpi.mp3"
+ },
+ {
+  "id": "go:push-press",
+  "text": "Push press. Small dip, drive with the legs, lock out overhead.",
+  "file": "1gvdrjx1a6np4n.mp3"
+ },
+ {
+  "id": "go:push-up",
+  "text": "Push ups. Hands under the shoulders, body in one line.",
+  "file": "3lwtszc9abhh.mp3"
+ },
+ {
+  "id": "go:rapid-step-ups",
+  "text": "Rapid step ups. Low box, quick alternating steps.",
+  "file": "1b19e2v1jrk3al.mp3"
+ },
+ {
+  "id": "go:reverse-lunge",
+  "text": "Reverse lunges. Step back, lower the back knee toward the floor, alternate legs.",
+  "file": "16ddxih1x72e1z.mp3"
+ },
+ {
+  "id": "go:row",
+  "text": "Row. Legs, then hips, then arms.",
+  "file": "164t749166x5vj.mp3"
+ },
+ {
+  "id": "go:row-sprint",
+  "text": "Row sprint. Hard, fast strokes.",
+  "file": "bp7luo8g7qvu.mp3"
+ },
+ {
+  "id": "go:run",
+  "text": "Run. Steady, controlled pace.",
+  "file": "13nwq2swsvhii.mp3"
+ },
+ {
+  "id": "go:run-outside",
+  "text": "Run. Outside on a flat route.",
+  "file": "1h6tbyezhrymg.mp3"
+ },
+ {
+  "id": "go:shadow-boxing",
+  "text": "Shadow boxing. Fast combinations, stay light on your feet.",
+  "file": "14nqg7l1jpzw5z.mp3"
+ },
+ {
+  "id": "go:shoulder-press",
+  "text": "Shoulder press. Brace, ribs down, press straight overhead.",
+  "file": "3lgt7x82l9pz.mp3"
+ },
+ {
+  "id": "go:side-plank",
+  "text": "Side plank. Elbow under the shoulder, hips high.",
+  "file": "qmmgahqqjz4z.mp3"
+ },
+ {
+  "id": "go:single-leg-rdl",
+  "text": "Single leg R D Ls. Reach down as one leg lifts behind you, hips square.",
+  "file": "v0bpdlzq6evv.mp3"
+ },
+ {
+  "id": "go:sit-to-stand",
+  "text": "Sit to stand. Sit on a chair, stand up without using your hands.",
+  "file": "1vxitmkjta1n2.mp3"
+ },
+ {
+  "id": "go:skater-jumps",
+  "text": "Skater jumps. Leap side to side, land on one leg with a soft knee.",
+  "file": "15uy2pn4me1nl.mp3"
+ },
+ {
+  "id": "go:split-squat",
+  "text": "Split squats. One foot forward, one back.",
+  "file": "q97pfau7lkb4.mp3"
+ },
+ {
+  "id": "go:squat-press",
+  "text": "Squat and press. Full squat, stand, then press.",
+  "file": "1fcmxn1ugwp5v.mp3"
+ },
+ {
+  "id": "go:squat-thrust",
+  "text": "Step back burpees. Hands down, step back to a plank one foot at a time, step in, stand.",
+  "file": "nugtf411pqe16.mp3"
+ },
+ {
+  "id": "go:squat-to-press",
+  "text": "Squat to press. Squat with dumbbells at the shoulders, stand and press in one motion.",
+  "file": "y3p7o91t3jz6j.mp3"
+ },
+ {
+  "id": "go:step-ups",
+  "text": "Step ups. Box or bench.",
+  "file": "1rk2j2m1d4673o.mp3"
+ },
+ {
+  "id": "go:suitcase-carry",
+  "text": "Suitcase carry. One heavy weight at your side.",
+  "file": "8i3ingrvstna.mp3"
+ },
+ {
+  "id": "go:suitcase-left",
+  "text": "Suitcase carry, left hand. Weight in the left hand.",
+  "file": "80dkk41henixe.mp3"
+ },
+ {
+  "id": "go:suitcase-right",
+  "text": "Suitcase carry, right hand. Weight in the right hand.",
+  "file": "180hym914674fn.mp3"
+ },
+ {
+  "id": "go:walk-outside",
+  "text": "Brisk walk. Walk with purpose, arms swinging.",
+  "file": "1ve9lzc1v9bx02.mp3"
+ },
+ {
+  "id": "go:wall-push-up",
+  "text": "Wall push ups. Hands on a wall, body straight.",
+  "file": "1ov7tfoteoov2.mp3"
+ },
+ {
+  "id": "go:wall-sit",
+  "text": "Wall sit. Back flat on a wall, thighs level with the floor.",
+  "file": "1pt5kbu5k4e3c.mp3"
+ },
+ {
+  "id": "go:wu-arm-circles",
+  "text": "Arm circles. Big slow circles forward, then backward.",
+  "file": "10vw6o0ga7xsq.mp3"
+ },
+ {
+  "id": "go:wu-hinge",
+  "text": "Hip hinges. Hands on hips, push the hips back with a flat back.",
+  "file": "18z4bb918taenj.mp3"
+ },
+ {
+  "id": "go:wu-inchworm",
+  "text": "Inchworms. Walk the hands out to a plank, walk them back.",
+  "file": "1hazkrx1gwycxv.mp3"
+ },
+ {
+  "id": "go:wu-lunge-reach",
+  "text": "Lunge and reach. Step back, reach both arms overhead, alternate legs.",
+  "file": "1jk0wqjm7wgu9.mp3"
+ },
+ {
+  "id": "go:wu-march",
+  "text": "Warm up. Easy march. Get the blood moving.",
+  "file": "4d2nr51vze8qz.mp3"
+ },
+ {
+  "id": "go:wu-squat",
+  "text": "Bodyweight squats. Slow and deep.",
+  "file": "396hd0lq5s5i.mp3"
+ },
+ {
+  "id": "halfway",
+  "text": "Halfway there.",
+  "file": "gf5uybdzqua9.mp3"
+ },
+ {
+  "id": "last-round",
+  "text": "Last round. Make it count!",
+  "file": "1h0dk2kj29inm.mp3"
+ },
+ {
+  "id": "mph:10.0",
+  "text": "Treadmill at 10.",
+  "file": "dftlwxqvg9fz.mp3"
+ },
+ {
+  "id": "mph:10.1",
+  "text": "Treadmill at 10.1.",
+  "file": "d5u07y1oqv42g.mp3"
+ },
+ {
+  "id": "mph:10.2",
+  "text": "Treadmill at 10.2.",
+  "file": "cvueizu5qm65.mp3"
+ },
+ {
+  "id": "mph:10.3",
+  "text": "Treadmill at 10.3.",
+  "file": "clusu01s15gsm.mp3"
+ },
+ {
+  "id": "mph:10.4",
+  "text": "Treadmill at 10.4.",
+  "file": "ejs0otxg0ywb.mp3"
+ },
+ {
+  "id": "mph:10.5",
+  "text": "Treadmill at 10.5.",
+  "file": "e9sezu1vbftis.mp3"
+ },
+ {
+  "id": "mph:10.6",
+  "text": "Treadmill at 10.6.",
+  "file": "dzstav10qbbmh.mp3"
+ },
+ {
+  "id": "mph:10.7",
+  "text": "Treadmill at 10.7.",
+  "file": "dpt7lw1ylq68y.mp3"
+ },
+ {
+  "id": "mph:10.8",
+  "text": "Treadmill at 10.8.",
+  "file": "b7wsd5dqaujb.mp3"
+ },
+ {
+  "id": "mph:10.9",
+  "text": "Treadmill at 10.9.",
+  "file": "axx6o61blpp5s.mp3"
+ },
+ {
+  "id": "mph:11.0",
+  "text": "Treadmill at 11.",
+  "file": "kewd6y6gu6tw.mp3"
+ },
+ {
+  "id": "mph:11.1",
+  "text": "Treadmill at 11.1.",
+  "file": "kovyvx17mje6j.mp3"
+ },
+ {
+  "id": "mph:11.2",
+  "text": "Treadmill at 11.2.",
+  "file": "jux5t09r4jk2.mp3"
+ },
+ {
+  "id": "mph:11.3",
+  "text": "Treadmill at 11.3.",
+  "file": "k4wrhz1awtqwp.mp3"
+ },
+ {
+  "id": "mph:11.4",
+  "text": "Treadmill at 11.4.",
+  "file": "jaxyf21yxdjco.mp3"
+ },
+ {
+  "id": "mph:11.5",
+  "text": "Treadmill at 11.5.",
+  "file": "jkxk41111yoq7.mp3"
+ },
+ {
+  "id": "mph:11.6",
+  "text": "Treadmill at 11.6.",
+  "file": "iqyr1436ju3q.mp3"
+ },
+ {
+  "id": "mph:11.7",
+  "text": "Treadmill at 11.7.",
+  "file": "j0ycq314c91gd.mp3"
+ },
+ {
+  "id": "mph:11.8",
+  "text": "Treadmill at 11.8.",
+  "file": "i6zjn61scstwc.mp3"
+ },
+ {
+  "id": "mph:11.9",
+  "text": "Treadmill at 11.9.",
+  "file": "igz5c5uhdz9v.mp3"
+ },
+ {
+  "id": "mph:12.0",
+  "text": "Treadmill at 12.",
+  "file": "11dwwhnkcd7p9.mp3"
+ },
+ {
+  "id": "mph:2.0",
+  "text": "Treadmill at 2.",
+  "file": "1155aay1vg89zk.mp3"
+ },
+ {
+  "id": "mph:2.1",
+  "text": "Treadmill at 2.1.",
+  "file": "11f4vzxxktfd3.mp3"
+ },
+ {
+  "id": "mph:2.2",
+  "text": "Treadmill at 2.2.",
+  "file": "10l62x01yqimpq.mp3"
+ },
+ {
+  "id": "mph:2.3",
+  "text": "Treadmill at 2.3.",
+  "file": "10v5olz10v3s39.mp3"
+ },
+ {
+  "id": "mph:2.4",
+  "text": "Treadmill at 2.4.",
+  "file": "1016vj22zoxgs.mp3"
+ },
+ {
+  "id": "mph:2.5",
+  "text": "Treadmill at 2.5.",
+  "file": "10b6h81145e4tf.mp3"
+ },
+ {
+  "id": "mph:2.6",
+  "text": "Treadmill at 2.6.",
+  "file": "zh7o5469za6y.mp3"
+ },
+ {
+  "id": "mph:2.7",
+  "text": "Treadmill at 2.7.",
+  "file": "zr79u317fohjl.mp3"
+ },
+ {
+  "id": "mph:2.8",
+  "text": "Treadmill at 2.8.",
+  "file": "yx8gr69k9mx4.mp3"
+ },
+ {
+  "id": "mph:2.9",
+  "text": "Treadmill at 2.9.",
+  "file": "z782g51apyu9r.mp3"
+ },
+ {
+  "id": "mph:3.0",
+  "text": "Treadmill at 3.",
+  "file": "1tolg7l165for.mp3"
+ },
+ {
+  "id": "mph:3.1",
+  "text": "Treadmill at 3.1.",
+  "file": "1teluimz1kab8.mp3"
+ },
+ {
+  "id": "mph:3.2",
+  "text": "Treadmill at 3.2.",
+  "file": "1t4m8tn4gfsex.mp3"
+ },
+ {
+  "id": "mph:3.3",
+  "text": "Treadmill at 3.3.",
+  "file": "1sumn4o12bun1e.mp3"
+ },
+ {
+  "id": "mph:3.4",
+  "text": "Treadmill at 3.4.",
+  "file": "1usjuzh1tmos7j.mp3"
+ },
+ {
+  "id": "mph:3.5",
+  "text": "Treadmill at 3.5.",
+  "file": "1uik9aisgzkuw.mp3"
+ },
+ {
+  "id": "mph:3.6",
+  "text": "Treadmill at 3.6.",
+  "file": "1u8knlj1wwz4xp.mp3"
+ },
+ {
+  "id": "mph:3.7",
+  "text": "Treadmill at 3.7.",
+  "file": "1tyl1wkvr9xl2.mp3"
+ },
+ {
+  "id": "mph:3.8",
+  "text": "Treadmill at 3.8.",
+  "file": "1rgomnt1n242r7.mp3"
+ },
+ {
+  "id": "mph:3.9",
+  "text": "Treadmill at 3.9.",
+  "file": "1r6p0yulwevek.mp3"
+ },
+ {
+  "id": "mph:4.0",
+  "text": "Treadmill at 4.",
+  "file": "4einj41x0bzya.mp3"
+ },
+ {
+  "id": "mph:4.1",
+  "text": "Treadmill at 4.1.",
+  "file": "4oi983z4x5bt.mp3"
+ },
+ {
+  "id": "mph:4.2",
+  "text": "Treadmill at 4.2.",
+  "file": "4yhux21tq1n84.mp3"
+ },
+ {
+  "id": "mph:4.3",
+  "text": "Treadmill at 4.3.",
+  "file": "58hgm1vumsln.mp3"
+ },
+ {
+  "id": "mph:4.4",
+  "text": "Treadmill at 4.4.",
+  "file": "5ih2b01qfrahy.mp3"
+ },
+ {
+  "id": "mph:4.5",
+  "text": "Treadmill at 4.5.",
+  "file": "5sgnzzskcfvh.mp3"
+ },
+ {
+  "id": "mph:4.6",
+  "text": "Treadmill at 4.6.",
+  "file": "62g9oy1n5gxrs.mp3"
+ },
+ {
+  "id": "mph:4.7",
+  "text": "Treadmill at 4.7.",
+  "file": "6cfvdxpa235b.mp3"
+ },
+ {
+  "id": "mph:4.8",
+  "text": "Treadmill at 4.8.",
+  "file": "6mfh2w1jv6l1m.mp3"
+ },
+ {
+  "id": "mph:4.9",
+  "text": "Treadmill at 4.9.",
+  "file": "6wf2rvlzrqf5.mp3"
+ },
+ {
+  "id": "mph:5.0",
+  "text": "Treadmill at 5.",
+  "file": "67z8g7idu0l9.mp3"
+ },
+ {
+  "id": "mph:5.1",
+  "text": "Treadmill at 5.1.",
+  "file": "5xzmr81g98v7q.mp3"
+ },
+ {
+  "id": "mph:5.2",
+  "text": "Treadmill at 5.2.",
+  "file": "6ryfu5f3jnv3.mp3"
+ },
+ {
+  "id": "mph:5.3",
+  "text": "Treadmill at 5.3.",
+  "file": "6hyu561cyyihk.mp3"
+ },
+ {
+  "id": "mph:5.4",
+  "text": "Treadmill at 5.4.",
+  "file": "540toboyeq1l.mp3"
+ },
+ {
+  "id": "mph:5.5",
+  "text": "Treadmill at 5.5.",
+  "file": "4u17zc1mttko2.mp3"
+ },
+ {
+  "id": "mph:5.6",
+  "text": "Treadmill at 5.6.",
+  "file": "5o0129lo4dbf.mp3"
+ },
+ {
+  "id": "mph:5.7",
+  "text": "Treadmill at 5.7.",
+  "file": "5e0fda1jjj7xw.mp3"
+ },
+ {
+  "id": "mph:5.8",
+  "text": "Treadmill at 5.8.",
+  "file": "402ewf58olol.mp3"
+ },
+ {
+  "id": "mph:5.9",
+  "text": "Treadmill at 5.9.",
+  "file": "3q2t7g1343gb2.mp3"
+ },
+ {
+  "id": "mph:6.0",
+  "text": "Treadmill at 6.",
+  "file": "1fhjexi4iazpw.mp3"
+ },
+ {
+  "id": "mph:6.1",
+  "text": "Treadmill at 6.1.",
+  "file": "1frj0mh15o072j.mp3"
+ },
+ {
+  "id": "mph:6.2",
+  "text": "Treadmill at 6.2.",
+  "file": "1exk7jk7slcg2.mp3"
+ },
+ {
+  "id": "mph:6.3",
+  "text": "Treadmill at 6.3.",
+  "file": "1f7jt8j18yajsp.mp3"
+ },
+ {
+  "id": "mph:6.4",
+  "text": "Treadmill at 6.4.",
+  "file": "1glhtpe1wyuc8o.mp3"
+ },
+ {
+  "id": "mph:6.5",
+  "text": "Treadmill at 6.5.",
+  "file": "1gvhfedz3fhm7.mp3"
+ },
+ {
+  "id": "mph:6.6",
+  "text": "Treadmill at 6.6.",
+  "file": "1g1imbg180mzq.mp3"
+ },
+ {
+  "id": "mph:6.7",
+  "text": "Treadmill at 6.7.",
+  "file": "1gbi80f12dpucd.mp3"
+ },
+ {
+  "id": "mph:6.8",
+  "text": "Treadmill at 6.8.",
+  "file": "1hpg8ha1qe9msc.mp3"
+ },
+ {
+  "id": "mph:6.9",
+  "text": "Treadmill at 6.9.",
+  "file": "1hzfu69sius5v.mp3"
+ },
+ {
+  "id": "mph:7.0",
+  "text": "Treadmill at 7.",
+  "file": "1hk9m8towx2bz.mp3"
+ },
+ {
+  "id": "mph:7.1",
+  "text": "Treadmill at 7.1.",
+  "file": "1haa0ju1msbwyg.mp3"
+ },
+ {
+  "id": "mph:7.2",
+  "text": "Treadmill at 7.2.",
+  "file": "1h0aeuvs77f25.mp3"
+ },
+ {
+  "id": "mph:7.3",
+  "text": "Treadmill at 7.3.",
+  "file": "1gqat5w1q2m9om.mp3"
+ },
+ {
+  "id": "mph:7.4",
+  "text": "Treadmill at 7.4.",
+  "file": "1ggb7gxvhhrsb.mp3"
+ },
+ {
+  "id": "mph:7.5",
+  "text": "Treadmill at 7.5.",
+  "file": "1g6blry1tcwmes.mp3"
+ },
+ {
+  "id": "mph:7.6",
+  "text": "Treadmill at 7.6.",
+  "file": "1fwc02zyrs4ih.mp3"
+ },
+ {
+  "id": "mph:7.7",
+  "text": "Treadmill at 7.7.",
+  "file": "1fmcee01wn6z4y.mp3"
+ },
+ {
+  "id": "mph:7.8",
+  "text": "Treadmill at 7.8.",
+  "file": "1fccsp1brrnfb.mp3"
+ },
+ {
+  "id": "mph:7.9",
+  "text": "Treadmill at 7.9.",
+  "file": "1f2d70219n6i1s.mp3"
+ },
+ {
+  "id": "mph:8.0",
+  "text": "Treadmill at 8.",
+  "file": "rvtor0csiau.mp3"
+ },
+ {
+  "id": "mph:8.1",
+  "text": "Treadmill at 8.1.",
+  "file": "s5tafz11ihpnh.mp3"
+ },
+ {
+  "id": "mph:8.2",
+  "text": "Treadmill at 8.2.",
+  "file": "sfsw4y1w3m7js.mp3"
+ },
+ {
+  "id": "mph:8.3",
+  "text": "Treadmill at 8.3.",
+  "file": "spshtxy87cxb.mp3"
+ },
+ {
+  "id": "mph:8.4",
+  "text": "Treadmill at 8.4.",
+  "file": "qrv9z46xd7r6.mp3"
+ },
+ {
+  "id": "mph:8.5",
+  "text": "Treadmill at 8.5.",
+  "file": "r1uvo31832f3t.mp3"
+ },
+ {
+  "id": "mph:8.6",
+  "text": "Treadmill at 8.6.",
+  "file": "rbuhd23n2v10.mp3"
+ },
+ {
+  "id": "mph:8.7",
+  "text": "Treadmill at 8.7.",
+  "file": "rlu32114ss2dn.mp3"
+ },
+ {
+  "id": "mph:8.8",
+  "text": "Treadmill at 8.8.",
+  "file": "u3qias1m8r5da.mp3"
+ },
+ {
+  "id": "mph:8.9",
+  "text": "Treadmill at 8.9.",
+  "file": "udq3zrodcaqt.mp3"
+ },
+ {
+  "id": "mph:9.0",
+  "text": "Treadmill at 9.",
+  "file": "1k9469fgtkl1d.mp3"
+ },
+ {
+  "id": "mph:9.1",
+  "text": "Treadmill at 9.1.",
+  "file": "1jz4kkg1eozfnu.mp3"
+ },
+ {
+  "id": "mph:9.2",
+  "text": "Treadmill at 9.2.",
+  "file": "1kt3dnddja8b7.mp3"
+ },
+ {
+  "id": "mph:9.3",
+  "text": "Treadmill at 9.3.",
+  "file": "1kj3rye1bep2xo.mp3"
+ },
+ {
+  "id": "mph:9.4",
+  "text": "Treadmill at 9.4.",
+  "file": "1ld2l1ba8zvl1.mp3"
+ },
+ {
+  "id": "mph:9.5",
+  "text": "Treadmill at 9.5.",
+  "file": "1l32zcc184eq7i.mp3"
+ },
+ {
+  "id": "mph:9.6",
+  "text": "Treadmill at 9.6.",
+  "file": "1lx1sf96ypiuv.mp3"
+ },
+ {
+  "id": "mph:9.7",
+  "text": "Treadmill at 9.7.",
+  "file": "1ln26qa14u4dhc.mp3"
+ },
+ {
+  "id": "mph:9.8",
+  "text": "Treadmill at 9.8.",
+  "file": "1mh0zt7typzy1.mp3"
+ },
+ {
+  "id": "mph:9.9",
+  "text": "Treadmill at 9.9.",
+  "file": "1m71e481ru4uki.mp3"
+ },
+ {
+  "id": "next:air-squat",
+  "text": "Up next, air squats.",
+  "file": "dq5brt10kd6cv.mp3"
+ },
+ {
+  "id": "next:backpack-row",
+  "text": "Up next, backpack rows.",
+  "file": "1jxaqudak69zz.mp3"
+ },
+ {
+  "id": "next:battle-ropes",
+  "text": "Up next, battle ropes.",
+  "file": "5mvi0owrwbfe.mp3"
+ },
+ {
+  "id": "next:bear-crawl",
+  "text": "Up next, bear crawl.",
+  "file": "1u630ba74hgm4.mp3"
+ },
+ {
+  "id": "next:bent-over-row",
+  "text": "Up next, bent over rows.",
+  "file": "ow6bwf1btvsg9.mp3"
+ },
+ {
+  "id": "next:bike",
+  "text": "Up next, bike.",
+  "file": "1xdjnm31f3o9jt.mp3"
+ },
+ {
+  "id": "next:bike-sprint",
+  "text": "Up next, bike sprint.",
+  "file": "a0c5kiksrang.mp3"
+ },
+ {
+  "id": "next:bird-dog",
+  "text": "Up next, bird dogs.",
+  "file": "1aq7s4mrhuhlg.mp3"
+ },
+ {
+  "id": "next:burpee",
+  "text": "Up next, burpees.",
+  "file": "10ktrwb1dxdkq1.mp3"
+ },
+ {
+  "id": "next:bw-lunge",
+  "text": "Up next, lunges.",
+  "file": "sn4ocz1fao3v5.mp3"
+ },
+ {
+  "id": "next:cardio-choice",
+  "text": "Up next, cardio, your choice.",
+  "file": "34cppo14qt4lu.mp3"
+ },
+ {
+  "id": "next:cd-chest",
+  "text": "Up next, chest opener.",
+  "file": "15ec1cx12zbbu3.mp3"
+ },
+ {
+  "id": "next:cd-hamstring",
+  "text": "Up next, hamstring fold.",
+  "file": "zmhss71k4jlzh.mp3"
+ },
+ {
+  "id": "next:cd-hip-flexor",
+  "text": "Up next, hip flexor stretch.",
+  "file": "18tm2ummhguyw.mp3"
+ },
+ {
+  "id": "next:cd-walk",
+  "text": "Up next, easy walk.",
+  "file": "79qoat13esv6j.mp3"
+ },
+ {
+  "id": "next:clean-thruster",
+  "text": "Up next, clean and thruster.",
+  "file": "1td7dwjr1k11l.mp3"
+ },
+ {
+  "id": "next:core-finish",
+  "text": "Up next, knee drives or dead bugs.",
+  "file": "1vzvsd783rrwd.mp3"
+ },
+ {
+  "id": "next:db-clean",
+  "text": "Up next, dumbbell cleans.",
+  "file": "1mhduo899e1gy.mp3"
+ },
+ {
+  "id": "next:db-floor-press",
+  "text": "Up next, floor press.",
+  "file": "1kmlag526edjz.mp3"
+ },
+ {
+  "id": "next:db-rdl",
+  "text": "Up next, romanian deadlifts.",
+  "file": "cuynyj1g652pd.mp3"
+ },
+ {
+  "id": "next:db-row",
+  "text": "Up next, dumbbell rows.",
+  "file": "fdaup5b9u9sb.mp3"
+ },
+ {
+  "id": "next:db-ski-punch",
+  "text": "Up next, dumbbell ski punches.",
+  "file": "laplrl1naraaj.mp3"
+ },
+ {
+  "id": "next:db-squat",
+  "text": "Up next, dumbbell squats.",
+  "file": "e0t9k71r1n0p1.mp3"
+ },
+ {
+  "id": "next:db-swing",
+  "text": "Up next, dumbbell swings.",
+  "file": "9m3t3vjogvu1.mp3"
+ },
+ {
+  "id": "next:db-thruster",
+  "text": "Up next, dumbbell thrusters.",
+  "file": "oo5eeabmyvck.mp3"
+ },
+ {
+  "id": "next:deadlift-front-rack",
+  "text": "Up next, deadlift to front rack.",
+  "file": "5v639lnqt8in.mp3"
+ },
+ {
+  "id": "next:farmer-carry",
+  "text": "Up next, farmer carry.",
+  "file": "xqhuvb152w65.mp3"
+ },
+ {
+  "id": "next:farmer-march",
+  "text": "Up next, farmer march.",
+  "file": "79elszrsvmqx.mp3"
+ },
+ {
+  "id": "next:front-rack-carry",
+  "text": "Up next, front rack carry.",
+  "file": "igtzdx1o4uae7.mp3"
+ },
+ {
+  "id": "next:glute-bridge",
+  "text": "Up next, glute bridges.",
+  "file": "16apuj12yab55.mp3"
+ },
+ {
+  "id": "next:goblet-squat",
+  "text": "Up next, goblet squats.",
+  "file": "qcr65wacp0v2.mp3"
+ },
+ {
+  "id": "next:high-knee-march",
+  "text": "Up next, high knee march.",
+  "file": "1ewmck13yu3z6.mp3"
+ },
+ {
+  "id": "next:high-knees",
+  "text": "Up next, high knees.",
+  "file": "wlycxz1bkiwit.mp3"
+ },
+ {
+  "id": "next:high-pull",
+  "text": "Up next, high pulls.",
+  "file": "1ex0twibwh744.mp3"
+ },
+ {
+  "id": "next:hinge-jump",
+  "text": "Up next, hip hinge jumps.",
+  "file": "1uitvc81tfry9m.mp3"
+ },
+ {
+  "id": "next:incline-walk",
+  "text": "Up next, incline walk.",
+  "file": "2z0586vy41yk.mp3"
+ },
+ {
+  "id": "next:jog-in-place",
+  "text": "Up next, jog in place.",
+  "file": "cw9wioce7d1e.mp3"
+ },
+ {
+  "id": "next:jump-squat",
+  "text": "Up next, jump squats.",
+  "file": "1ozpib11srijdr.mp3"
+ },
+ {
+  "id": "next:jumping-jacks",
+  "text": "Up next, jumping jacks.",
+  "file": "k3i9oj1akgjvh.mp3"
+ },
+ {
+  "id": "next:kb-clean",
+  "text": "Up next, kettlebell cleans.",
+  "file": "1jc86tvyslc29.mp3"
+ },
+ {
+  "id": "next:kb-deadlift",
+  "text": "Up next, kettlebell deadlifts.",
+  "file": "bgz3xd1leyrz3.mp3"
+ },
+ {
+  "id": "next:kb-front-squat",
+  "text": "Up next, front squats.",
+  "file": "1fzgnmms7zx38.mp3"
+ },
+ {
+  "id": "next:kb-push-press",
+  "text": "Up next, push press.",
+  "file": "16z283ckif9da.mp3"
+ },
+ {
+  "id": "next:kb-reverse-lunge",
+  "text": "Up next, reverse lunges.",
+  "file": "1tb2lqin5ql3c.mp3"
+ },
+ {
+  "id": "next:kb-row",
+  "text": "Up next, one arm rows.",
+  "file": "yc3gq1jclh4o.mp3"
+ },
+ {
+  "id": "next:kb-suitcase-carry",
+  "text": "Up next, suitcase carry.",
+  "file": "bqfl9h1h56fx7.mp3"
+ },
+ {
+  "id": "next:kb-swing",
+  "text": "Up next, kettlebell swings.",
+  "file": "ddtzw01xzz84q.mp3"
+ },
+ {
+  "id": "next:kb-swing-fast",
+  "text": "Up next, fast kettlebell swings.",
+  "file": "1rnb8dtgp9v1z.mp3"
+ },
+ {
+  "id": "next:knee-push-up",
+  "text": "Up next, knee push ups.",
+  "file": "7djcpakwyq3g.mp3"
+ },
+ {
+  "id": "next:march-in-place",
+  "text": "Up next, march in place.",
+  "file": "1xcxn9t1xmwb4b.mp3"
+ },
+ {
+  "id": "next:mountain-climbers",
+  "text": "Up next, mountain climbers.",
+  "file": "7yvkg71oyj6m1.mp3"
+ },
+ {
+  "id": "next:overhead-carry",
+  "text": "Up next, overhead carry.",
+  "file": "1aw6los70nwt2.mp3"
+ },
+ {
+  "id": "next:pike-push-up",
+  "text": "Up next, pike push ups.",
+  "file": "afi8g24uvs6w.mp3"
+ },
+ {
+  "id": "next:plank-shoulder-taps",
+  "text": "Up next, plank shoulder taps.",
+  "file": "8xqqay4toa3w.mp3"
+ },
+ {
+  "id": "next:prone-ytw",
+  "text": "Up next, y t w raises.",
+  "file": "2euy0z13cff99.mp3"
+ },
+ {
+  "id": "next:push-press",
+  "text": "Up next, push press.",
+  "file": "31zzg81ljwepm.mp3"
+ },
+ {
+  "id": "next:push-up",
+  "text": "Up next, push ups.",
+  "file": "9s9lyk6a8h9u.mp3"
+ },
+ {
+  "id": "next:rapid-step-ups",
+  "text": "Up next, rapid step ups.",
+  "file": "tqraiq10d0f6o.mp3"
+ },
+ {
+  "id": "next:reverse-lunge",
+  "text": "Up next, reverse lunges.",
+  "file": "1gt9d8q16pcjlg.mp3"
+ },
+ {
+  "id": "next:row",
+  "text": "Up next, row.",
+  "file": "1gjsmve1hkui3o.mp3"
+ },
+ {
+  "id": "next:row-sprint",
+  "text": "Up next, row sprint.",
+  "file": "w5b8s5kgk0jr.mp3"
+ },
+ {
+  "id": "next:run",
+  "text": "Up next, run.",
+  "file": "1j3t1wv14mfcix.mp3"
+ },
+ {
+  "id": "next:run-outside",
+  "text": "Up next, run.",
+  "file": "1blty211l7klb3.mp3"
+ },
+ {
+  "id": "next:shadow-boxing",
+  "text": "Up next, shadow boxing.",
+  "file": "iyzgde1g7tbmc.mp3"
+ },
+ {
+  "id": "next:shoulder-press",
+  "text": "Up next, shoulder press.",
+  "file": "57j5b0soisbq.mp3"
+ },
+ {
+  "id": "next:side-plank",
+  "text": "Up next, side plank.",
+  "file": "odfkz41fh9oga.mp3"
+ },
+ {
+  "id": "next:single-leg-rdl",
+  "text": "Up next, single leg r d ls.",
+  "file": "1x374w0iizy6a.mp3"
+ },
+ {
+  "id": "next:sit-to-stand",
+  "text": "Up next, sit to stand.",
+  "file": "mgzo2lfoihev.mp3"
+ },
+ {
+  "id": "next:skater-jumps",
+  "text": "Up next, skater jumps.",
+  "file": "doeq9uod109c.mp3"
+ },
+ {
+  "id": "next:split-squat",
+  "text": "Up next, split squats.",
+  "file": "zesxl9fgadf.mp3"
+ },
+ {
+  "id": "next:squat-press",
+  "text": "Up next, squat and press.",
+  "file": "fmqre61yqd0ug.mp3"
+ },
+ {
+  "id": "next:squat-thrust",
+  "text": "Up next, step back burpees.",
+  "file": "1ekj12d17ysvxb.mp3"
+ },
+ {
+  "id": "next:squat-to-press",
+  "text": "Up next, squat to press.",
+  "file": "1uq3qa45h58nq.mp3"
+ },
+ {
+  "id": "next:step-ups",
+  "text": "Up next, step ups.",
+  "file": "g7mmhjkc4x45.mp3"
+ },
+ {
+  "id": "next:suitcase-carry",
+  "text": "Up next, suitcase carry.",
+  "file": "bvq1451w1lqgv.mp3"
+ },
+ {
+  "id": "next:suitcase-left",
+  "text": "Up next, suitcase carry, left hand.",
+  "file": "zk21v1w27tpx.mp3"
+ },
+ {
+  "id": "next:suitcase-right",
+  "text": "Up next, suitcase carry, right hand.",
+  "file": "dsumloevo2hi.mp3"
+ },
+ {
+  "id": "next:walk-outside",
+  "text": "Up next, brisk walk.",
+  "file": "5x59axum75l7.mp3"
+ },
+ {
+  "id": "next:wall-push-up",
+  "text": "Up next, wall push ups.",
+  "file": "u68t0p19wsr4z.mp3"
+ },
+ {
+  "id": "next:wall-sit",
+  "text": "Up next, wall sit.",
+  "file": "114jszv1osqyr5.mp3"
+ },
+ {
+  "id": "next:wu-arm-circles",
+  "text": "Up next, arm circles.",
+  "file": "188acp1vagvk7.mp3"
+ },
+ {
+  "id": "next:wu-hinge",
+  "text": "Up next, hip hinges.",
+  "file": "b9gmdw11s93k6.mp3"
+ },
+ {
+  "id": "next:wu-inchworm",
+  "text": "Up next, inchworms.",
+  "file": "1hzxkf614an2c4.mp3"
+ },
+ {
+  "id": "next:wu-lunge-reach",
+  "text": "Up next, lunge and reach.",
+  "file": "1kc20iy1bnx1w0.mp3"
+ },
+ {
+  "id": "next:wu-march",
+  "text": "Up next, easy march.",
+  "file": "oodz9kssmeze.mp3"
+ },
+ {
+  "id": "next:wu-squat",
+  "text": "Up next, bodyweight squats.",
+  "file": "26j8ntltym7f.mp3"
+ },
+ {
+  "id": "paused",
+  "text": "Paused.",
+  "file": "2svw0b1edpwad.mp3"
+ },
+ {
+  "id": "preview",
+  "text": "Hey, I'm your VYRA coach. Round three. Kettlebell swings, let's go. Snap those hips!",
+  "file": "ksxopj88ons5.mp3"
+ },
+ {
+  "id": "rest-1",
+  "text": "Rest.",
+  "file": "1h4qe7h1mfn6h7.mp3"
+ },
+ {
+  "id": "rest-2",
+  "text": "Nice work. Take a breather.",
+  "file": "1garl4kok8buq.mp3"
+ },
+ {
+  "id": "rest-3",
+  "text": "Good. Shake it out.",
+  "file": "1gkr6tj1ppxj7d.mp3"
+ },
+ {
+  "id": "rest-4",
+  "text": "Breathe. You earned that.",
+  "file": "1fqsdqmepd9o8.mp3"
+ },
+ {
+  "id": "resume",
+  "text": "And we're back.",
+  "file": "1ytdf8q2qbzjo.mp3"
+ },
+ {
+  "id": "round:1",
+  "text": "Round one. Here we go.",
+  "file": "41pdza1suguv8.mp3"
+ },
+ {
+  "id": "round:10",
+  "text": "Round ten.",
+  "file": "cd0q2q17prmjw.mp3"
+ },
+ {
+  "id": "round:11",
+  "text": "Round eleven.",
+  "file": "cn0brp9ucrxf.mp3"
+ },
+ {
+  "id": "round:12",
+  "text": "Round twelve.",
+  "file": "bt1ios1b01za2.mp3"
+ },
+ {
+  "id": "round:13",
+  "text": "Round thirteen.",
+  "file": "c314drd4n4nl.mp3"
+ },
+ {
+  "id": "round:14",
+  "text": "Round fourteen.",
+  "file": "b92bau1156x3k.mp3"
+ },
+ {
+  "id": "round:15",
+  "text": "Round fifteen.",
+  "file": "bj1wzt39s2h3.mp3"
+ },
+ {
+  "id": "round:16",
+  "text": "Round sixteen.",
+  "file": "ap33ww14fh9tq.mp3"
+ },
+ {
+  "id": "round:17",
+  "text": "Round seventeen.",
+  "file": "az2plv6k2f79.mp3"
+ },
+ {
+  "id": "round:18",
+  "text": "Round eighteen.",
+  "file": "ekxjmi1kux1gk.mp3"
+ },
+ {
+  "id": "round:19",
+  "text": "Round nineteen.",
+  "file": "eux5bhmzi6u3.mp3"
+ },
+ {
+  "id": "round:2",
+  "text": "Round two.",
+  "file": "3rpsaby9ccyx.mp3"
+ },
+ {
+  "id": "round:20",
+  "text": "Round twenty.",
+  "file": "1a7ivll6ru90f.mp3"
+ },
+ {
+  "id": "round:3",
+  "text": "Round three.",
+  "file": "3hq6lc1w4r7le.mp3"
+ },
+ {
+  "id": "round:4",
+  "text": "Round four.",
+  "file": "5fneg5oehasf.mp3"
+ },
+ {
+  "id": "round:5",
+  "text": "Round five.",
+  "file": "55nsr61m9w5ew.mp3"
+ },
+ {
+  "id": "round:6",
+  "text": "Round six.",
+  "file": "4vo727rornil.mp3"
+ },
+ {
+  "id": "round:7",
+  "text": "Round seven.",
+  "file": "4lold81pk6i52.mp3"
+ },
+ {
+  "id": "round:8",
+  "text": "Round eight.",
+  "file": "6jlt81htwlc3.mp3"
+ },
+ {
+  "id": "round:9",
+  "text": "Round nine.",
+  "file": "69m7j21fpbfyk.mp3"
+ },
+ {
+  "id": "seg-easy",
+  "text": "Easy. Recover.",
+  "file": "1f4t77j1i8zvll.mp3"
+ },
+ {
+  "id": "seg-hard",
+  "text": "Hard! Push the pace.",
+  "file": "1nkrqa8xnxn72.mp3"
+ },
+ {
+  "id": "seg-rest",
+  "text": "Rest.",
+  "file": "1ehaxr710edq99.mp3"
+ },
+ {
+  "id": "seg-work",
+  "text": "Work!",
+  "file": "1gerhosrdzsje.mp3"
+ },
+ {
+  "id": "t:1 km",
+  "text": "1 kilometer.",
+  "file": "1b8l1hm1jsz9d0.mp3"
+ },
+ {
+  "id": "t:10 km",
+  "text": "10 kilometers.",
+  "file": "1osfddy1zi8s.mp3"
+ },
+ {
+  "id": "t:10 reps",
+  "text": "10 reps.",
+  "file": "h6y6la1gmel7o.mp3"
+ },
+ {
+  "id": "t:10 reps + 10 reps/side + 10 presses",
+  "text": "10 reps, then 10 reps each side, then 10 presses.",
+  "file": "4ozo1rvlz6yl.mp3"
+ },
+ {
+  "id": "t:10 reps/side",
+  "text": "10 reps each side.",
+  "file": "6wtwk81is8a8m.mp3"
+ },
+ {
+  "id": "t:100 m",
+  "text": "100 meters.",
+  "file": "1avuw6d126rqkn.mp3"
+ },
+ {
+  "id": "t:100 reps",
+  "text": "100 reps.",
+  "file": "1v5769u1qxr6lo.mp3"
+ },
+ {
+  "id": "t:12 reps",
+  "text": "12 reps.",
+  "file": "15hd4ik13jj0zq.mp3"
+ },
+ {
+  "id": "t:15 RDLs + 10–12 presses",
+  "text": "15 R D Ls, then 10 to 12 presses.",
+  "file": "ze0wgj1sacpmp.mp3"
+ },
+ {
+  "id": "t:15 presses + 12 rows/side",
+  "text": "15 presses, then 12 rows each side.",
+  "file": "1tbvldj1xviy0t.mp3"
+ },
+ {
+  "id": "t:2 km",
+  "text": "2 kilometers.",
+  "file": "1uhl1o9gnhvc7.mp3"
+ },
+ {
+  "id": "t:20 reps",
+  "text": "20 reps.",
+  "file": "1niwugv17bu6il.mp3"
+ },
+ {
+  "id": "t:200 m + 10 reps + 10 reps + 10 reps",
+  "text": "200 meters, then 10 reps, then 10 reps, then 10 reps.",
+  "file": "1hq1srm11tip20.mp3"
+ },
+ {
+  "id": "t:25 reps",
+  "text": "25 reps.",
+  "file": "ad1r7y1523ofg.mp3"
+ },
+ {
+  "id": "t:250 m",
+  "text": "250 meters.",
+  "file": "1eg8ql15qak2n.mp3"
+ },
+ {
+  "id": "t:3 km",
+  "text": "3 kilometers.",
+  "file": "6qf6zg12xozdu.mp3"
+ },
+ {
+  "id": "t:30 reps",
+  "text": "30 reps.",
+  "file": "u9mgxs19c54ju.mp3"
+ },
+ {
+  "id": "t:4 km",
+  "text": "4 kilometers.",
+  "file": "4hrfu3nt9nmt.mp3"
+ },
+ {
+  "id": "t:400 m",
+  "text": "400 meters.",
+  "file": "ooma1i868gwc.mp3"
+ },
+ {
+  "id": "t:5 km",
+  "text": "5 kilometers.",
+  "file": "oxtssm1tqpjag.mp3"
+ },
+ {
+  "id": "t:50 reps",
+  "text": "50 reps.",
+  "file": "15us64i1t42tww.mp3"
+ },
+ {
+  "id": "t:500 m",
+  "text": "500 meters.",
+  "file": "1w9ty0p1fd29lv.mp3"
+ },
+ {
+  "id": "t:8 presses",
+  "text": "8 presses.",
+  "file": "t5710i13sp7vc.mp3"
+ },
+ {
+  "id": "t:8 reps + 8 reps + 8 reps",
+  "text": "8 reps, then 8 reps, then 8 reps.",
+  "file": "2bxqr11l8atzv.mp3"
+ },
+ {
+  "id": "t:~20 reps",
+  "text": "About 20 reps.",
+  "file": "1ko3enn171qv11.mp3"
+ },
+ {
+  "id": "t:~20 total",
+  "text": "About 20 in total.",
+  "file": "18gudonhml0ml.mp3"
+ },
+ {
+  "id": "tap-done",
+  "text": "Tap done when the set is finished.",
+  "file": "cvb39l1ecdk5b.mp3"
+ },
+ {
+  "id": "tap-done-dist",
+  "text": "Tap done when you hit the distance.",
+  "file": "ybro5o1lhenm6.mp3"
+ },
+ {
+  "id": "ten-rest",
+  "text": "Ten seconds. Get ready.",
+  "file": "11pgjfhbq3hyj.mp3"
+ },
+ {
+  "id": "ten-work",
+  "text": "Ten seconds. Finish strong!",
+  "file": "1wn53auhkl6js.mp3"
+ },
+ {
+  "id": "togo-1",
+  "text": "One more after this.",
+  "file": "1f6x0zoep5h3m.mp3"
+ },
+ {
+  "id": "togo-2",
+  "text": "Two more rounds after this.",
+  "file": "1g0vu2l1ckkbq3.mp3"
+ },
+ {
+  "id": "togo-3",
+  "text": "Three more rounds after this.",
+  "file": "1fqw8dmbev4dg.mp3"
+ },
+ {
+  "id": "warmup-done",
+  "text": "Warm up done. Nice. Take a breath, get set up, and tap start when you're ready.",
+  "file": "1j7lkkoa0l0cq.mp3"
+ },
+ {
+  "id": "warmup-start",
+  "text": "Alright, let's warm up. Nice and easy, get the blood moving.",
+  "file": "1l79xac9i4h4i.mp3"
+ },
+ {
+  "id": "workout-done",
+  "text": "That's it, workout complete. Great job today.",
+  "file": "lpbfvbyp6ke1.mp3"
+ }
+]

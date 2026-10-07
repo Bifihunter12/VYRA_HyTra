@@ -11,10 +11,10 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.06.1";
+const APP_VERSION = "2026.10.07.1";
 const STORE_KEY = "vyra_v1";
-/* Beeps, spoken cues and vibration are switched off for now. Set to true to bring them back. */
-const CUES_ENABLED = false;
+/* Beeps, the voice coach and vibration. */
+const CUES_ENABLED = true;
 
 /* ── 4. Cues: sound, speech, vibration ──────────────────────────────────────── */
 
@@ -55,42 +55,112 @@ const Cues = {
                 this.tone(990, 0.42, { type: "square", gain: 0.22, delay: 0.22 }); },
   segment()   { this.tone(1046, 0.12, { type: "triangle" }); this.tone(1046, 0.12, { type: "triangle", delay: 0.16 }); },
   complete()  { [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.35, { type: "triangle", gain: 0.25, delay: i * 0.16 })); },
-  say(text, { interrupt = true } = {}) {
-    if (!CUES_ENABLED) return;
-    if (!state.settings.voice || !text || !("speechSynthesis" in window)) return;
-    try {
-      if (interrupt) speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "en-US"; u.rate = 1.05;
-      speechSynthesis.speak(u);
-    } catch { /* ignore */ }
-  },
-  hush() { try { speechSynthesis.cancel(); } catch { /* ignore */ } },
+  say(text) { Voice.play([], { fallback: text }); },
+  hush() { Voice.stop(); },
   buzz(pattern) {
     if (!CUES_ENABLED) return;
     if (state.settings.vibrate && navigator.vibrate) { try { navigator.vibrate(pattern); } catch { /* ignore */ } }
   },
 };
 
+/* ── Voice coach: plays the recorded lines (audio/voice), device voice as a fallback ── */
+const coachVoice = () => (state.settings.voice === false ? "off" : state.settings.coach || "female");
+const Voice = {
+  manifest: null, buffers: new Map(), token: 0, source: null,
+  async loadManifest() {
+    if (this.manifest) return this.manifest;
+    try { this.manifest = await (await fetch(`audio/voice/manifest.json?v=${APP_VERSION}`)).json(); } catch { this.manifest = { lines: {} }; }
+    return this.manifest;
+  },
+  async buffer(id, voice = coachVoice()) {
+    const key = `${voice}|${id}`;
+    if (this.buffers.has(key)) return this.buffers.get(key);
+    const m = await this.loadManifest();
+    const line = m.lines?.[id];
+    if (!line || !Cues.ctx) return null;
+    const p = fetch(`audio/voice/${voice}/${line.file}`).then(r => (r.ok ? r.arrayBuffer() : Promise.reject(r.status)))
+      .then(b => Cues.ctx.decodeAudioData(b)).catch(() => null);
+    this.buffers.set(key, p);
+    return p;
+  },
+  /* Fetch and decode a workout's lines up front so they play instantly (and offline). */
+  prepare(ids) { if (coachVoice() !== "off") [...ids].forEach(id => this.buffer(id)); },
+  stop() {
+    this.token++;
+    try { this.source?.stop(); } catch { /* already stopped */ }
+    this.source = null;
+    try { speechSynthesis.cancel(); } catch { /* ignore */ }
+  },
+  /* Say these lines one after another, cutting off whatever was being said. */
+  async play(ids, { fallback = "", interrupt = true } = {}) {
+    if (!CUES_ENABLED || coachVoice() === "off") return;
+    if (interrupt) this.stop();
+    const token = this.token;
+    const items = await Promise.all(ids.filter(Boolean).map(async id => ({ id, buf: await this.buffer(id) })));
+    if (fallback) items.push({ id: null, buf: null, text: fallback });
+    for (const it of items) {
+      if (token !== this.token) return;
+      if (it.buf) await this.playBuffer(it.buf);
+      else await this.speak(it.text || this.manifest?.lines?.[it.id]?.text || coachText(it.id));
+    }
+  },
+  playBuffer(buf) {
+    return new Promise(resolve => {
+      try {
+        const src = Cues.ctx.createBufferSource();
+        src.buffer = buf; src.connect(Cues.ctx.destination);
+        src.onended = () => resolve(); this.source = src; src.start();
+      } catch { resolve(); }
+    });
+  },
+  speak(text) {
+    return new Promise(resolve => {
+      if (!text || !("speechSynthesis" in window)) return resolve();
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "en-US"; u.rate = 1.02;
+        const want = coachVoice() === "male" ? /male|daniel|alex|fred|guy|david|mark|james/i : /female|samantha|karen|victoria|zira|aria|jenny/i;
+        const v = speechSynthesis.getVoices().filter(x => /^en/i.test(x.lang));
+        u.voice = v.find(x => want.test(x.name) && /natural|neural|enhanced|premium|google/i.test(x.name)) || v.find(x => want.test(x.name)) || null;
+        u.onend = u.onerror = () => resolve();
+        speechSynthesis.speak(u);
+        setTimeout(resolve, 8000);
+      } catch { resolve(); }
+    });
+  },
+};
+const COACH_COMMON = ["warmup-start", "warmup-done", "cooldown", "cooldown-done", "workout-done", "challenge-done", "ended", "paused", "resume",
+  "rest-1", "rest-2", "rest-3", "rest-4", "ten-work", "ten-rest", "halfway", "enc-1", "enc-2", "enc-3", "enc-4", "enc-5", "enc-6",
+  "last-round", "togo-1", "togo-2", "togo-3", "tap-done", "tap-done-dist", "seg-hard", "seg-easy", "seg-work", "seg-rest"];
+
 function wireCues(engine) {
+  const coach = new CoachScript(engine.timeline, { challenge: !!session?.workout?.challenge });
+  Voice.prepare([...timelineLines(engine.timeline), ...COACH_COMMON]);
   engine
-    .on("countdown", ({ n }) => { Cues.beep(); Cues.buzz(60); Cues.say(String(n)); })
+    .on("countdown", ({ n }) => { Cues.beep(); Cues.buzz(60); Voice.play(coach.countdown(n)); })
     .on("go", () => { Cues.go(); Cues.buzz(200); })
-    .on("interval", ({ reason, interval }) => {
+    .on("interval", ({ reason, index }) => {
       if (reason === "auto") { Cues.end(); Cues.buzz([280, 120, 280]); }
-      Cues.say(reason === "start" ? `Go. ${interval.say}` : interval.say);
+      const gate = gateFor(engine.timeline, index, reason);
+      const lines = coach.interval(index, reason, gate);
+      Voice.play(reason === "start" ? ["go", ...lines] : lines);
     })
     .on("second", ({ remaining }, e) => {
       const d = e.durationMs() / 1000;
-      if (remaining === 10 && d >= 20) Cues.say("10 seconds");
-      if (remaining <= 3 && remaining >= 1 && d > 4) { Cues.beep(); Cues.buzz(50); Cues.say(String(remaining)); }
+      if (remaining <= 3 && remaining >= 1 && d > 4) { Cues.beep(); Cues.buzz(50); }
+      const lines = coach.second(e.current, remaining, d);
+      if (lines.length) Voice.play(lines);
     })
-    .on("segment", ({ segment }) => { Cues.segment(); Cues.buzz([120, 80, 120]); Cues.say(cap(segment.label)); })
-    .on("pause", () => { Cues.hush(); Cues.say("Paused"); })
-    .on("resume", () => Cues.say("Resume"))
+    .on("segment", ({ segment }) => { Cues.segment(); Cues.buzz([120, 80, 120]); Voice.play(coach.segment(segment)); })
+    .on("pause", () => { if (!ui.gate) Voice.play(["paused"]); })
+    .on("resume", () => {
+      if (ui.gateResume) { ui.gateResume = false; Voice.play(coach.intro(engine.current, engine.timeline[engine.index - 1])); }
+      else Voice.play(["resume"]);
+    })
     .on("complete", ({ early }) => {
       Cues.complete(); Cues.buzz([400, 150, 400, 150, 600]);
-      Cues.say(early ? "Workout ended" : "Workout complete");
+      Voice.play(coach.finish(early, ui.cooledDown));
+      ui.cooledDown = false;
     });
 }
 
@@ -940,8 +1010,11 @@ function renderProfile() {
 
   ${CUES_ENABLED ? `${sectionLabel("Cues")}
   <div class="set-list">
+    <div class="set-row set-row--stack"><i class="ti ti-microphone-2 set-ic"></i>
+      <span class="set-label">Coach voice<span class="set-unit">Talks you through every interval, like a coach in the room</span></span></div>
+    <div class="pad-y coach-pick">${chips("data-coach", [["female", "Female"], ["male", "Male"], ["off", "Off"]], coachVoice())}
+      ${coachVoice() !== "off" ? `<button class="text-btn" data-act="voice-preview"><i class="ti ti-player-play"></i> Hear ${esc(COACH_VOICES[coachVoice()].name)}</button>` : ""}</div>
     ${switchRow('data-setting="sound"', state.settings.sound, "Beeps", "ti-bell-ringing")}
-    ${switchRow('data-setting="voice"', state.settings.voice, "Spoken cues", "ti-microphone-2")}
     ${switchRow('data-setting="vibrate"', state.settings.vibrate, "Vibration", "ti-device-mobile-vibration")}
   </div>` : ""}
 
@@ -1133,31 +1206,37 @@ function exList(exs) {
 /* ── Transitions: warm-up → workout → cool-down ────────────────────────────
    The player stops between the parts. The workout (and a challenge's clock)
    starts only when the athlete taps Start; warm-up time never counts. */
+function gateFor(tl, index, reason) {
+  const cur = tl[index], prev = tl[index - 1];
+  if (!prev || reason === "prev") return null;
+  if (prev.type === "WARM" && prev.phase === "warm" && cur.type !== "WARM") return "main";
+  if (cur.type === "WARM" && cur.phase === "cool" && prev.type !== "WARM") return "cool";
+  return null;
+}
 function gateCheck(index, reason) {
-  const tl = engine.timeline, cur = tl[index], prev = tl[index - 1];
-  if (!prev || reason === "prev") return;
-  if (prev.type === "WARM" && prev.phase === "warm" && cur.type !== "WARM") ui.gate = "main";
-  else if (cur.type === "WARM" && cur.phase === "cool" && prev.type !== "WARM") ui.gate = "cool";
-  else return;
+  const gate = gateFor(engine.timeline, index, reason);
+  if (!gate) return;
+  ui.gate = gate;
   engine.pause();
 }
 const isChallengeSession = () => !!session?.workout?.challenge;
 const mainSecSoFar = () => engine.visits.filter(v => v.type !== "WARM").reduce((a, v) => a + v.ms, 0) / 1000;
 
 function gateGo() {
-  if (ui.gate === "cool") { ui.gate = null; engine.resume(); return; }
-  ui.gate = null; ui.gateCount = 3; renderPlayer();
+  Cues.unlock();
+  if (ui.gate === "cool") { ui.gate = null; ui.cooledDown = true; ui.gateResume = true; engine.resume(); return; }
+  ui.gate = null; ui.gateCount = 3; renderPlayer(); Cues.beep(); Voice.play(["c3"]);
   const step = () => {
     if (!engine || ui.gateCount == null) return;
     ui.gateCount -= 1;
-    if (ui.gateCount > 0) { renderPlayer(); setTimeout(step, 1000); return; }
-    ui.gateCount = null; ui.go = true; renderPlayer();
-    setTimeout(() => { ui.go = false; if (engine) engine.resume(); }, 700);   // resume re-renders the player
+    if (ui.gateCount > 0) { renderPlayer(); Cues.beep(); Voice.play([`c${ui.gateCount}`]); setTimeout(step, 1000); return; }
+    ui.gateCount = null; ui.go = true; renderPlayer(); Cues.go(); Cues.buzz(200);
+    setTimeout(() => { ui.go = false; ui.gateResume = true; if (engine) engine.resume(); }, 700);   // resume re-renders the player and says the first interval
   };
   setTimeout(step, 1000);
 }
 function skipCooldown() {
-  ui.gate = null;
+  ui.gate = null; ui.cooledDown = true;
   engine.resume();
   while (engine && engine.phase === "running" && engine.current.type === "WARM") engine.next("skipped");
 }
@@ -1544,7 +1623,7 @@ app.addEventListener("input", ev => {
 });
 
 app.addEventListener("click", async ev => {
-  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility],[data-ath-activity],[data-compete-view],[data-athlete],[data-comments],[data-react],[data-follow],[data-del-comment],[data-event],[data-event-division],[data-standings-division],[data-ghost],[data-review],[data-club],[data-club-join],[data-club-kind],[data-club-open],[data-battle-scope],[data-board-where],[data-pd-day],[data-pd-goal],[data-pd-min],[data-slot-change],[data-slot-remove],[data-pick],[data-pick-mine],[data-mine],[data-remind-at],[data-remind-day],[data-hall-division],[data-month-time],[data-month-remind]");
+  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility],[data-ath-activity],[data-compete-view],[data-athlete],[data-comments],[data-react],[data-follow],[data-del-comment],[data-event],[data-event-division],[data-standings-division],[data-ghost],[data-review],[data-club],[data-club-join],[data-club-kind],[data-club-open],[data-battle-scope],[data-board-where],[data-pd-day],[data-pd-goal],[data-pd-min],[data-slot-change],[data-slot-remove],[data-pick],[data-pick-mine],[data-mine],[data-remind-at],[data-remind-day],[data-hall-division],[data-month-time],[data-month-remind],[data-coach]");
   if (!el) return;
   const d = el.dataset;
   if (!["erase", "delete-history", "program-join", "program-leave", "sync-delete", "plan-delete", "mine-delete"].includes(d.act)) ui.confirm = null;
@@ -1562,11 +1641,16 @@ app.addEventListener("click", async ev => {
     save(); return rerender();
   }
   if (d.profileToggle) { state.profile[d.profileToggle] = !state.profile[d.profileToggle]; save(); return rerender(); }
+  if (d.coach) {
+    state.settings.coach = d.coach === "off" ? state.settings.coach : d.coach;
+    state.settings.voice = d.coach !== "off"; save();
+    if (d.coach !== "off") { Cues.unlock(); Voice.play(["preview"]); } else Voice.stop();
+    return rerender();
+  }
   if (d.setting) {
     const k = d.setting;
     state.settings[k] = !state.settings[k]; save();
     if (k === "sound" && state.settings.sound) { Cues.unlock(); Cues.beep(); }
-    if (k === "voice" && state.settings.voice) { Cues.unlock(); Cues.say("Spoken cues on"); }
     if (k === "vibrate" && state.settings.vibrate) Cues.buzz(80);
     return rerender();
   }
@@ -1649,6 +1733,7 @@ app.addEventListener("click", async ev => {
       ui.confirmEnd = true; return renderPlayer();
     case "end-cancel": ui.confirmEnd = false; return renderPlayer();
     case "end-confirm": ui.confirmEnd = false; return engine?.end();
+    case "voice-preview": Cues.unlock(); Voice.play(["preview"]); return;
     case "toggle-audio": {
       const on = !(state.settings.sound || state.settings.voice);
       state.settings.sound = on; state.settings.voice = on; save();
