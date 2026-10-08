@@ -2,7 +2,7 @@
 
 The coach's lines are recorded once with [Kokoro](https://github.com/hexgrad/kokoro)
 (open-source neural TTS, Apache-2.0) and shipped in `audio/voice/` (female: `af_heart`,
-male: `am_michael`). `coach.js` decides what is said and when; lines without a
+male: an even blend of `am_fenrir` and `am_onyx`). `coach.js` decides what is said and when; lines without a
 recording fall back to the device's own voice.
 
 After changing exercises, workouts, benchmarks or coach lines:

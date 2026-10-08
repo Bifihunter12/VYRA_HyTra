@@ -9,7 +9,7 @@
 
 const COACH_VOICES = {
   female: { model: "af_heart",   label: "Female", name: "Heart" },
-  male:   { model: "am_michael", label: "Male",   name: "Michael" },
+  male:   { model: "am_fenrir+am_onyx", label: "Male", name: "Fenrir" },
 };
 
 /* Fixed lines. Short, warm, like a coach standing next to you. */
