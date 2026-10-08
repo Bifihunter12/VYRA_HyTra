@@ -1332,6 +1332,10 @@
 "file": "1ehaxr710edq99.mp3",
 "text": "Rest."
 },
+"seg-switch": {
+"file": "j5rcwt16yir7n.mp3",
+"text": "Switch. Move to the next one."
+},
 "seg-work": {
 "file": "1gerhosrdzsje.mp3",
 "text": "Work!"
@@ -1364,13 +1368,29 @@
 "file": "1v5769u1qxr6lo.mp3",
 "text": "100 reps."
 },
+"t:10\u201312 presses": {
+"file": "1f4fdpfi66r6x.mp3",
+"text": "10 to 12 presses."
+},
 "t:12 reps": {
 "file": "15hd4ik13jj0zq.mp3",
 "text": "12 reps."
 },
+"t:12 rows/side": {
+"file": "1vet4zt1614b6n.mp3",
+"text": "12 rows each side."
+},
+"t:15 RDLs": {
+"file": "1y7mfig1x26t36.mp3",
+"text": "15 R D Ls."
+},
 "t:15 RDLs + 10\u201312 presses": {
 "file": "ze0wgj1sacpmp.mp3",
 "text": "15 R D Ls, then 10 to 12 presses."
+},
+"t:15 presses": {
+"file": "xp07u1qsk2r0.mp3",
+"text": "15 presses."
 },
 "t:15 presses + 12 rows/side": {
 "file": "1tbvldj1xviy0t.mp3",

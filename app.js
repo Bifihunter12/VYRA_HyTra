@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.08.1";
+const APP_VERSION = "2026.10.08.2";
 const STORE_KEY = "vyra_v1";
 /* Beeps, the voice coach and vibration. */
 const CUES_ENABLED = true;
@@ -1369,6 +1369,7 @@ function renderPlayer() {
   // Big metric line under the timer
   let metric = "";
   if (iv.type === "CARDIO") metric = iv.speed ? `${fmtSpeed(iv.speed)} ${iv.speedUnit.toUpperCase()}` : iv.effort;
+  else if (iv.split && seg) metric = seg.switch ? `Next · ${EXERCISES[seg.exId]?.name || ""}` : seg.target ? `Target ${seg.target}` : "";
   else if (iv.type === "WORK" && iv.target) metric = `Target ${iv.target}`;
   else if (iv.type === "REST" && upcoming) metric = `Next · ${upcoming.title}`;
   // To-target intervals: the target is the headline, the clock just counts up.
@@ -1378,7 +1379,7 @@ function renderPlayer() {
   // Sub-interval strip (HARD / EASY, Tabata WORK / REST)
   const segStrip = iv.segments.length ? `
     <div class="seg">
-      <div class="seg-label tone-${tone}" data-bind="seg-label">${esc(seg?.label || "")}</div>
+      <div class="seg-label tone-${tone} ${(seg?.label || "").length > 9 ? "seg-label--long" : ""}" data-bind="seg-label">${esc(seg?.label || "")}</div>
       <div class="seg-meta" data-bind="seg-meta">${segMeta(iv, e.segIndex)}</div>
       <div class="seg-pips">${iv.segments.map((s, i) => `<span class="pip pip-${s.tone} ${i < e.segIndex ? "done" : i === e.segIndex ? "now" : ""}" style="flex:${s.end - s.start}"></span>`).join("")}</div>
     </div>` : "";
@@ -1390,6 +1391,14 @@ function renderPlayer() {
           <div class="pl-instr">${!upcoming ? "Recover." : upcoming.type === "WORK" ? "Get to the station and set up."
             : machineWord(upcoming) ? `Get on the ${machineWord(upcoming)}.` : "Get ready."}</div></div>
       </div>`
+    : iv.split && seg ? (() => {
+        const ex = EXERCISES[seg.exId] || {};
+        return `<div class="pl-row">
+        <span class="pl-k">${seg.switch ? "Switch to" : "Now"}</span>
+        <div class="pl-v"><div class="pl-name">${esc(ex.name || "")}${seg.target ? ` · ${esc(seg.target)}` : ""}</div>
+          <div class="pl-instr">${esc(seg.switch ? "Move to the next station and set up." : ex.instruction || "")}</div>
+          <div class="pl-note">${esc(iv.title)} · move ${iv.segments.filter(s => !s.switch).indexOf(iv.segments.find(s => !s.switch && s.exId === seg.exId)) + 1} of ${iv.segments.filter(s => !s.switch).length}</div></div>
+      </div>`; })()
     : `<div class="pl-row">
         <span class="pl-k">Now</span>
         <div class="pl-v"><div class="pl-name">${esc(iv.title)}</div>
@@ -1412,7 +1421,10 @@ function renderPlayer() {
       </div>`
     : `<div class="pl-row">
         <span class="pl-k">Next</span>
-        <div class="pl-v"><div class="pl-name pl-name--dim">${next ? esc(nextLabel(next)) : "Finish"}</div></div>
+        <div class="pl-v"><div class="pl-name pl-name--dim">${(() => {
+          const nm = iv.split ? iv.segments.slice(e.segIndex + 1).find(s => !s.switch) : null;
+          return nm ? `${esc(EXERCISES[nm.exId]?.name || "")} · ${fmtShort(nm.end - nm.start)}` : next ? esc(nextLabel(next)) : "Finish";
+        })()}</div></div>
       </div>`;
 
   const showDone = (iv.type === "WORK" && (iv.hasTarget || iv.openEnded)) || (iv.type === "CARDIO" && iv.openEnded);
@@ -1475,6 +1487,11 @@ function nextLabel(n) {
 function segMeta(iv, si) {
   const s = iv.segments[si];
   if (!s) return "";
+  if (iv.split) {
+    const moves = iv.segments.filter(x => !x.switch);
+    const n = moves.findIndex(x => x.exId === s.exId) + 1;
+    return s.switch ? `Next · move ${n} of ${moves.length}` : `Move ${n} of ${moves.length}${n < moves.length ? " · then switch" : " · last move"}`;
+  }
   const sameTone = iv.segments.filter(x => x.label === s.label);
   const n = sameTone.indexOf(s) + 1;
   const nxt = iv.segments[si + 1];

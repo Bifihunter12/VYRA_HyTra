@@ -30,12 +30,28 @@ test("all templates compile into well-formed timelines", () => {
 test("VYRA 8 matches the original spec", () => {
   const tl = V.compile(V.createWorkout("vyra-8", {}), {});
   assert.equal(tl.length, 31);                       // 8 × 4 minus the final rest
-  assert.equal(V.planTotals(tl).total, 1410);         // 23:30
+  assert.equal(V.planTotals(tl).total, 1830);         // 30:30: multi-move stations give each move its own minute
   assert.equal(tl[0].type, "CARDIO");
   assert.equal(tl[0].speed, 7);
   assert.equal(tl.at(-1).type, "WORK");
   const ropes = tl[2];
   assert.deepEqual(plain(ropes.segments.map(s => [s.label, s.start, s.end])), [["HARD", 0, 20], ["EASY", 20, 40], ["HARD", 40, 60]]);
+});
+
+test("a timed station with several moves gives each move its own timer and a switch", () => {
+  const tl = V.compile(V.createWorkout("vyra-8", {}), {});
+  const fin = tl.at(-1);
+  assert.equal(fin.duration, 4 * 60 + 3 * 10);
+  assert.deepEqual(plain(fin.segments.map(s => [s.switch ? "SWITCH" : s.exId, s.end - s.start])),
+    [["goblet-squat", 60], ["SWITCH", 10], ["db-row", 60], ["SWITCH", 10], ["push-press", 60], ["SWITCH", 10], ["battle-ropes", 60]]);
+  const upper = tl.find(iv => iv.title === "Upper Body");
+  assert.deepEqual(plain(upper.segments.filter(s => !s.switch).map(s => s.target)), ["15 presses", "12 rows/side"]);
+  // Circuits keep one timer for the whole block.
+  const mixer = V.compile(V.createWorkout("the-mixer", {}), {}).find(iv => iv.title === "Strength Circuit");
+  assert.equal(mixer.segments.length, 0);
+  assert.equal(mixer.duration, 120);
+  const storm = V.compile(V.challengeWorkout(V.challengeById("the-storm"), "20", "open"), {})[0];
+  assert.equal(storm.segments.length, 0);
 });
 
 test("segments scale by share and support Tabata-style repeats", () => {

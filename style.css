@@ -1112,3 +1112,4 @@ a.cl-row .day-tag { flex: none; }
   border-radius: 18px; background: var(--surface-2); border: 1px solid var(--border-active); box-shadow: 0 18px 40px rgba(0,0,0,.45);
 }
 .icon-btn.on { color: var(--accent); }
+.seg-label--long { font-size: clamp(22px, 6.4vw, 36px); letter-spacing: 1.5px; }
