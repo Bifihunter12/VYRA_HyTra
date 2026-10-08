@@ -1665,6 +1665,11 @@
   "file": "1ehaxr710edq99.mp3"
  },
  {
+  "id": "seg-switch",
+  "text": "Switch. Move to the next one.",
+  "file": "j5rcwt16yir7n.mp3"
+ },
+ {
   "id": "seg-work",
   "text": "Work!",
   "file": "1gerhosrdzsje.mp3"
@@ -1705,14 +1710,34 @@
   "file": "1v5769u1qxr6lo.mp3"
  },
  {
+  "id": "t:10–12 presses",
+  "text": "10 to 12 presses.",
+  "file": "1f4fdpfi66r6x.mp3"
+ },
+ {
   "id": "t:12 reps",
   "text": "12 reps.",
   "file": "15hd4ik13jj0zq.mp3"
  },
  {
+  "id": "t:12 rows/side",
+  "text": "12 rows each side.",
+  "file": "1vet4zt1614b6n.mp3"
+ },
+ {
+  "id": "t:15 RDLs",
+  "text": "15 R D Ls.",
+  "file": "1y7mfig1x26t36.mp3"
+ },
+ {
   "id": "t:15 RDLs + 10–12 presses",
   "text": "15 R D Ls, then 10 to 12 presses.",
   "file": "ze0wgj1sacpmp.mp3"
+ },
+ {
+  "id": "t:15 presses",
+  "text": "15 presses.",
+  "file": "xp07u1qsk2r0.mp3"
  },
  {
   "id": "t:15 presses + 12 rows/side",

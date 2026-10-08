@@ -139,14 +139,14 @@ const TEMPLATES = [
           note: "Stop when the reps are done, or keep going until the timer ends." }),
         station([ex("farmer-carry")], p.stationSec, { instruction: "Heavy dumbbells or kettlebells. Stand tall, short quick steps." }),
         station([ex("db-floor-press", reps(15, { label: "presses" })), ex("db-row", reps(12, { perSide: true, label: "rows" }))], p.stationSec,
-          { name: "Upper Body", cue: "Upper body. Floor press and rows", note: "Or keep working for the full interval." }),
+          { name: "Upper Body", cue: "Upper body. Floor press and rows" }),
         station([ex("reverse-lunge", reps(20, { approx: true, label: "total" }))], p.stationSec),
         station([ex("db-rdl", reps(15, { label: "RDLs" })), ex("shoulder-press", reps([10, 12], { label: "presses" }))], p.stationSec,
           { name: "RDL + Shoulder Press", cue: "R D L and shoulder press", instruction: "Romanian deadlifts first, then strict shoulder presses." }),
         station([ex("suitcase-carry"), ex("core-finish")], p.stationSec,
           { name: "Suitcase Carry + Core", cue: "Suitcase carry and core", instruction: "Alternate sides on the carry, then transition into knee drives or dead bugs." }),
         station([ex("goblet-squat"), ex("db-row"), ex("push-press"), ex("battle-ropes")], p.stationSec,
-          { name: "Final Full-Body Station", cue: "Final full body station", note: "Keep moving until the timer ends." }),
+          { name: "Final Full-Body Station", cue: "Final full body station", note: "Each move gets its own timer, with a short switch in between." }),
       ];
       return { rounds: stations.map((st, i) => round([
         cardio("run", p.runSec, { speed: p.speed }), rest(p.restSec), st, i < stations.length - 1 && rest(p.restSec),
@@ -254,7 +254,7 @@ const TEMPLATES = [
       return { rounds: Array.from({ length: p.rounds }, () => round([
         cardio("run", p.machineSec, { speed: p.speed }), cardio("row", p.machineSec), cardio("bike", p.machineSec), rest(p.restSec),
         station([ex("goblet-squat", reps(10)), ex("db-row", reps(10, { perSide: true })), ex("push-press", reps(10, { label: "presses" }))], p.circuitSec,
-          { name: "Strength Circuit", cue: "Strength circuit", note: "Repeat the circuit until time runs out." }),
+          { name: "Strength Circuit", cue: "Strength circuit", note: "Repeat the circuit until time runs out.", circuit: true }),
       ])) };
     },
   },
@@ -322,8 +322,8 @@ const TEMPLATES = [
       const machines = ["run", "row", "bike", "run", "row", "bike", "run", "cardio-choice"];
       const stations = ["kb-swing", "goblet-squat", "db-row", "reverse-lunge", "push-press", "farmer-carry", "db-rdl"]
         .map(m => station([m], p.stationSec));
-      stations.push(station(["goblet-squat", "db-row", "push-press", "kb-swing"], Math.round(p.stationSec * 1.5),
-        { name: "Full-Body Finisher", cue: "Full body finisher", note: "Keep moving until the timer ends." }));
+      stations.push(station(["goblet-squat", "db-row", "push-press", "kb-swing"], p.stationSec,
+        { name: "Full-Body Finisher", cue: "Full body finisher", note: "Each move gets its own timer, with a short switch in between." }));
       return { rounds: stations.map((st, i) => round([
         cardio(machines[i], p.cardioSec, machines[i] === "run" ? { speed: p.speed } : {}), rest(p.transSec), st,
         i < stations.length - 1 && rest(p.transSec),

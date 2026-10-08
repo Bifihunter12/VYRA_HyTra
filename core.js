@@ -112,6 +112,19 @@ function spokenTarget(target) {
 }
 
 const OPEN_ENDED_ESTIMATE = 60;   // seconds assumed for rep-only stations when planning
+const SWITCH_SEC = 10;            // between exercises of a timed multi-exercise station
+
+/* A timed station with several exercises gives every exercise its own timer (the station's time each),
+   with a short SWITCH between them. Circuits ("repeat until time runs out") keep one timer. */
+function splitStation(b, exs) {
+  if (exs.length < 2 || b.duration == null || b.circuit || b.segments) return null;
+  const pattern = [];
+  exs.forEach((e, i) => {
+    if (i) pattern.push({ label: "SWITCH", tone: "rest", duration: SWITCH_SEC, exId: e.id, switch: true });
+    pattern.push({ label: e.name, tone: "hard", duration: b.duration, exId: e.id, target: targetText(e.target) });
+  });
+  return { pattern };
+}
 
 function compile(workout, swaps = {}, opts = {}) {
   const timeline = [];
@@ -147,11 +160,12 @@ function compile(workout, swaps = {}, opts = {}) {
         const title = single && (single.swapped || !b.name) ? single.name : (b.name || exs.map(e => e.name).join(" + "));
         const cue = single && (single.swapped || !b.cue) ? (single.cue || single.name) : (b.cue || title);
         const instruction = (!anySwap && b.instruction) || (single ? single.instruction : b.instruction || "");
-        const { segments, duration } = resolveSegments(b.segments, b.duration ?? null);
+        const split = splitStation(b, exs);
+        const { segments, duration } = split ? resolveSegments(split, null) : resolveSegments(b.segments, b.duration ?? null);
         timeline.push({ ...base, type: "WORK", state: "WORK", duration, estimate: duration ?? b.estimate ?? OPEN_ENDED_ESTIMATE,
           title, cue, icon: exerciseIcon(single || exs[0]), instruction, note: b.note || "",
           exercises: exs, target: exs.map(e => targetText(e.target)).filter(Boolean).join(" + "),
-          hasTarget: exs.some(e => e.target), openEnded: duration == null, segments });
+          hasTarget: exs.some(e => e.target), openEnded: duration == null, segments, split: !!split });
       }
     });
   });

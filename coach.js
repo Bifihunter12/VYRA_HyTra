@@ -31,6 +31,7 @@ const COACH_LINES = {
   "last-round": "Last round. Make it count!",
   "togo-1": "One more after this.", "togo-2": "Two more rounds after this.", "togo-3": "Three more rounds after this.",
   "tap-done": "Tap done when the set is finished.", "tap-done-dist": "Tap done when you hit the distance.",
+  "seg-switch": "Switch. Move to the next one.",
   "seg-hard": "Hard! Push the pace.", "seg-easy": "Easy. Recover.", "seg-work": "Work!", "seg-rest": "Rest.",
   "preview": "Hey, I'm your VYRA coach. Round three. Kettlebell swings, let's go. Snap those hips!",
 };
@@ -84,6 +85,10 @@ function timelineLines(timeline) {
     if (iv.type === "REST") { const n = timeline.slice(i + 1).find(x => x.type !== "REST"); if (n) ids.add(nextKey(n)); return; }
     ids.add(introKey(iv));
     if (iv.target) ids.add(`t:${iv.target}`);
+    (iv.segments || []).forEach(sg => {
+      if (sg.switch) { ids.add("seg-switch"); ids.add(`next:${sg.exId}`); }
+      else if (sg.exId) { ids.add(`go:${sg.exId}`); if (sg.target) ids.add(`t:${sg.target}`); }
+    });
     if (iv.speed) ids.add(speedKey(iv.speed));
     if (iv.rounds > 1 && iv.roundStart) ids.add(iv.round === iv.rounds ? "last-round" : `round:${iv.round}`);
   });
@@ -122,8 +127,8 @@ class CoachScript {
       if (left === 0) out.push("last-round");
       else { out.push(`round:${iv.round}`); if (left <= 3 && iv.round > 1) out.push(`togo-${left}`); }
     }
-    out.push(introKey(iv));
-    if (iv.target) out.push(`t:${iv.target}`);
+    if (iv.split && iv.segments[0]) out.push(...this.segment(iv.segments[0]));
+    else { out.push(introKey(iv)); if (iv.target) out.push(`t:${iv.target}`); }
     if (iv.speed) out.push(speedKey(iv.speed));
     if (iv.openEnded) {
       const key = iv.type === "CARDIO" ? "tap-done-dist" : "tap-done";
@@ -138,7 +143,11 @@ class CoachScript {
     if (iv.type !== "REST" && durationSec >= 90 && remaining === Math.round(durationSec / 2)) return [this.encN++ % 2 ? `enc-${(this.encN % 6) + 1}` : "halfway"];
     return [];
   }
-  segment(seg) { const k = `seg-${String(seg?.label || "").toLowerCase()}`; return COACH_LINES[k] ? [k] : []; }
+  segment(seg) {
+    if (seg?.switch) return ["seg-switch", `next:${seg.exId}`];
+    if (seg?.exId) return [`go:${seg.exId}`, seg.target ? `t:${seg.target}` : null].filter(Boolean);
+    const k = `seg-${String(seg?.label || "").toLowerCase()}`; return COACH_LINES[k] ? [k] : [];
+  }
   /* `afterGate`: the finish was already announced on the cool-down screen. */
   finish(early, afterGate = false) { return [early ? "ended" : afterGate ? "cooldown-done" : this.challenge ? "challenge-done" : "workout-done"]; }
 }

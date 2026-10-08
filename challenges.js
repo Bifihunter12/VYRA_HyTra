@@ -204,7 +204,7 @@ const BENCHMARKS = [
     rules: ["As many rounds as possible in 20 minutes of: 200 m row, 10 goblet squats, 10 KB swings, 10 DB push press.", "Score rounds + movements done in the last round."],
     inputs: () => [{ key: "rounds", label: "Full rounds", unit: "rounds" }, { key: "extra", label: "Movements into the next round (0–3)", unit: "of 4" }],
     build: v => ({ rounds: [round([station([ex("row-sprint", { distance: 200, unit: "m" }), ex("goblet-squat", reps(10)), ex("kb-swing", reps(10)), ex("push-press", reps(10))], v.min * 60,
-      { name: "The Storm", cue: "The Storm. As many rounds as possible", note: "Count your rounds." })])] }),
+      { name: "The Storm", cue: "The Storm. As many rounds as possible", note: "Count your rounds.", circuit: true })])] }),
   },
   {
     id: "iron-hour", name: "Iron Hour", tagline: "60 minutes for distance", scoring: "distance", icon: "ti-hourglass",
@@ -390,7 +390,7 @@ function challengeFromSpec(spec) {
     if (sg.type === "cardio") return sg.meters ? toDistance(sg.ex, sg.meters, sg.estimate || sg.meters * 0.3, { title: sg.title, effort: sg.effort })
       : cardio(sg.ex, sg.sec, { title: sg.title, effort: sg.effort });
     const exs = sg.exercises.map(e => ex(e.id, e.reps ? reps(e.reps) : e.meters ? { distance: e.meters, unit: "m" } : undefined));
-    return station(exs, sg.sec ?? null, { name: sg.name, estimate: sg.estimate, note: sg.note });
+    return station(exs, sg.sec ?? null, { name: sg.name, estimate: sg.estimate, note: sg.note, circuit: true });
   };
   return {
     kind: spec.kind || "event", icon: spec.icon || "ti-trophy", level: spec.level || "intermediate",
