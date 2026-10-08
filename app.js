@@ -11,18 +11,28 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.07.1";
+const APP_VERSION = "2026.10.08.1";
 const STORE_KEY = "vyra_v1";
 /* Beeps, the voice coach and vibration. */
 const CUES_ENABLED = true;
 
 /* ── 4. Cues: sound, speech, vibration ──────────────────────────────────────── */
 
+/* Volume: 0–1.5 (above 100% is a boost for loud gyms; a limiter keeps it clean). */
+const volume = () => (state.settings.muted ? 0 : state.settings.volume ?? 1);
+
 const Cues = {
-  ctx: null,
+  ctx: null, master: null,
   unlock() {
     try {
-      if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!this.ctx) {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const limiter = this.ctx.createDynamicsCompressor();
+        limiter.threshold.value = -3; limiter.knee.value = 0; limiter.ratio.value = 20; limiter.attack.value = 0.002; limiter.release.value = 0.1;
+        this.master = this.ctx.createGain();
+        this.master.gain.value = volume();
+        this.master.connect(limiter).connect(this.ctx.destination);
+      }
       if (this.ctx.state === "suspended") this.ctx.resume();
     } catch { /* audio unavailable */ }
     // iOS only allows speech after a user gesture: prime it with a silent utterance.
@@ -45,7 +55,7 @@ const Cues = {
       g.gain.setValueAtTime(0.0001, t);
       g.gain.exponentialRampToValueAtTime(gain, t + 0.015);
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      osc.connect(g).connect(this.ctx.destination);
+      osc.connect(g).connect(this.master || this.ctx.destination);
       osc.start(t); osc.stop(t + dur + 0.05);
     } catch { /* ignore */ }
   },
@@ -57,6 +67,15 @@ const Cues = {
   complete()  { [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.35, { type: "triangle", gain: 0.25, delay: i * 0.16 })); },
   say(text) { Voice.play([], { fallback: text }); },
   hush() { Voice.stop(); },
+  setVolume(v) {
+    state.settings.volume = Math.max(0, Math.min(1.5, v));
+    if (this.master) this.master.gain.setTargetAtTime(volume(), this.ctx.currentTime, 0.03);
+  },
+  setMuted(m) {
+    state.settings.muted = m;
+    if (m) Voice.stop();
+    if (this.master) this.master.gain.setTargetAtTime(volume(), this.ctx.currentTime, 0.03);
+  },
   buzz(pattern) {
     if (!CUES_ENABLED) return;
     if (state.settings.vibrate && navigator.vibrate) { try { navigator.vibrate(pattern); } catch { /* ignore */ } }
@@ -93,7 +112,7 @@ const Voice = {
   },
   /* Say these lines one after another, cutting off whatever was being said. */
   async play(ids, { fallback = "", interrupt = true } = {}) {
-    if (!CUES_ENABLED || coachVoice() === "off") return;
+    if (!CUES_ENABLED || coachVoice() === "off" || state.settings.muted) return;
     if (interrupt) this.stop();
     const token = this.token;
     const items = await Promise.all(ids.filter(Boolean).map(async id => ({ id, buf: await this.buffer(id) })));
@@ -108,7 +127,7 @@ const Voice = {
     return new Promise(resolve => {
       try {
         const src = Cues.ctx.createBufferSource();
-        src.buffer = buf; src.connect(Cues.ctx.destination);
+        src.buffer = buf; src.connect(Cues.master || Cues.ctx.destination);
         src.onended = () => resolve(); this.source = src; src.start();
       } catch { resolve(); }
     });
@@ -118,7 +137,7 @@ const Voice = {
       if (!text || !("speechSynthesis" in window)) return resolve();
       try {
         const u = new SpeechSynthesisUtterance(text);
-        u.lang = "en-US"; u.rate = 1.02;
+        u.lang = "en-US"; u.rate = 1.02; u.volume = Math.min(1, volume());
         const want = coachVoice() === "male" ? /male|daniel|alex|fred|guy|david|mark|james/i : /female|samantha|karen|victoria|zira|aria|jenny/i;
         const v = speechSynthesis.getVoices().filter(x => /^en/i.test(x.lang));
         u.voice = v.find(x => want.test(x.name) && /natural|neural|enhanced|premium|google/i.test(x.name)) || v.find(x => want.test(x.name)) || null;
@@ -327,11 +346,26 @@ function topbar(right = "", left = "") {
 const backButton = (act, label = "Back") =>
   `<button class="back-btn" data-go="${act}" aria-label="${label}"><i class="ti ti-chevron-left"></i><span>${label}</span></button>`;
 
+const volIcon = () => (volume() === 0 ? "ti-volume-off" : volume() < 0.5 ? "ti-volume-2" : "ti-volume");
+/* The speaker button opens a volume panel (slider, quick steps, mute). */
 function soundButton() {
   if (!CUES_ENABLED) return "";
-  const on = state.settings.sound || state.settings.voice;
-  return `<button class="icon-btn" data-act="toggle-audio" aria-label="${on ? "Mute audio cues" : "Turn audio cues on"}" title="Audio cues">
-    <i class="ti ${on ? "ti-volume" : "ti-volume-off"}" aria-hidden="true"></i></button>`;
+  return `<button class="icon-btn ${ui.volOpen ? "on" : ""}" data-act="volume-open" aria-label="Volume" aria-expanded="${!!ui.volOpen}" title="Volume">
+    <i class="ti ${volIcon()}" aria-hidden="true"></i></button>
+    ${ui.volOpen ? `<div class="vol-panel" role="dialog" aria-label="Volume">${volumeControl("vol-slider")}
+      <button class="text-btn vol-close" data-act="volume-open">Done</button></div>` : ""}`;
+}
+function volumeControl(id) {
+  const pct = Math.round((state.settings.volume ?? 1) * 100);
+  const muted = !!state.settings.muted;
+  return `
+  <div class="vol">
+    <button class="icon-btn" data-act="toggle-audio" aria-label="${muted ? "Unmute" : "Mute"}"><i class="ti ${muted ? "ti-volume-off" : "ti-volume"}"></i></button>
+    <button class="icon-btn icon-btn--sm" data-act="volume-step" data-dir="-1" aria-label="Quieter"><i class="ti ti-minus"></i></button>
+    <input class="vol-slider" id="${id}" type="range" min="0" max="150" step="5" value="${pct}" aria-label="Volume" ${muted ? "disabled" : ""}>
+    <button class="icon-btn icon-btn--sm" data-act="volume-step" data-dir="1" aria-label="Louder"><i class="ti ti-plus"></i></button>
+    <span class="vol-pct" data-bind="vol-pct">${muted ? "Muted" : `${pct}%`}</span>
+  </div>`;
 }
 const sectionLabel = (text, right = "") => `<div class="section-label section-label--row"><span>${text}</span>${right}</div>`;
 const switchRow = (attr, on, label, icon, sub = "") => `
@@ -1014,6 +1048,8 @@ function renderProfile() {
       <span class="set-label">Coach voice<span class="set-unit">Talks you through every interval, like a coach in the room</span></span></div>
     <div class="pad-y coach-pick">${chips("data-coach", [["female", "Female"], ["male", "Male"], ["off", "Off"]], coachVoice())}
       ${coachVoice() !== "off" ? `<button class="text-btn" data-act="voice-preview"><i class="ti ti-player-play"></i> Hear ${esc(COACH_VOICES[coachVoice()].name)}</button>` : ""}</div>
+    <div class="set-row set-row--stack"><i class="ti ti-volume set-ic"></i><span class="set-label">Volume<span class="set-unit">Above 100% boosts the coach for loud gyms</span></span></div>
+    <div class="pad-y">${volumeControl("vol-slider-profile")}</div>
     ${switchRow('data-setting="sound"', state.settings.sound, "Beeps", "ti-bell-ringing")}
     ${switchRow('data-setting="vibrate"', state.settings.vibrate, "Vibration", "ti-device-mobile-vibration")}
   </div>` : ""}
@@ -1110,7 +1146,7 @@ function startWorkout(templateId = ui.templateId, custom = null, programKey = nu
   if (mine) workout.name = mine.name;
   else if (inPlan?.name) workout.name = inPlan.name;
   ui.returnTo = ui.screen === "summary" ? ui.tab : ui.screen;
-  ui.gate = null; ui.gateCount = null;
+  ui.gate = null; ui.gateCount = null; ui.volOpen = false;
   session = { workout, timeline, swaps, startedAt: Date.now(), programKey: inPlan ? inPlan.key : null, ghost: custom?.ghost || null, mineId: mine?.id || null };
   engine = new IntervalEngine(timeline, { countdown: 3 });
   wireCues(engine);
@@ -1591,9 +1627,21 @@ function renderSummary() {
 
 /* ── Events ────────────────────────────────────────────────────────────────── */
 
-app.addEventListener("change", ev => { handlePlansChange(ev); });
+app.addEventListener("change", ev => {
+  if (ev.target.classList?.contains("vol-slider")) { save(); volumeSample(); return; }
+  handlePlansChange(ev);
+});
+/* A short sound at the new level, so the athlete hears what they picked (mid-workout: just a beep). */
+function volumeSample() {
+  if (ui.screen === "player" || coachVoice() === "off") Cues.beep(); else Voice.play(["halfway"]);
+}
 
 app.addEventListener("input", ev => {
+  if (ev.target.classList?.contains("vol-slider")) {
+    Cues.unlock(); Cues.setVolume(Number(ev.target.value) / 100);
+    const out = app.querySelector('[data-bind="vol-pct"]'); if (out) out.textContent = `${ev.target.value}%`;
+    return;
+  }
   if (handlePlansInput(ev)) return;
   if (ev.target.id === "athlete-search") { searchAthletes(ev.target.value.trim()); return; }
   if (ev.target.id === "club-search") { searchClubs(ev.target.value.trim()); return; }
@@ -1735,9 +1783,17 @@ app.addEventListener("click", async ev => {
     case "end-confirm": ui.confirmEnd = false; return engine?.end();
     case "voice-preview": Cues.unlock(); Voice.play(["preview"]); return;
     case "toggle-audio": {
-      const on = !(state.settings.sound || state.settings.voice);
-      state.settings.sound = on; state.settings.voice = on; save();
-      if (on) { Cues.unlock(); Cues.beep(); } else Cues.hush();
+      Cues.unlock();
+      Cues.setMuted(!state.settings.muted); save();
+      if (!state.settings.muted) Cues.beep();
+      return ui.screen === "player" ? renderPlayer() : rerender();
+    }
+    case "volume-open": ui.volOpen = !ui.volOpen; return ui.screen === "player" ? renderPlayer() : rerender();
+    case "volume-step": {
+      Cues.unlock();
+      if (state.settings.muted) Cues.setMuted(false);
+      Cues.setVolume(Math.round(((state.settings.volume ?? 1) + Number(d.dir) * 0.1) * 10) / 10); save();
+      volumeSample();
       return ui.screen === "player" ? renderPlayer() : rerender();
     }
     case "rate": {
