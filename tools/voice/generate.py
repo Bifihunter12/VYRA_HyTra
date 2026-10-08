@@ -14,7 +14,13 @@ from kokoro_onnx import Kokoro
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT = os.path.join(ROOT, "audio", "voice")
-VOICES = {"female": ("af_heart", 1.04), "male": ("am_michael", 1.04)}   # Kokoro voice, speaking speed
+# Kokoro voice ("a+b" = an even blend of two voices), speaking speed
+VOICES = {"female": ("af_heart", 1.04), "male": ("am_fenrir+am_onyx", 1.04)}
+
+
+def style(k, model):
+    names = model.split("+")
+    return sum(k.get_voice_style(n) for n in names) / len(names)
 
 
 def encode(samples, sr, dest):
@@ -31,16 +37,19 @@ def encode(samples, sr, dest):
 def main(models):
     lines = json.load(open(os.path.join(ROOT, "tools", "voice", "catalog.json")))
     man_path = os.path.join(OUT, "manifest.json")
-    old = json.load(open(man_path))["lines"] if os.path.exists(man_path) else {}
+    old_man = json.load(open(man_path)) if os.path.exists(man_path) else {"lines": {}, "voices": {}}
+    old = old_man["lines"]
     k = Kokoro(os.path.join(models, "kokoro-v1.0.onnx"), os.path.join(models, "voices-v1.0.bin"))
     made = 0
     for key, (model, speed) in VOICES.items():
         os.makedirs(os.path.join(OUT, key), exist_ok=True)
+        same_voice = old_man.get("voices", {}).get(key) == model          # a new voice re-records everything
+        voice = style(k, model)
         for line in lines:
             dest = os.path.join(OUT, key, line["file"])
-            if os.path.exists(dest) and old.get(line["id"], {}).get("text") == line["text"]:
+            if same_voice and os.path.exists(dest) and old.get(line["id"], {}).get("text") == line["text"]:
                 continue
-            samples, sr = k.create(line["text"], voice=model, speed=speed, lang="en-us")
+            samples, sr = k.create(line["text"], voice=voice, speed=speed, lang="en-us")
             encode(samples, sr, dest)
             made += 1
     keep = {l["file"] for l in lines}
