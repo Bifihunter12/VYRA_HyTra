@@ -79,7 +79,7 @@ declare
   m   date := date_trunc('month', p_month)::date;
   s   timestamptz := (m::timestamp) at time zone 'utc';
   e   timestamptz := ((m + interval '1 month')::timestamp) at time zone 'utc';
-  ch  text; va text; d text; b text;
+  ch  text; va text; d text; board text;
 begin
   if now() < e + interval '1 day' then return; end if;
   if exists (select 1 from public.monthly_closings c where c.month = m) then return; end if;
@@ -87,9 +87,9 @@ begin
   if ch is null then return; end if;
 
   foreach d in array array['open', 'competitive', 'elite'] loop
-  foreach b in array array[va, va || '~any'] loop
+  foreach board in array array[va, va || '~any'] loop
     insert into public.monthly_results (month, division, variant, rank, user_id, display_name, handle, score, verification)
-    select m, d, b, ranked.rank, ranked.user_id, coalesce(p.display_name, 'Athlete'), p.handle, ranked.score, ranked.verification
+    select m, d, board, ranked.rank, ranked.user_id, coalesce(p.display_name, 'Athlete'), p.handle, ranked.score, ranked.verification
     from (
       select b.*, rank() over (order by case when b.better = 'lower' then b.score end asc,
                                         case when b.better = 'higher' then b.score end desc)::int as rank
@@ -97,7 +97,7 @@ begin
         select distinct on (a.user_id) a.user_id, a.score, a.better, a.verification
         from public.attempts a
         join public.athletes p on p.user_id = a.user_id
-        where a.challenge_id = ch and a.variant = b and a.division = d
+        where a.challenge_id = ch and a.variant = board and a.division = d
           and not a.deleted and not a.dnf and a.verification in ('community', 'verified')
           and p.leaderboards
           and a.performed_at >= s and a.performed_at < e
@@ -109,9 +109,9 @@ begin
     on conflict do nothing;
 
     insert into public.monthly_closings (month, division, challenge_id, variant, better, participants)
-    values (m, d, ch, b,
+    values (m, d, ch, board,
             (select a.better from public.attempts a where a.challenge_id = ch limit 1),
-            (select count(*) from public.monthly_results r where r.month = m and r.division = d and r.variant = b))
+            (select count(*) from public.monthly_results r where r.month = m and r.division = d and r.variant = board))
     on conflict do nothing;
   end loop;
   end loop;
