@@ -16,7 +16,11 @@ const COACH_VOICES = {
 const COACH_LINES = {
   "c3": "Three.", "c2": "Two.", "c1": "One.", "go": "Go!",
   "warmup-start": "Alright, let's warm up. Nice and easy, get the blood moving.",
-  "warmup-done": "Warm up done. Nice. Take a breath, get set up, and tap start when you're ready.",
+  "warmup-done": "Warm up done. Nice. Take a breath, get set up, and press play on your headphones, or tap start, when you're ready.",
+  "cooldown-offer": "Press play to cool down, or tap skip.",
+  "fixed-block": "This block runs to the end. Keep moving.",
+  "locked": "Screen locked. Use your headphones: press once to pause, twice for done.",
+  "your-time": "Your time:",
   "cooldown": "Let's cool down. Slow it right down and breathe.",
   "workout-done": "That's it, workout complete. Great job today.",
   "challenge-done": "Done! Clock's stopped. That was a big effort.",
@@ -31,13 +35,31 @@ const COACH_LINES = {
   "enc-4": "Stay with it.", "enc-5": "Relax the shoulders. Keep moving.", "enc-6": "That's it. Keep it steady.",
   "last-round": "Last round. Make it count!",
   "togo-1": "One more after this.", "togo-2": "Two more rounds after this.", "togo-3": "Three more rounds after this.",
-  "tap-done": "Tap done when the set is finished.", "tap-done-dist": "Tap done when you hit the distance.",
+  "tap-done": "Tap done, or double press your headphones, when the set is finished.",
+  "tap-done-dist": "Tap done, or double press your headphones, when you hit the distance.",
   "seg-switch": "Switch. Move to the next one.",
   "seg-hard": "Hard! Push the pace.", "seg-easy": "Easy. Recover.", "seg-work": "Work!", "seg-rest": "Rest.",
   "preview": "Hey, I'm your Iron Forest coach. Round three. Kettlebell swings, let's go. Snap those hips!",
 };
 const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
   "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"];
+const TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+/* 0–199 as words: 34 → "thirty-four", 125 → "one hundred twenty-five". */
+function numberWords(n) {
+  n = Math.round(n);
+  if (n >= 100) return `one hundred${n > 100 ? ` ${numberWords(n - 100)}` : ""}`;
+  if (n <= 20) return NUMBER_WORDS[n];
+  return `${TENS[Math.floor(n / 10)]}${n % 10 ? `-${NUMBER_WORDS[n % 10]}` : ""}`;
+}
+const cap1 = s => s[0].toUpperCase() + s.slice(1);
+/* How long a timed block is, the way a coach says it: 60 → "One minute.", 270 → "Four minutes thirty." */
+function durationText(sec) {
+  const m = Math.floor(sec / 60), s = sec % 60;
+  if (!m || (m === 1 && s)) return `${cap1(numberWords(sec))} seconds.`;
+  if (!s) return `${cap1(numberWords(m))} minute${m === 1 ? "" : "s"}.`;
+  return `${cap1(numberWords(m))} minutes ${numberWords(s)}.`;
+}
+const LONG_SEC = 150;          // timed blocks this long get "N minutes left" every minute
 
 const firstSentence = s => (String(s || "").match(/^.*?[.!?](\s|$)/) || [String(s || "")])[0].trim();
 const sentence = s => { s = String(s || "").trim(); return s ? s[0].toUpperCase() + s.slice(1) + (/[.!?]$/.test(s) ? "" : ".") : ""; };
@@ -61,6 +83,11 @@ function coachText(id) {
   if (kind === "t") return speakTarget(arg);
   if (kind === "mph") return `Treadmill at ${Number(arg)}.`;
   if (kind === "round") return Number(arg) === 1 ? "Round one. Here we go." : `Round ${NUMBER_WORDS[arg] || arg}.`;
+  if (kind === "dur") return durationText(Number(arg));
+  if (kind === "left") return Number(arg) === 1 ? "One minute left." : `${cap1(numberWords(Number(arg)))} minutes left.`;
+  if (kind === "in") return Number(arg) === 1 ? "One minute in." : `${cap1(numberWords(Number(arg)))} minutes.`;
+  if (kind === "tmin") return `${cap1(numberWords(Number(arg)))} minute${Number(arg) === 1 ? "" : "s"},`;
+  if (kind === "tsec") return `${numberWords(Number(arg))} second${Number(arg) === 1 ? "" : "s"}.`;
   return "";
 }
 
@@ -93,14 +120,20 @@ function timelineLines(timeline) {
     });
     if (iv.speed) ids.add(speedKey(iv.speed));
     if (iv.rounds > 1 && iv.roundStart) ids.add(iv.round === iv.rounds ? "last-round" : `round:${iv.round}`);
+    if (sayDuration(iv)) ids.add(`dur:${iv.duration}`);
+    (iv.segments || []).forEach(sg => sg.exId && !sg.switch && ids.add(`dur:${sg.end - sg.start}`));
+    if (iv.duration >= LONG_SEC) for (let m = 1; m * 60 < iv.duration - 30; m++) ids.add(`left:${m}`);
   });
   return ids;
 }
 
+/* Timed work is announced with its length, so nobody has to look at the clock. */
+const sayDuration = iv => iv && iv.duration > 0 && (iv.type === "WORK" || iv.type === "CARDIO") && !iv.split;
+
 /* What to say as the workout moves along. Keeps a little memory so it doesn't repeat itself. */
 class CoachScript {
-  constructor(timeline, { challenge = false, finale = "" } = {}) {
-    this.tl = timeline; this.challenge = challenge; this.finale = finale;
+  constructor(timeline, { challenge = false, finale = "", timeSec = null } = {}) {
+    this.tl = timeline; this.challenge = challenge; this.finale = finale; this.timeSec = timeSec;
     this.restN = 0; this.encN = 0; this.toldDone = new Set();
   }
   countdown(n) { return [`c${n}`]; }
@@ -109,7 +142,7 @@ class CoachScript {
   interval(index, reason, gate = null) {
     const iv = this.tl[index], prev = this.tl[index - 1];
     if (gate === "main") return ["warmup-done"];
-    if (gate === "cool") return [this.doneLine()];
+    if (gate === "cool") return [this.doneLine(), ...this.timeLines(), "cooldown-offer"];
     return this.intro(iv, prev, reason);
   }
   intro(iv, prev) {
@@ -132,6 +165,7 @@ class CoachScript {
     if (iv.story) out.push(`cue:${iv.story}`);                  // story challenges: the stage line says it all
     else if (iv.split && iv.segments[0]) out.push(...this.segment(iv.segments[0]));
     else { out.push(introKey(iv)); if (iv.target) out.push(`t:${iv.target}`); }
+    if (sayDuration(iv)) out.push(`dur:${iv.duration}`);
     if (iv.speed) out.push(speedKey(iv.speed));
     if (iv.openEnded && !iv.story) {
       const key = iv.type === "CARDIO" ? "tap-done-dist" : "tap-done";
@@ -143,16 +177,34 @@ class CoachScript {
   second(iv, remaining, durationSec) {
     if (!iv || iv.type === "WARM") return [];
     if (remaining === 10 && durationSec >= 30) return [iv.type === "REST" ? "ten-rest" : "ten-work"];
-    if (iv.type !== "REST" && durationSec >= 90 && remaining === Math.round(durationSec / 2)) return [this.encN++ % 2 ? `enc-${(this.encN % 6) + 1}` : "halfway"];
+    if (iv.type === "REST") return [];
+    if (durationSec >= LONG_SEC) {                                   // long blocks: every minute, how much is left
+      if (remaining % 60 === 0 && remaining > 0 && remaining < durationSec - 30) return [`left:${remaining / 60}`];
+      return [];
+    }
+    if (durationSec >= 90 && remaining === Math.round(durationSec / 2)) return [this.encN++ % 2 ? `enc-${(this.encN % 6) + 1}` : "halfway"];
     return [];
+  }
+  /* Seconds into an open-ended interval (run to a distance, finish the reps): a minute marker now and then. */
+  elapsed(iv, sec) {
+    if (!iv || iv.type === "WARM" || !iv.openEnded || sec <= 0 || sec % 60) return [];
+    const m = sec / 60;
+    return m <= 10 || m % 5 === 0 ? [`in:${m}`] : [];
+  }
+  /* "Your time: twelve minutes, thirty-four seconds." */
+  timeLines() {
+    const t = Math.round(this.timeSec?.() || 0);
+    if (t < 1) return [];
+    const m = Math.floor(t / 60), s = t % 60;
+    return ["your-time", m ? `tmin:${Math.min(m, 199)}` : null, m && !s ? null : `tsec:${s}`].filter(Boolean);
   }
   segment(seg) {
     if (seg?.switch) return ["seg-switch", `next:${seg.exId}`];
-    if (seg?.exId) return [`go:${seg.exId}`, seg.target ? `t:${seg.target}` : null].filter(Boolean);
+    if (seg?.exId) return [`go:${seg.exId}`, seg.target ? `t:${seg.target}` : null, `dur:${seg.end - seg.start}`].filter(Boolean);
     const k = `seg-${String(seg?.label || "").toLowerCase()}`; return COACH_LINES[k] ? [k] : [];
   }
   /* `afterGate`: the finish was already announced on the cool-down screen. */
-  finish(early, afterGate = false) { return [early ? "ended" : afterGate ? "cooldown-done" : this.doneLine()]; }
+  finish(early, afterGate = false) { return early ? ["ended"] : afterGate ? ["cooldown-done"] : [this.doneLine(), ...this.timeLines()]; }
   doneLine() { return finaleKey(this.finale) || (this.challenge ? "challenge-done" : "workout-done"); }
 }
 
@@ -165,6 +217,10 @@ function coachCatalog(timelines = []) {
   Object.keys(EXERCISES).forEach(id => { ids.add(`go:${id}`); ids.add(`next:${id}`); });
   MPH_STEPS.forEach(v => ids.add(`mph:${v}`));
   for (let r = 1; r <= 20; r++) ids.add(`round:${r}`);
+  for (let m = 1; m <= 120; m++) ids.add(`tmin:${m}`);
+  for (let s = 0; s < 60; s++) ids.add(`tsec:${s}`);
+  for (let m = 1; m <= 10; m++) { ids.add(`in:${m}`); ids.add(`left:${m}`); }
+  for (let m = 15; m <= 60; m += 5) ids.add(`in:${m}`);
   timelines.forEach(tl => timelineLines(tl).forEach(id => ids.add(id)));
   if (typeof BENCHMARKS !== "undefined") BENCHMARKS.forEach(c => c.finale && ids.add(finaleKey(c.finale)));
   return [...ids].sort().map(id => ({ id, text: coachText(id) })).filter(x => x.text);

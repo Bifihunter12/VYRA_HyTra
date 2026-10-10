@@ -24,6 +24,10 @@
 "file": "1d5l6qzsioks1.mp3",
 "text": "Nicely done. Drink some water, and I'll see you next time."
 },
+"cooldown-offer": {
+"file": "18c8zrv153m1h.mp3",
+"text": "Press play to cool down, or tap skip."
+},
 "cue:50 push-ups. Body in one straight line.": {
 "file": "1iop3pzrewl8l.mp3",
 "text": "50 push-ups. Body in one straight line."
@@ -560,6 +564,86 @@
 "file": "10i2subkr5kqh.mp3",
 "text": "You reached the summit. Nobody climbs higher than that."
 },
+"dur:120": {
+"file": "n2756v13z5wj1.mp3",
+"text": "Two minutes."
+},
+"dur:1200": {
+"file": "3tm00ltsqgmz.mp3",
+"text": "Twenty minutes."
+},
+"dur:135": {
+"file": "1manb6lixms7r.mp3",
+"text": "Two minutes fifteen."
+},
+"dur:180": {
+"file": "1nnqqjx19mu51j.mp3",
+"text": "Three minutes."
+},
+"dur:1800": {
+"file": "ommrxjx083o1.mp3",
+"text": "Thirty minutes."
+},
+"dur:240": {
+"file": "1v5ox3kcwebsi.mp3",
+"text": "Four minutes."
+},
+"dur:2400": {
+"file": "1ac8sf41nvf08e.mp3",
+"text": "Forty minutes."
+},
+"dur:255": {
+"file": "1xnohua139afjk.mp3",
+"text": "Four minutes fifteen."
+},
+"dur:270": {
+"file": "14n63vwaurk1.mp3",
+"text": "Four minutes thirty."
+},
+"dur:30": {
+"file": "19tvdud1s8x1bv.mp3",
+"text": "Thirty seconds."
+},
+"dur:300": {
+"file": "1swguwv2kawrh.mp3",
+"text": "Five minutes."
+},
+"dur:330": {
+"file": "x9gpc41mcvce.mp3",
+"text": "Five minutes thirty."
+},
+"dur:360": {
+"file": "1rrxbjdk3rujf.mp3",
+"text": "Six minutes."
+},
+"dur:3600": {
+"file": "uvi197sa0ypp.mp3",
+"text": "Sixty minutes."
+},
+"dur:40": {
+"file": "e6v89m1rayzws.mp3",
+"text": "Forty seconds."
+},
+"dur:45": {
+"file": "dcwf6pmuzftz.mp3",
+"text": "Forty-five seconds."
+},
+"dur:60": {
+"file": "1adcm4o16ykiq6.mp3",
+"text": "One minute."
+},
+"dur:600": {
+"file": "luyz3c3hxbf6.mp3",
+"text": "Ten minutes."
+},
+"dur:720": {
+"file": "i4tt4xdi8dkr.mp3",
+"text": "Twelve minutes."
+},
+"dur:90": {
+"file": "18pbugv10rcmtt.mp3",
+"text": "Ninety seconds."
+},
 "enc-1": {
 "file": "16c63a11mb7btn.mp3",
 "text": "You're doing great. Stay smooth."
@@ -591,6 +675,10 @@
 "escaped": {
 "file": "m8tphi1h2zvt8.mp3",
 "text": "You made it out. You escaped the Iron Forest! Clock's stopped."
+},
+"fixed-block": {
+"file": "1yd6v791sn8i5r.mp3",
+"text": "This block runs to the end. Keep moving."
 },
 "go": {
 "file": "iciszv1hasd45.mp3",
@@ -952,9 +1040,329 @@
 "file": "gf5uybdzqua9.mp3",
 "text": "Halfway there."
 },
+"in:1": {
+"file": "1smakrr10ssfvd.mp3",
+"text": "One minute in."
+},
+"in:10": {
+"file": "f4cxitjomhu7.mp3",
+"text": "Ten minutes."
+},
+"in:15": {
+"file": "dqex1y1o4m1x0.mp3",
+"text": "Fifteen minutes."
+},
+"in:2": {
+"file": "1swa6gq1vdwxro.mp3",
+"text": "Two minutes."
+},
+"in:20": {
+"file": "gsdp6m1nfhesc.mp3",
+"text": "Twenty minutes."
+},
+"in:25": {
+"file": "i6bpnhizhupj.mp3",
+"text": "Twenty-five minutes."
+},
+"in:3": {
+"file": "1t69s5pxii357.mp3",
+"text": "Three minutes."
+},
+"in:30": {
+"file": "1hyzlmv1410z0t.mp3",
+"text": "Thirty minutes."
+},
+"in:35": {
+"file": "1gl1l609fwh4i.mp3",
+"text": "Thirty-five minutes."
+},
+"in:4": {
+"file": "1r8ckaw1s3ml1i.mp3",
+"text": "Four minutes."
+},
+"in:40": {
+"file": "1f6falk5xual6.mp3",
+"text": "Forty minutes."
+},
+"in:45": {
+"file": "1gkdb2f10iyshh.mp3",
+"text": "Forty-five minutes."
+},
+"in:5": {
+"file": "1ric5zvu87qf1.mp3",
+"text": "Five minutes."
+},
+"in:50": {
+"file": "1gug29d1odfg7f.mp3",
+"text": "Fifty minutes."
+},
+"in:55": {
+"file": "1hoevcagn5jeg.mp3",
+"text": "Fifty-five minutes."
+},
+"in:6": {
+"file": "1rsbrou1otc8bc.mp3",
+"text": "Six minutes."
+},
+"in:60": {
+"file": "1iigtx6qa8rrs.mp3",
+"text": "Sixty minutes."
+},
+"in:7": {
+"file": "1s2bddtqxxdov.mp3",
+"text": "Seven minutes."
+},
+"in:8": {
+"file": "1q4e5j01lj1vl6.mp3",
+"text": "Eight minutes."
+},
+"in:9": {
+"file": "1qedr7znnn0yp.mp3",
+"text": "Nine minutes."
+},
 "last-round": {
 "file": "1h0dk2kj29inm.mp3",
 "text": "Last round. Make it count!"
+},
+"left:1": {
+"file": "1oqo0v11i2kc03.mp3",
+"text": "One minute left."
+},
+"left:10": {
+"file": "33uljr1s98kqd.mp3",
+"text": "Ten minutes left."
+},
+"left:11": {
+"file": "2tuzusr3jddq.mp3",
+"text": "Eleven minutes left."
+},
+"left:12": {
+"file": "3ntsxp1oyy807.mp3",
+"text": "Twelve minutes left."
+},
+"left:13": {
+"file": "3du78qnt90nk.mp3",
+"text": "Thirteen minutes left."
+},
+"left:14": {
+"file": "1zw6rv1ytta6p.mp3",
+"text": "Fourteen minutes left."
+},
+"left:15": {
+"file": "1pwl2wxo42u2.mp3",
+"text": "Fifteen minutes left."
+},
+"left:16": {
+"file": "2jve5t1vjixgj.mp3",
+"text": "Sixteen minutes left."
+},
+"left:17": {
+"file": "29vsguudtq3w.mp3",
+"text": "Seventeen minutes left."
+},
+"left:18": {
+"file": "vxrzz6d9xnx.mp3",
+"text": "Eighteen minutes left."
+},
+"left:19": {
+"file": "ly6b0148osae.mp3",
+"text": "Nineteen minutes left."
+},
+"left:2": {
+"file": "1nwp7s4k75hdm.mp3",
+"text": "Two minutes left."
+},
+"left:20": {
+"file": "xmb7r01bnpodi.mp3",
+"text": "Twenty minutes left."
+},
+"left:21": {
+"file": "xwatfzdsatr1.mp3",
+"text": "Twenty-one minutes left."
+},
+"left:22": {
+"file": "y6af4y18dfbnc.mp3",
+"text": "Twenty-two minutes left."
+},
+"left:23": {
+"file": "yga0txai0h0v.mp3",
+"text": "Twenty-three minutes left."
+},
+"left:24": {
+"file": "wicsz41i8adtu.mp3",
+"text": "Twenty-four minutes left."
+},
+"left:25": {
+"file": "wsceo3kcvj7d.mp3",
+"text": "Twenty-five minutes left."
+},
+"left:26": {
+"file": "x2c0d21ey013o.mp3",
+"text": "Twenty-six minutes left."
+},
+"left:27": {
+"file": "xcbm21h2l6h7.mp3",
+"text": "Twenty-seven minutes left."
+},
+"left:28": {
+"file": "zu81asyik9gu.mp3",
+"text": "Twenty-eight minutes left."
+},
+"left:29": {
+"file": "1047mzrn5eud.mp3",
+"text": "Twenty-nine minutes left."
+},
+"left:3": {
+"file": "1o6oth31lcuoq9.mp3",
+"text": "Three minutes left."
+},
+"left:30": {
+"file": "zabzet1aprmyf.mp3",
+"text": "Thirty minutes left."
+},
+"left:31": {
+"file": "z0cdpu9k2fls.mp3",
+"text": "Thirty-one minutes left."
+},
+"left:32": {
+"file": "yqcs0v1e01zol.mp3",
+"text": "Thirty-two minutes left."
+},
+"left:33": {
+"file": "ygd6bwcucsby.mp3",
+"text": "Thirty-three minutes left."
+},
+"left:34": {
+"file": "y6dkmx1haccer.mp3",
+"text": "Thirty-four minutes left."
+},
+"left:35": {
+"file": "xwdyxyg4n524.mp3",
+"text": "Thirty-five minutes left."
+},
+"left:36": {
+"file": "xmed8z1kkmp4x.mp3",
+"text": "Thirty-six minutes left."
+},
+"left:37": {
+"file": "xcerk0jexhsa.mp3",
+"text": "Thirty-seven minutes left."
+},
+"left:38": {
+"file": "11i8syl1nux1v3.mp3",
+"text": "Thirty-eight minutes left."
+},
+"left:39": {
+"file": "118979mmp7uig.mp3",
+"text": "Thirty-nine minutes left."
+},
+"left:4": {
+"file": "1ncq0e6acaf74.mp3",
+"text": "Four minutes left."
+},
+"left:40": {
+"file": "3nbtu21hbdww0.mp3",
+"text": "Forty minutes left."
+},
+"left:41": {
+"file": "3xbfj1jfz29j.mp3",
+"text": "Forty-one minutes left."
+},
+"left:42": {
+"file": "33cmg41klo9m6.mp3",
+"text": "Forty-two minutes left."
+},
+"left:43": {
+"file": "3dc853mq9ezp.mp3",
+"text": "Forty-three minutes left."
+},
+"left:44": {
+"file": "2jdf261nvymcc.mp3",
+"text": "Forty-four minutes left."
+},
+"left:45": {
+"file": "2td0r5q0jrpv.mp3",
+"text": "Forty-five minutes left."
+},
+"left:46": {
+"file": "1ze7o81r68z2i.mp3",
+"text": "Forty-six minutes left."
+},
+"left:47": {
+"file": "29dtd7tau4g1.mp3",
+"text": "Forty-seven minutes left."
+},
+"left:48": {
+"file": "1ff0aa1ugjbso.mp3",
+"text": "Forty-eight minutes left."
+},
+"left:49": {
+"file": "1pelz9wl4h67.mp3",
+"text": "Forty-nine minutes left."
+},
+"left:5": {
+"file": "1nmpm351bhzmjr.mp3",
+"text": "Five minutes left."
+},
+"left:50": {
+"file": "vyag37xwxh4h.mp3",
+"text": "Fifty minutes left."
+},
+"left:51": {
+"file": "voaue81vscbqy.mp3",
+"text": "Fifty-one minutes left."
+},
+"left:52": {
+"file": "wi9nh5umn4eb.mp3",
+"text": "Fifty-two minutes left."
+},
+"left:53": {
+"file": "w8a1s61si1z0s.mp3",
+"text": "Fifty-three minutes left."
+},
+"left:54": {
+"file": "x28uv3rccro5.mp3",
+"text": "Fifty-four minutes left."
+},
+"left:55": {
+"file": "ws99641p7rmam.mp3",
+"text": "Fifty-five minutes left."
+},
+"left:56": {
+"file": "xm8291o22exz.mp3",
+"text": "Fifty-six minutes left."
+},
+"left:57": {
+"file": "xc8gk21lxh9kg.mp3",
+"text": "Fifty-seven minutes left."
+},
+"left:58": {
+"file": "y679mz1b22w15.mp3",
+"text": "Fifty-eight minutes left."
+},
+"left:59": {
+"file": "xw7ny09wdooi.mp3",
+"text": "Fifty-nine minutes left."
+},
+"left:6": {
+"file": "1msqt08dmkrxa.mp3",
+"text": "Six minutes left."
+},
+"left:7": {
+"file": "1n2qep71es9z9x.mp3",
+"text": "Seven minutes left."
+},
+"left:8": {
+"file": "1m8rlmau20jk4.mp3",
+"text": "Eight minutes left."
+},
+"left:9": {
+"file": "1mir7b91v7pqwr.mp3",
+"text": "Nine minutes left."
+},
+"locked": {
+"file": "1l6jm371bx19hp.mp3",
+"text": "Screen locked. Use your headphones: press once to pause, twice for done."
 },
 "mph:10.0": {
 "file": "dftlwxqvg9fz.mp3",
@@ -1982,11 +2390,11 @@
 },
 "tap-done": {
 "file": "cvb39l1ecdk5b.mp3",
-"text": "Tap done when the set is finished."
+"text": "Tap done, or double press your headphones, when the set is finished."
 },
 "tap-done-dist": {
 "file": "ybro5o1lhenm6.mp3",
-"text": "Tap done when you hit the distance."
+"text": "Tap done, or double press your headphones, when you hit the distance."
 },
 "ten-rest": {
 "file": "11pgjfhbq3hyj.mp3",
@@ -1995,6 +2403,486 @@
 "ten-work": {
 "file": "1wn53auhkl6js.mp3",
 "text": "Ten seconds. Finish strong!"
+},
+"tmin:1": {
+"file": "eg3k9wtow6n6.mp3",
+"text": "One minute,"
+},
+"tmin:10": {
+"file": "kzp7wc1udr2la.mp3",
+"text": "Ten minutes,"
+},
+"tmin:100": {
+"file": "aarlk41vqlnky.mp3",
+"text": "One hundred minutes,"
+},
+"tmin:101": {
+"file": "akr793xv6syh.mp3",
+"text": "One hundred one minutes,"
+},
+"tmin:102": {
+"file": "auqsy21sgbaus.mp3",
+"text": "One hundred two minutes,"
+},
+"tmin:103": {
+"file": "b4qen1ukwg8b.mp3",
+"text": "One hundred three minutes,"
+},
+"tmin:104": {
+"file": "96t6s81p60y4m.mp3",
+"text": "One hundred four minutes,"
+},
+"tmin:105": {
+"file": "9gssh7ram3i5.mp3",
+"text": "One hundred five minutes,"
+},
+"tmin:106": {
+"file": "9qse661lvqleg.mp3",
+"text": "One hundred six minutes,"
+},
+"tmin:107": {
+"file": "a0rzv5o0bqrz.mp3",
+"text": "One hundred seven minutes,"
+},
+"tmin:108": {
+"file": "82us0c1ilg8oa.mp3",
+"text": "One hundred eight minutes,"
+},
+"tmin:109": {
+"file": "8cudpbkq1e1t.mp3",
+"text": "One hundred nine minutes,"
+},
+"tmin:11": {
+"file": "l9otlbwic7yt.mp3",
+"text": "Eleven minutes,"
+},
+"tmin:110": {
+"file": "1bhdi0d1usnm5v.mp3",
+"text": "One hundred ten minutes,"
+},
+"tmin:111": {
+"file": "1b7dwbetmyet8.mp3",
+"text": "One hundred eleven minutes,"
+},
+"tmin:112": {
+"file": "1axeamf1y2xyw1.mp3",
+"text": "One hundred twelve minutes,"
+},
+"tmin:113": {
+"file": "1aneoxgwx8rje.mp3",
+"text": "One hundred thirteen minutes,"
+},
+"tmin:114": {
+"file": "1adf38h1o82wpj.mp3",
+"text": "One hundred fourteen minutes,"
+},
+"tmin:115": {
+"file": "1a3fhjin2dpcw.mp3",
+"text": "One hundred fifteen minutes,"
+},
+"tmin:116": {
+"file": "19tfvuj1rid9fp.mp3",
+"text": "One hundred sixteen minutes,"
+},
+"tmin:117": {
+"file": "19jga5kqco232.mp3",
+"text": "One hundred seventeen minutes,"
+},
+"tmin:118": {
+"file": "199gogl8woz3f.mp3",
+"text": "One hundred eighteen minutes,"
+},
+"tmin:119": {
+"file": "18zh2rm16s3tpw.mp3",
+"text": "One hundred nineteen minutes,"
+},
+"tmin:12": {
+"file": "ljofaa1r3gpv4.mp3",
+"text": "Twelve minutes,"
+},
+"tmin:120": {
+"file": "149qzh2zieh4w.mp3",
+"text": "One hundred twenty minutes,"
+},
+"tmin:13": {
+"file": "lto0z9t81v8n.mp3",
+"text": "Thirteen minutes,"
+},
+"tmin:14": {
+"file": "jvqt4g1x7q2i.mp3",
+"text": "Fourteen minutes,"
+},
+"tmin:15": {
+"file": "k5qetf132wxf5.mp3",
+"text": "Fifteen minutes,"
+},
+"tmin:16": {
+"file": "kfq0ie1xo1fbg.mp3",
+"text": "Sixteen minutes,"
+},
+"tmin:17": {
+"file": "kppm7dzsmkoz.mp3",
+"text": "Seventeen minutes,"
+},
+"tmin:18": {
+"file": "n7m1g48hsfiu.mp3",
+"text": "Eighteen minutes,"
+},
+"tmin:19": {
+"file": "nhln5319nhmvh.mp3",
+"text": "Nineteen minutes,"
+},
+"tmin:2": {
+"file": "fa2dct1rkb19n.mp3",
+"text": "Two minutes,"
+},
+"tmin:20": {
+"file": "1picno71vbp40d.mp3",
+"text": "Twenty minutes,"
+},
+"tmin:21": {
+"file": "1p8d1z8u5zwnq.mp3",
+"text": "Twenty-one minutes,"
+},
+"tmin:22": {
+"file": "1q2bv251s1era7.mp3",
+"text": "Twenty-two minutes,"
+},
+"tmin:23": {
+"file": "1psc9d6qvpjxk.mp3",
+"text": "Twenty-three minutes,"
+},
+"tmin:24": {
+"file": "1oee8wb2v5rhl.mp3",
+"text": "Twenty-four minutes,"
+},
+"tmin:25": {
+"file": "1o4en7c10qkm42.mp3",
+"text": "Twenty-five minutes,"
+},
+"tmin:26": {
+"file": "1oydga91ylzgqj.mp3",
+"text": "Twenty-six minutes,"
+},
+"tmin:27": {
+"file": "1oodulaxga9dw.mp3",
+"text": "Twenty-seven minutes,"
+},
+"tmin:28": {
+"file": "1nafu4f1i6jp3p.mp3",
+"text": "Twenty-eight minutes,"
+},
+"tmin:29": {
+"file": "1n0g8fgh0uhr2.mp3",
+"text": "Twenty-nine minutes,"
+},
+"tmin:3": {
+"file": "f02rnuqeltx0.mp3",
+"text": "Three minutes,"
+},
+"tmin:30": {
+"file": "1nubw0efp1hss.mp3",
+"text": "Thirty minutes,"
+},
+"tmin:31": {
+"file": "1o4bhpd1guqp5f.mp3",
+"text": "Thirty-one minutes,"
+},
+"tmin:32": {
+"file": "1nacomgizbuiy.mp3",
+"text": "Thirty-two minutes,"
+},
+"tmin:33": {
+"file": "1nkcabf1k511vl.mp3",
+"text": "Thirty-three minutes,"
+},
+"tmin:34": {
+"file": "1oyaasa94gscg.mp3",
+"text": "Thirty-four minutes,"
+},
+"tmin:35": {
+"file": "1p89wh91aa5zp3.mp3",
+"text": "Thirty-five minutes,"
+},
+"tmin:36": {
+"file": "1oeb3eccer52m.mp3",
+"text": "Thirty-six minutes,"
+},
+"tmin:37": {
+"file": "1ooap3b1dkgcf9.mp3",
+"text": "Thirty-seven minutes,"
+},
+"tmin:38": {
+"file": "1lmf2gmsu6wpg.mp3",
+"text": "Thirty-eight minutes,"
+},
+"tmin:39": {
+"file": "1lweo5l1tzw423.mp3",
+"text": "Thirty-nine minutes,"
+},
+"tmin:4": {
+"file": "dm4r6z1oa0ojh.mp3",
+"text": "Four minutes,"
+},
+"tmin:40": {
+"file": "1odt4apgmzj7v.mp3",
+"text": "Forty minutes,"
+},
+"tmin:41": {
+"file": "1o3tilq1eieduc.mp3",
+"text": "Forty-one minutes,"
+},
+"tmin:42": {
+"file": "1nttwwrjx9vy1.mp3",
+"text": "Forty-two minutes,"
+},
+"tmin:43": {
+"file": "1njub7s1hsoqki.mp3",
+"text": "Forty-three minutes,"
+},
+"tmin:44": {
+"file": "1phrj2la2etrj.mp3",
+"text": "Forty-four minutes,"
+},
+"tmin:45": {
+"file": "1p7rxdm17xtoe0.mp3",
+"text": "Forty-five minutes,"
+},
+"tmin:46": {
+"file": "1oxsbondcp6hp.mp3",
+"text": "Forty-six minutes,"
+},
+"tmin:47": {
+"file": "1onspzo1b84146.mp3",
+"text": "Forty-seven minutes,"
+},
+"tmin:48": {
+"file": "1m5waqx3hu4b7.mp3",
+"text": "Forty-eight minutes,"
+},
+"tmin:49": {
+"file": "1lvwp1y11d8yxo.mp3",
+"text": "Forty-nine minutes,"
+},
+"tmin:5": {
+"file": "dc55i0n4bh6u.mp3",
+"text": "Five minutes,"
+},
+"tmin:50": {
+"file": "1mpscmwx8ifkq.mp3",
+"text": "Fifty minutes,"
+},
+"tmin:51": {
+"file": "1mzrybv1ye7mxd.mp3",
+"text": "Fifty-one minutes,"
+},
+"tmin:52": {
+"file": "1n9rk0uty82uk.mp3",
+"text": "Fifty-two minutes,"
+},
+"tmin:53": {
+"file": "1njr5pt1v3xa77.mp3",
+"text": "Fifty-three minutes,"
+},
+"tmin:54": {
+"file": "1ntqresqnxq4e.mp3",
+"text": "Fifty-four minutes,"
+},
+"tmin:55": {
+"file": "1o3qd3r1rtmxh1.mp3",
+"text": "Fifty-five minutes,"
+},
+"tmin:56": {
+"file": "1odpysqndnde8.mp3",
+"text": "Fifty-six minutes,"
+},
+"tmin:57": {
+"file": "1onpkhp1ojckqv.mp3",
+"text": "Fifty-seven minutes,"
+},
+"tmin:58": {
+"file": "1khvj341adnuhe.mp3",
+"text": "Fifty-eight minutes,"
+},
+"tmin:59": {
+"file": "1krv4s3ci8zux.mp3",
+"text": "Fifty-nine minutes,"
+},
+"tmin:6": {
+"file": "e63ykx1kzqbtb.mp3",
+"text": "Six minutes,"
+},
+"tmin:60": {
+"file": "jbog8jy6ggzt.mp3",
+"text": "Sixty minutes,"
+},
+"tmin:61": {
+"file": "j1oujk1w1vbma.mp3",
+"text": "Sixty-one minutes,"
+},
+"tmin:62": {
+"file": "jvnnmhuw649n.mp3",
+"text": "Sixty-two minutes,"
+},
+"tmin:63": {
+"file": "jlo1xi1srkyw4.mp3",
+"text": "Sixty-three minutes,"
+},
+"tmin:64": {
+"file": "kfmv0frlvrjh.mp3",
+"text": "Sixty-four minutes,"
+},
+"tmin:65": {
+"file": "k5n9bg1pham5y.mp3",
+"text": "Sixty-five minutes,"
+},
+"tmin:66": {
+"file": "kzm2edobletb.mp3",
+"text": "Sixty-six minutes,"
+},
+"tmin:67": {
+"file": "kpmgpe1m709fs.mp3",
+"text": "Sixty-seven minutes,"
+},
+"tmin:68": {
+"file": "ljl9sbl1b235.mp3",
+"text": "Sixty-eight minutes,"
+},
+"tmin:69": {
+"file": "l9lo3c1iwpwpm.mp3",
+"text": "Sixty-nine minutes,"
+},
+"tmin:7": {
+"file": "dw4cvyju14go.mp3",
+"text": "Seven minutes,"
+},
+"tmin:70": {
+"file": "1q1tvyi1hkwwrc.mp3",
+"text": "Seventy minutes,"
+},
+"tmin:71": {
+"file": "1qbthnhjpi24v.mp3",
+"text": "Seventy-one minutes,"
+},
+"tmin:72": {
+"file": "1phuokk1kv79hi.mp3",
+"text": "Seventy-two minutes,"
+},
+"tmin:73": {
+"file": "1prua9jmzsev1.mp3",
+"text": "Seventy-three minutes,"
+},
+"tmin:74": {
+"file": "1oxvh6m1o5hm7o.mp3",
+"text": "Seventy-four minutes,"
+},
+"tmin:75": {
+"file": "1p7v2vlqa2rl7.mp3",
+"text": "Seventy-five minutes,"
+},
+"tmin:76": {
+"file": "1odw9so1rfryxu.mp3",
+"text": "Seventy-six minutes,"
+},
+"tmin:77": {
+"file": "1onvvhntkd4bd.mp3",
+"text": "Seventy-seven minutes,"
+},
+"tmin:78": {
+"file": "1ntx2eq14frhuo.mp3",
+"text": "Seventy-eight minutes,"
+},
+"tmin:79": {
+"file": "1o3wo3p6kcn87.mp3",
+"text": "Seventy-nine minutes,"
+},
+"tmin:8": {
+"file": "ci6cf31hpfz35.mp3",
+"text": "Eight minutes,"
+},
+"tmin:80": {
+"file": "r2s7251y9ajr.mp3",
+"text": "Eighty minutes,"
+},
+"tmin:81": {
+"file": "qssld6zto568.mp3",
+"text": "Eighty-one minutes,"
+},
+"tmin:82": {
+"file": "qiszo758jn9x.mp3",
+"text": "Eighty-two minutes,"
+},
+"tmin:83": {
+"file": "q8tdz8133yhwe.mp3",
+"text": "Eighty-three minutes,"
+},
+"tmin:84": {
+"file": "pytsa98iu003.mp3",
+"text": "Eighty-four minutes,"
+},
+"tmin:85": {
+"file": "pou6la16e8umk.mp3",
+"text": "Eighty-five minutes,"
+},
+"tmin:86": {
+"file": "peukwbbt4cq9.mp3",
+"text": "Eighty-six minutes,"
+},
+"tmin:87": {
+"file": "p4uz7c19oj7cq.mp3",
+"text": "Eighty-seven minutes,"
+},
+"tmin:88": {
+"file": "ouvdidf3epgf.mp3",
+"text": "Eighty-eight minutes,"
+},
+"tmin:89": {
+"file": "okvrte1cytk2w.mp3",
+"text": "Eighty-nine minutes,"
+},
+"tmin:9": {
+"file": "c86qq4gjqrqi.mp3",
+"text": "Nine minutes,"
+},
+"tmin:90": {
+"file": "perfec2w7byu.mp3",
+"text": "Ninety minutes,"
+},
+"tmin:91": {
+"file": "por13b141wjbh.mp3",
+"text": "Ninety-one minutes,"
+},
+"tmin:92": {
+"file": "pyqmsa1yn117s.mp3",
+"text": "Ninety-two minutes,"
+},
+"tmin:93": {
+"file": "q8q8h910rm6lb.mp3",
+"text": "Ninety-three minutes,"
+},
+"tmin:94": {
+"file": "oat0mg9gs1f6.mp3",
+"text": "Ninety-four minutes,"
+},
+"tmin:95": {
+"file": "oksmbf1amh8rt.mp3",
+"text": "Ninety-five minutes,"
+},
+"tmin:96": {
+"file": "ous80e66hop0.mp3",
+"text": "Ninety-six minutes,"
+},
+"tmin:97": {
+"file": "p4rtpd17c6w1n.mp3",
+"text": "Ninety-seven minutes,"
+},
+"tmin:98": {
+"file": "n6uluk1os5z1a.mp3",
+"text": "Ninety-eight minutes,"
+},
+"tmin:99": {
+"file": "ngu7jjqwr4et.mp3",
+"text": "Ninety-nine minutes,"
 },
 "togo-1": {
 "file": "1f6x0zoep5h3m.mp3",
@@ -2008,9 +2896,249 @@
 "file": "1fqw8dmbev4dg.mp3",
 "text": "Three more rounds after this."
 },
+"tsec:0": {
+"file": "gbbg661v7zix4.mp3",
+"text": "zero seconds."
+},
+"tsec:1": {
+"file": "glb1v5xckoan.mp3",
+"text": "one second."
+},
+"tsec:10": {
+"file": "9w3wcz1d2z1a1.mp3",
+"text": "ten seconds."
+},
+"tsec:11": {
+"file": "9m4ao0bx9txe.mp3",
+"text": "eleven seconds."
+},
+"tsec:12": {
+"file": "ag33qx19soojv.mp3",
+"text": "twelve seconds."
+},
+"tsec:13": {
+"file": "a63i1y8mzh78.mp3",
+"text": "thirteen seconds."
+},
+"tsec:14": {
+"file": "b02b4v16iebtp.mp3",
+"text": "fourteen seconds."
+},
+"tsec:15": {
+"file": "aq2pfw5cp4h2.mp3",
+"text": "fifteen seconds."
+},
+"tsec:16": {
+"file": "bk1iit1383z3j.mp3",
+"text": "sixteen seconds."
+},
+"tsec:17": {
+"file": "ba1wtu22erqw.mp3",
+"text": "seventeen seconds."
+},
+"tsec:18": {
+"file": "c40pwrzxtmdd.mp3",
+"text": "eighteen seconds."
+},
+"tsec:19": {
+"file": "bu147s1xt8gzu.mp3",
+"text": "nineteen seconds."
+},
+"tsec:2": {
+"file": "frc8s81yi9vna.mp3",
+"text": "two seconds."
+},
+"tsec:20": {
+"file": "1da7src1c50zuy.mp3",
+"text": "twenty seconds."
+},
+"tsec:21": {
+"file": "1dk7egbe9m58h.mp3",
+"text": "twenty-one seconds."
+},
+"tsec:22": {
+"file": "1du705a18uqn4s.mp3",
+"text": "twenty-two seconds."
+},
+"tsec:23": {
+"file": "1e46lu9azbsib.mp3",
+"text": "twenty-three seconds."
+},
+"tsec:24": {
+"file": "1ee67j815kgaem.mp3",
+"text": "twenty-four seconds."
+},
+"tsec:25": {
+"file": "1eo5t877p1fs5.mp3",
+"text": "twenty-five seconds."
+},
+"tsec:26": {
+"file": "1ey5ex612a5xog.mp3",
+"text": "twenty-six seconds."
+},
+"tsec:27": {
+"file": "1f850m54er31z.mp3",
+"text": "twenty-seven seconds."
+},
+"tsec:28": {
+"file": "1b2az7k1pa6erm.mp3",
+"text": "twenty-eight seconds."
+},
+"tsec:29": {
+"file": "1bcakwjrerk55.mp3",
+"text": "twenty-nine seconds."
+},
+"tsec:3": {
+"file": "g1buh710mv10t.mp3",
+"text": "three seconds."
+},
+"tsec:30": {
+"file": "ffpn8hsqkk3f.mp3",
+"text": "thirty seconds."
+},
+"tsec:31": {
+"file": "f5q1ji1qlzepw.mp3",
+"text": "thirty-one seconds."
+},
+"tsec:32": {
+"file": "evqfujw0uwtl.mp3",
+"text": "thirty-two seconds."
+},
+"tsec:33": {
+"file": "elqu5k1tw9rg2.mp3",
+"text": "thirty-three seconds."
+},
+"tsec:34": {
+"file": "gjo20dm5zun3.mp3",
+"text": "thirty-four seconds."
+},
+"tsec:35": {
+"file": "g9ogbe1k1ep9k.mp3",
+"text": "thirty-five seconds."
+},
+"tsec:36": {
+"file": "fzoumfpga7d9.mp3",
+"text": "thirty-six seconds."
+},
+"tsec:37": {
+"file": "fpp8xg1nbp1zq.mp3",
+"text": "thirty-seven seconds."
+},
+"tsec:38": {
+"file": "d7stopflf56r.mp3",
+"text": "thirty-eight seconds."
+},
+"tsec:39": {
+"file": "cxt7zq1dgtzt8.mp3",
+"text": "thirty-nine seconds."
+},
+"tsec:4": {
+"file": "hf9uy22rg6ec.mp3",
+"text": "four seconds."
+},
+"tsec:40": {
+"file": "1eerc4ursmioc.mp3",
+"text": "forty seconds."
+},
+"tsec:41": {
+"file": "1eoqxtt1sybq0z.mp3",
+"text": "forty-one seconds."
+},
+"tsec:42": {
+"file": "1dus4qwv2wvei.mp3",
+"text": "forty-two seconds."
+},
+"tsec:43": {
+"file": "1e4rqfv1w8m2r5.mp3",
+"text": "forty-three seconds."
+},
+"tsec:44": {
+"file": "1fipqwql81t80.mp3",
+"text": "forty-four seconds."
+},
+"tsec:45": {
+"file": "1fspclp1mdr0kn.mp3",
+"text": "forty-five seconds."
+},
+"tsec:46": {
+"file": "1eyqjisoic5y6.mp3",
+"text": "forty-six seconds."
+},
+"tsec:47": {
+"file": "1f8q57r1po1dat.mp3",
+"text": "forty-seven seconds."
+},
+"tsec:48": {
+"file": "1c6uil214xrxl0.mp3",
+"text": "forty-eight seconds."
+},
+"tsec:49": {
+"file": "1cgu4a172d2yj.mp3",
+"text": "forty-nine seconds."
+},
+"tsec:5": {
+"file": "hp9gn113x5dqz.mp3",
+"text": "five seconds."
+},
+"tsec:50": {
+"file": "1g2s3sn8e62wt.mp3",
+"text": "fifty seconds."
+},
+"tsec:51": {
+"file": "1fssi3o169kxja.mp3",
+"text": "fifty-one seconds."
+},
+"tsec:52": {
+"file": "1gmrb6l53vq6n.mp3",
+"text": "fifty-two seconds."
+},
+"tsec:53": {
+"file": "1gcrphm12zakt4.mp3",
+"text": "fifty-three seconds."
+},
+"tsec:54": {
+"file": "1eytp0reyqsd5.mp3",
+"text": "fifty-four seconds."
+},
+"tsec:55": {
+"file": "1eou3bs1cu5mzm.mp3",
+"text": "fifty-five seconds."
+},
+"tsec:56": {
+"file": "1fiswepbogfmz.mp3",
+"text": "fifty-six seconds."
+},
+"tsec:57": {
+"file": "1f8tapq19jva9g.mp3",
+"text": "fifty-seven seconds."
+},
+"tsec:58": {
+"file": "1duva8v1ua4pz9.mp3",
+"text": "fifty-eight seconds."
+},
+"tsec:59": {
+"file": "1dkvojwt4fimm.mp3",
+"text": "fifty-nine seconds."
+},
+"tsec:6": {
+"file": "gvank461qj4i.mp3",
+"text": "six seconds."
+},
+"tsec:7": {
+"file": "h5a993177fqh5.mp3",
+"text": "seven seconds."
+},
+"tsec:8": {
+"file": "e3emme1i2u40g.mp3",
+"text": "eight seconds."
+},
+"tsec:9": {
+"file": "ede8bdk7f9dz.mp3",
+"text": "nine seconds."
+},
 "warmup-done": {
 "file": "1j7lkkoa0l0cq.mp3",
-"text": "Warm up done. Nice. Take a breath, get set up, and tap start when you're ready."
+"text": "Warm up done. Nice. Take a breath, get set up, and press play on your headphones, or tap start, when you're ready."
 },
 "warmup-start": {
 "file": "1l79xac9i4h4i.mp3",
@@ -2019,6 +3147,10 @@
 "workout-done": {
 "file": "lpbfvbyp6ke1.mp3",
 "text": "That's it, workout complete. Great job today."
+},
+"your-time": {
+"file": "2jk52c1h7nepy.mp3",
+"text": "Your time:"
 }
 },
 "voices": {
