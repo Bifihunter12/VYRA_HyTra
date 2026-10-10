@@ -5,20 +5,22 @@
    ════════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --bg: #0b0b0c;
-  --surface: #141416;
-  --surface-2: #1c1c1f;
-  --surface-3: #26262a;
-  --primary: #d97742;
-  --secondary: #e0935f;
-  --primary-rgb: 217 119 66;      /* the same colours as r g b, for see-through tints */
-  --secondary-rgb: 224 147 95;
+  /* Forest: deep green backgrounds, sage for actions, jade for highlights. */
+  --bg: #0a0f0c;
+  --surface: #111a15;
+  --surface-2: #18241d;
+  --surface-3: #223128;
+  --primary: #9db89a;
+  --secondary: #6fcfa9;
+  --primary-rgb: 157 184 154;     /* the same colours as r g b, for see-through tints */
+  --secondary-rgb: 111 207 169;
+  --warn: #e3a857;                /* warnings stay warm, so they never read as "all good" */
   --accent: var(--primary);
-  --accent-ink: #2a1206;
+  --accent-ink: #111a10;
   --text: #f0efed;
   --text-dim: #9a9a98;
   --text-faint: #5a5a58;
-  --track: #1c1c1f;
+  --track: #18241d;
   --border: rgba(255, 255, 255, 0.09);
   --border-active: rgba(255, 255, 255, 0.20);
   --nebula: rgb(var(--primary-rgb) / 0.07);
@@ -428,10 +430,10 @@ body[data-screen="history"] .app-shell, body[data-screen="profile"] .app-shell {
 .hint i { color: var(--accent); vertical-align: -2px; }
 .hint b { color: var(--text-dim); font-weight: 500; }
 .hint a { color: var(--text-dim); }
-.hint--warn { color: var(--secondary); }
+.hint--warn { color: var(--warn); }
 .pad-y { padding: 12px 2px 4px; }
 .set-list--tight { margin-top: 14px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-.set-row--danger .set-ic, .set-row--danger .set-label { color: var(--secondary); }
+.set-row--danger .set-ic, .set-row--danger .set-label { color: var(--warn); }
 .cl-chip--off { border-style: dashed; color: var(--text-faint); }
 .cl-row.is-locked { opacity: .55; }
 .mini-track { display: block; height: 3px; background: var(--track); border-radius: 2px; overflow: hidden; margin-top: 7px; }
@@ -510,7 +512,7 @@ body[data-screen="history"] .app-shell, body[data-screen="profile"] .app-shell {
 .no-match i { color: var(--accent); margin-right: 4px; }
 .gear-note { margin-top: 14px; font-size: 12.5px; line-height: 1.5; color: var(--text-dim); padding: 10px 12px; border-left: 2px solid var(--accent); background: rgb(var(--primary-rgb) / .05); }
 .gear-note i { color: var(--accent); margin-right: 4px; }
-.gear-note--warn { border-left-color: var(--secondary); color: var(--secondary); }
+.gear-note--warn { border-left-color: var(--warn); color: var(--warn); }
 .btn-primary:disabled { opacity: .4; }
 .round-row--warm .round-no i { font-size: 16px; color: var(--text-faint); }
 .round-row--warm .round-name { color: var(--text-dim); }
