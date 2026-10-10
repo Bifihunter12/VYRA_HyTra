@@ -117,9 +117,9 @@ test("months run in UTC; the final five days are flagged with next month's chall
   assert.equal(late.daysLeft, 5);
   assert.equal(late.final, true);
   assert.equal(late.challengeId, "the-mill");
-  assert.equal(late.next.challengeId, "the-hundred");
+  assert.equal(late.next.challengeId, "the-escape");
   assert.equal(V.monthlyStatus(Date.UTC(2026, 9, 31, 23, 59)).daysLeft, 1);
-  assert.equal(V.monthlyStatus(Date.UTC(2026, 10, 1, 0, 1)).challengeId, "the-hundred");
+  assert.equal(V.monthlyStatus(Date.UTC(2026, 10, 1, 0, 1)).challengeId, "the-escape");
 });
 
 test("monthly reminders: '5 days left' on the 27th/26th and 'live' on the 1st, for 12 months", () => {
@@ -129,9 +129,9 @@ test("monthly reminders: '5 days left' on the 27th/26th and 'live' on the 1st, f
   assert.equal(live.length, 11, "October is already live");
   assert.equal(fin[0].start.getDate(), 27); assert.equal(fin[0].start.getMonth(), 9); assert.equal(fin[0].start.getHours(), 18);
   assert.match(fin[0].title, /5 days left: The Mill/);
-  assert.match(fin[0].desc, /Next up on the 1st: The Hundred/);
+  assert.match(fin[0].desc, /Next up on the 1st: The Escape/);
   assert.equal(live[0].start.getDate(), 1); assert.equal(live[0].start.getMonth(), 10);
-  assert.match(live[0].title, /November challenge is live: The Hundred/);
+  assert.match(live[0].title, /November challenge is live: The Escape/);
   assert.equal(fin[1].start.getDate(), 26, "November has 30 days");
   const ics = V.icsCalendar(evs, { url: "https://example.app/" });
   assert.equal((ics.match(/BEGIN:VEVENT/g) || []).length, 23);
@@ -175,4 +175,30 @@ test("Every challenge tells a story: an intro, spoken stage lines and its own fi
   }
   const coach = new V.CoachScript([], { challenge: "the-hunt", finale: V.challengeById("the-hunt").finale });
   assert.deepEqual([...coach.finish(false)], ["cue:Caught it. The hunt is over. Clock's stopped."]);
+});
+
+test("Anywhere: machines become timed blocks of a move you pick, on their own leaderboard", () => {
+  const c = V.challengeById("the-escape");
+  const w = V.challengeWorkout(c, "standard~any", "open", { run: "burpee", row: "kb-swing" });
+  assert.equal(w.challenge.variant, "standard~any");
+  assert.deepEqual({ ...w.challenge.moves }, { run: "burpee", row: "kb-swing" });
+  const tl = V.compile(w, {}, {});
+  assert.equal(tl.length, 10);
+  // 800 m run → 4:30 of burpees, 500 m row → 2:15 of swings, 1 km → 5:30. Same for everyone.
+  assert.deepEqual([...tl.map(iv => iv.openEnded ? iv.target : iv.duration)],
+    [270, 135, "100 m", "20 reps", "30 reps", 270, 135, "40 reps", "100 m", 330]);
+  assert.equal(tl[0].exercises[0].id, "burpee");
+  assert.ok(tl[0].fixed && !tl[2].fixed, "swapped blocks are fixed: no skipping");
+  // The move never changes the time: a different pick gives the same timeline lengths.
+  const other = V.compile(V.challengeWorkout(c, "standard~any", "open", { run: "high-knees", row: "jumping-jacks" }), {}, {});
+  assert.deepEqual([...other.map(iv => iv.duration)], [...tl.map(iv => iv.duration)]);
+  // Unknown moves fall back to the defaults; the original variant is untouched.
+  assert.equal(V.challengeWorkout(c, "standard~any", "open", { run: "nope" }).challenge.moves.run, "jumping-jacks");
+  assert.equal(V.challengeWorkout(c, "standard", "open").challenge.variant, "standard");
+  assert.equal(V.variantOf(c, "half~any").id, "half");
+  assert.equal(V.variantLabel(c, "half~any"), "Half Escape · Anywhere");
+  // Only challenges with machine distances offer Anywhere, and the monthly ones include The Escape.
+  for (const b of V.BENCHMARKS.filter(b => b.anywhere))
+    assert.ok(V.anywhereMachines(b.build(b.variants[0], "open")).length, b.id);
+  assert.ok(V.MONTHLY_ROTATION.some(([id]) => id === "the-escape"));
 });

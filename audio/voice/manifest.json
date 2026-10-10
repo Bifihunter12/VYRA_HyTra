@@ -744,6 +744,10 @@
 "file": "11o2fgd1j6anz.mp3",
 "text": "Jog in place. Light, quick steps on the balls of your feet."
 },
+"go:jump-rope": {
+"file": "znley1cyzh3w.mp3",
+"text": "Jump rope. Small jumps on the balls of the feet, turn the rope from the wrists."
+},
 "go:jump-squat": {
 "file": "e3bbrkchdsoa.mp3",
 "text": "Jump squats. Squat, then jump."
@@ -1499,6 +1503,10 @@
 "next:jog-in-place": {
 "file": "cw9wioce7d1e.mp3",
 "text": "Up next, jog in place."
+},
+"next:jump-rope": {
+"file": "1cx4u9d1s9ntav.mp3",
+"text": "Up next, jump rope."
 },
 "next:jump-squat": {
 "file": "1ozpib11srijdr.mp3",

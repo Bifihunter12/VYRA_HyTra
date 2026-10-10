@@ -163,7 +163,7 @@ function compile(workout, swaps = {}, opts = {}) {
         const split = splitStation(b, exs);
         const { segments, duration } = split ? resolveSegments(split, null) : resolveSegments(b.segments, b.duration ?? null);
         timeline.push({ ...base, type: "WORK", state: "WORK", duration, estimate: duration ?? b.estimate ?? OPEN_ENDED_ESTIMATE,
-          title, cue, icon: exerciseIcon(single || exs[0]), instruction, note: b.note || "", story: b.story || "",
+          title, cue, icon: exerciseIcon(single || exs[0]), instruction, note: b.note || "", story: b.story || "", fixed: !!b.fixed,
           exercises: exs, target: exs.map(e => targetText(e.target)).filter(Boolean).join(" + "),
           hasTarget: exs.some(e => e.target), openEnded: duration == null, segments, split: !!split });
       }

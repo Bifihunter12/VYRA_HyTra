@@ -38,19 +38,22 @@ await att(D, { score: 100 });                                         // opted o
 await att(G, { score: 50, ver: "training" }); await att(G, { score: 60, dnf: true }); await att(G, { score: 70, del: true });
 await att(B, { score: 200, ch: { challenge_id: "not-this-month", variant: "x" } });
 await att(C, { div: "competitive", score: 260 });
+await att(E, { score: 150, ch: { ...last, variant: `${last.variant}~any` } });   // Anywhere (no machines): its own board
 await att(A, { m: months.this, ch: cur, score: 10, day: 2 });         // this month: still running
 
 console.log("closing");
 const hall = await db.as(F, `select * from monthly_hall(12)`);
-const open = hall.filter(r => r.division === "open" && r.month.toISOString().slice(0, 7) === months.last.toISOString().slice(0, 7));
+const open = hall.filter(r => r.division === "open" && r.variant === last.variant && r.month.toISOString().slice(0, 7) === months.last.toISOString().slice(0, 7));
 console.log("   open podium:", open.map(r => `${r.rank}.${r.display_name}:${r.score}${r.is_me ? "(me)" : ""}`).join("  "));
 ok(open.length === 4 && open.slice(0, 3).map(r => r.display_name).join() === "Ana,Caro,Ben", "podium = best per athlete, ranked; training, DNF, deleted and opted-out ignored");
 ok(open[3]?.is_me && open[3].display_name === "Finn" && open[3].rank === 5, "the caller's own place is included even off the podium");
 ok(Number(open[0].participants) === 5 && open[0].challenge_id === last.challenge_id, "participants and the month's challenge recorded");
-const comp = hall.filter(r => r.division === "competitive" && r.month.toISOString().slice(0, 7) === months.last.toISOString().slice(0, 7));
+const comp = hall.filter(r => r.division === "competitive" && r.variant === last.variant && r.month.toISOString().slice(0, 7) === months.last.toISOString().slice(0, 7));
 ok(comp.length === 1 && comp[0].display_name === "Caro" && comp[0].rank === 1, "each division has its own ranking");
-const elite = hall.filter(r => r.division === "elite" && r.month.toISOString().slice(0, 7) === months.last.toISOString().slice(0, 7));
+const elite = hall.filter(r => r.division === "elite" && r.variant === last.variant && r.month.toISOString().slice(0, 7) === months.last.toISOString().slice(0, 7));
 ok(elite.length === 1 && elite[0].rank === null && Number(elite[0].participants) === 0, "a division nobody entered closes empty");
+const anyOpen = hall.filter(r => r.division === "open" && r.variant === `${last.variant}~any` && r.month.toISOString().slice(0, 7) === months.last.toISOString().slice(0, 7));
+ok(anyOpen.length === 1 && anyOpen[0].display_name === "Eli" && anyOpen[0].rank === 1 && Number(anyOpen[0].participants) === 1, "Anywhere results get their own podium");
 ok(!hall.some(r => r.month.toISOString().slice(0, 7) === months.this.toISOString().slice(0, 7)), "the running month is not closed");
 ok(!hall.some(r => r.month < months.last), "months before the first result are not created");
 
