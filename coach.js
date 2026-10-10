@@ -99,8 +99,8 @@ function timelineLines(timeline) {
 
 /* What to say as the workout moves along. Keeps a little memory so it doesn't repeat itself. */
 class CoachScript {
-  constructor(timeline, { challenge = false } = {}) {
-    this.tl = timeline; this.challenge = challenge;
+  constructor(timeline, { challenge = false, finale = "" } = {}) {
+    this.tl = timeline; this.challenge = challenge; this.finale = finale;
     this.restN = 0; this.encN = 0; this.toldDone = new Set();
   }
   countdown(n) { return [`c${n}`]; }
@@ -153,8 +153,11 @@ class CoachScript {
   }
   /* `afterGate`: the finish was already announced on the cool-down screen. */
   finish(early, afterGate = false) { return [early ? "ended" : afterGate ? "cooldown-done" : this.doneLine()]; }
-  doneLine() { return this.challenge === "the-escape" ? "escaped" : this.challenge ? "challenge-done" : "workout-done"; }
+  doneLine() { return finaleKey(this.finale) || (this.challenge ? "challenge-done" : "workout-done"); }
 }
+
+/* A challenge's own finish line: a fixed line id, or text to say. */
+const finaleKey = f => !f ? null : COACH_LINES[f] ? f : `cue:${f}`;
 
 /* All lines for the recording: fixed lines, every exercise, speeds, rounds, plus whatever the given timelines use. */
 function coachCatalog(timelines = []) {
@@ -163,6 +166,7 @@ function coachCatalog(timelines = []) {
   MPH_STEPS.forEach(v => ids.add(`mph:${v}`));
   for (let r = 1; r <= 20; r++) ids.add(`round:${r}`);
   timelines.forEach(tl => timelineLines(tl).forEach(id => ids.add(id)));
+  if (typeof BENCHMARKS !== "undefined") BENCHMARKS.forEach(c => c.finale && ids.add(finaleKey(c.finale)));
   return [...ids].sort().map(id => ({ id, text: coachText(id) })).filter(x => x.text);
 }
 
