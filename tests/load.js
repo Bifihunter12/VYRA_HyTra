@@ -12,7 +12,7 @@ const EXPORTS = [
   "recommend", "weeklySeries", "weekStreak", "dayRun", "patternBalance", "badgeStatus", "progressionAdvice",
   "startOfWeek", "DAY_MS", "visitPatterns", "benchmarkLegs", "benchTotalMi",
   "stampChanges", "profileBlob", "mergeRemoteWorkouts", "pendingWorkoutRows", "deletionStamp",
-  "BENCHMARKS", "SCORING", "DIVISIONS", "challengeById", "variantOf", "challengeWorkout", "scoreFromInputs", "formatScore",
+  "BENCHMARKS", "SCORING", "DIVISIONS", "challengeById", "variantOf", "challengeWorkout", "variantLabel", "anywhereMachines", "MONTHLY_ROTATION", "scoreFromInputs", "formatScore",
   "ATHLETE_CATEGORIES", "activityRow", "competitionContext", "challengeFromSpec", "registerChallenge", "scoredSegments", "checkpointsFromVisits",
   "ghostFromTotal", "ghostStatus", "ghostText", "placementPoints", "eventPhase", "eventLine", "formatDelta", "prCheck", "bestAttempt", "rankEntries", "monthlyChallenge", "ageGroup", "EVENTS", "outdoorSwaps", "gearMissing", "makePlan", "planProgram", "planCandidates", "fitToMinutes", "sessionParams", "USER_PROGRAMS", "PLAN_GOALS", "WEEKDAYS", "reminderStarts", "planIcs", "googleCalendarUrl", "monthlyStatus", "monthlyReminderEvents", "monthlyGoogleUrls", "icsCalendar", "CoachScript", "coachText", "coachCatalog", "coachFile", "timelineLines", "COACH_LINES", "COACH_VOICES", "challengeWorkout", "planTotals", "templateById",
 ];

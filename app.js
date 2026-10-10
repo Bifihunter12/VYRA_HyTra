@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.10.3";
+const APP_VERSION = "2026.10.10.4";
 const STORE_KEY = "vyra_v1";
 /* Beeps, the voice coach and vibration. */
 const CUES_ENABLED = true;
@@ -1462,11 +1462,11 @@ function renderPlayer() {
     <div class="pl-controls">
       <button class="ctl" data-act="prev" aria-label="Previous interval"><i class="ti ti-player-skip-back"></i><span>Prev</span></button>
       <button class="ctl ${iv.openEnded && !e.paused ? "" : "ctl-main"}" data-act="pause" aria-label="${e.paused ? "Resume" : "Pause"}"><i class="ti ${e.paused ? "ti-player-play" : "ti-player-pause"}"></i><span>${e.paused ? "Resume" : "Pause"}</span></button>
-      <button class="ctl" data-act="skip" aria-label="Skip interval"><i class="ti ti-player-skip-forward"></i><span>Skip</span></button>
+      <button class="ctl" data-act="skip" aria-label="Skip interval" ${iv.fixed ? "disabled" : ""}><i class="ti ti-player-skip-forward"></i><span>Skip</span></button>
     </div>
     <div class="pl-controls pl-controls--sub">
-      ${iv.duration != null ? `<button class="ctl ctl-wide ${iv.type === "REST" ? "ctl-hot" : ""}" data-act="extend"><i class="ti ti-clock-plus"></i><span>+10 sec</span></button>` : ""}
-      ${showDone && !iv.openEnded ? `<button class="ctl ctl-wide" data-act="done"><i class="ti ti-check"></i><span>Reps done</span></button>` : ""}
+      ${iv.duration != null && !iv.fixed ? `<button class="ctl ctl-wide ${iv.type === "REST" ? "ctl-hot" : ""}" data-act="extend"><i class="ti ti-clock-plus"></i><span>+10 sec</span></button>` : ""}
+      ${showDone && !iv.openEnded && !iv.fixed ? `<button class="ctl ctl-wide" data-act="done"><i class="ti ti-check"></i><span>Reps done</span></button>` : ""}
       <button class="ctl ctl-wide ctl-ghost" data-act="end"><i class="ti ti-square"></i><span>End</span></button>
     </div>
     ${ui.confirmEnd ? `
@@ -1691,7 +1691,7 @@ app.addEventListener("input", ev => {
 });
 
 app.addEventListener("click", async ev => {
-  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility],[data-ath-activity],[data-compete-view],[data-athlete],[data-comments],[data-react],[data-follow],[data-del-comment],[data-event],[data-event-division],[data-standings-division],[data-ghost],[data-review],[data-club],[data-club-join],[data-club-kind],[data-club-open],[data-battle-scope],[data-board-where],[data-pd-day],[data-pd-goal],[data-pd-min],[data-slot-change],[data-slot-remove],[data-pick],[data-pick-mine],[data-mine],[data-remind-at],[data-remind-day],[data-hall-division],[data-month-time],[data-month-remind],[data-coach]");
+  const el = ev.target.closest("[data-act],[data-go],[data-step],[data-setting],[data-template],[data-history],[data-swap],[data-param-toggle],[data-profile-toggle],[data-checkin],[data-time],[data-feel],[data-goal],[data-p-level],[data-p-equip],[data-ob-goal],[data-ob-level],[data-ob-equip],[data-f-time],[data-f-type],[data-f-level],[data-program],[data-session],[data-challenge],[data-cvariant],[data-cboard],[data-any-move],[data-cdivision],[data-bench-filter],[data-board-scope],[data-board-cat],[data-board-age],[data-res-division],[data-res-verify],[data-ath-category],[data-ath-division],[data-ath-visibility],[data-ath-activity],[data-compete-view],[data-athlete],[data-comments],[data-react],[data-follow],[data-del-comment],[data-event],[data-event-division],[data-standings-division],[data-ghost],[data-review],[data-club],[data-club-join],[data-club-kind],[data-club-open],[data-battle-scope],[data-board-where],[data-pd-day],[data-pd-goal],[data-pd-min],[data-slot-change],[data-slot-remove],[data-pick],[data-pick-mine],[data-mine],[data-remind-at],[data-remind-day],[data-hall-division],[data-month-time],[data-month-remind],[data-coach]");
   if (!el) return;
   const d = el.dataset;
   if (!["erase", "delete-history", "program-join", "program-leave", "sync-delete", "plan-delete", "mine-delete"].includes(d.act)) ui.confirm = null;
@@ -1790,7 +1790,7 @@ app.addEventListener("click", async ev => {
     case "quick-start": ui.mineId = null; return startWorkout(d.id);
     case "start-recovery": return startWorkout("recovery", recoveryWorkout());
     case "pause": return engine?.toggle();
-    case "skip": return engine?.next();
+    case "skip": return engine?.current?.fixed ? toast("This block is the same length for everyone. Keep moving!") : engine?.next();
     case "prev": return engine?.prev();
     case "extend": return engine?.extend(10);
     case "done": return engine?.done();

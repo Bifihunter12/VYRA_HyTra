@@ -88,7 +88,7 @@ const EXERCISES = {
 
 const EQUIPMENT_LABEL = {
   "treadmill": "Treadmill", "rower": "Rower", "bike": "Bike", "kettlebell": "Kettlebell",
-  "dumbbell": "Dumbbell", "battle-ropes": "Battle ropes", "outdoors": "Outside (run & walk)",
+  "dumbbell": "Dumbbell", "battle-ropes": "Battle ropes", "jump-rope": "Jump rope", "outdoors": "Outside (run & walk)",
 };
 const MACHINES = ["treadmill", "rower", "bike"];
 const LEVELS = ["beginner", "intermediate", "advanced"];
@@ -479,6 +479,7 @@ Object.assign(EXERCISES, {
   "mountain-climbers": { name: "Mountain Climbers", cue: "Mountain climbers", equipment: [], pattern: "conditioning", subs: ["high-knees"], instruction: "High plank, drive the knees to the chest one at a time. Hips level." },
   "skater-jumps":   { name: "Skater Jumps", cue: "Skater jumps", equipment: [], pattern: "conditioning", subs: ["high-knees"], instruction: "Leap side to side, land on one leg with a soft knee. Step instead of jump to go easier." },
   "high-knees":     { name: "High Knees", cue: "High knees", equipment: [], pattern: "conditioning", subs: ["march-in-place"], instruction: "Run in place, knees to hip height, quick arms." },
+  "jump-rope":      { name: "Jump Rope", cue: "Jump rope", equipment: ["jump-rope"], pattern: "conditioning", subs: ["jumping-jacks"], instruction: "Small jumps on the balls of the feet, turn the rope from the wrists." },
   "jumping-jacks":  { name: "Jumping Jacks", cue: "Jumping jacks", equipment: [], pattern: "conditioning", subs: ["march-in-place"], instruction: "Light and quick on the balls of the feet." },
 });
 EXERCISES["run-outside"].pattern = EXERCISES["walk-outside"].pattern = "cardio";

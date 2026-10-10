@@ -312,10 +312,9 @@ function activityRow(uid, row) {
   const a = h.attempt;
   // "Training" results are private: they appear as a plain workout, without the score.
   const c = a && a.verification !== "training" && typeof challengeById === "function" ? challengeById(a.challengeId) : null;
-  const v = c ? variantOf(c, a.variant) : null;
   return {
     user_id: uid, id: row.id, kind: c ? "result" : "workout",
-    title: (c ? `${c.name}${c.variants.length > 1 ? ` · ${v.name}` : ""}` : h.name || "Workout").slice(0, 80),
+    title: (c ? `${c.name}${variantLabel(c, a.variant) ? ` · ${variantLabel(c, a.variant)}` : ""}` : h.name || "Workout").slice(0, 80),
     challenge_id: c ? c.id : null, variant: c ? a.variant : null, division: c ? a.division : null,
     score: c && !a.dnf ? a.score : null, better: c ? a.better : null,
     pr: !!(c && a.pr), first: !!(c && a.first), dnf: !!(c && a.dnf),

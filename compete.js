@@ -17,6 +17,13 @@ function attemptsFor(c, variant, division) {
   return allAttempts().filter(a => a.challengeId === c.id && (!variant || a.variant === variant) && (!division || a.division === division));
 }
 
+/* Which leaderboard to show for a challenge: "any" (no machines) when the athlete lacks the machines, else the original. */
+const MACHINE_GEAR = ["treadmill", "rower", "bike", "outdoors"];   // what Anywhere replaces
+const needsMachines = c => gearMissing(c, state.profile.equipment).some(q => q.split("|").some(x => MACHINE_GEAR.includes(x)));
+const boardFor = c => (c.anywhere && (ui.challengeBoard?.[c.id] || (needsMachines(c) ? "any" : "original"))) === "any" ? "any" : "original";
+const boardVariant = (c, vid) => boardFor(c) === "any" ? `${baseVariant(vid)}~any` : baseVariant(vid);
+const anywhereMoves = () => state.settings.anywhereMoves || {};
+
 /* ── Compete tab ──────────────────────────────────────────────────────────── */
 function renderCompete() {
   const ath = athlete();
@@ -62,7 +69,8 @@ function renderCompete() {
 function monthlyCard(full = false) {
   const m = monthlyStatus();
   const c = challengeById(m.challengeId);
-  const v = variantOf(c, m.variant);
+  const v = { ...variantOf(c, m.variant) };
+  v.id = boardVariant(c, v.id);
   const daysLeft = m.daysLeft;
   const nextC = challengeById(m.next.challengeId);
   const endsAt = new Date(m.end).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -75,7 +83,7 @@ function monthlyCard(full = false) {
   <div class="pick monthly ${m.final ? "monthly--final" : ""}">
     <div class="pick-eyebrow"><i class="ti ${m.final ? "ti-hourglass-high" : "ti-calendar-event"}"></i> ${esc(m.monthName)} challenge · ${m.final ? `<b>${daysLeft} day${daysLeft === 1 ? "" : "s"} left: log your best</b>` : `${daysLeft} days left`}</div>
     <button class="pick-main" data-challenge="${c.id}" data-variant="${v.id}">
-      <span class="pick-name">${esc(c.name)}${c.variants.length > 1 ? `: ${esc(v.name)}` : ""}</span>
+      <span class="pick-name">${esc(c.name)}${variantLabel(c, v.id) ? `: ${esc(variantLabel(c, v.id))}` : ""}</span>
       <span class="pick-meta">${esc(c.tagline)}</span>
     </button>
     <div class="monthly-stats">
@@ -109,13 +117,15 @@ function eventCard() {
 function renderChallenge() {
   const c = challengeById(ui.challengeId);
   const ath = athlete();
-  const v = variantOf(c, ui.challengeVariant);
+  const v = { ...variantOf(c, ui.challengeVariant) };
+  const any = boardFor(c) === "any";
+  v.id = boardVariant(c, v.id);
   const division = ui.challengeDivision || ath.division;
   const mine = attemptsFor(c, v.id, division).sort((a, b) => b.date - a.date);
   const best = bestAttempt(allAttempts(), c, v.id, division);
   const prIds = new Set();
   [...mine].reverse().reduce((b, a) => { if (isBetter(c, a.score, b) && !a.dnf) { prIds.add(a.id); return a.score; } return b; }, null);
-  const missing = gearMissing(c, state.profile.equipment);
+  const missing = gearMissing(c, state.profile.equipment).filter(q => !any || !q.split("|").some(x => MACHINE_GEAR.includes(x)));
   const series = [...mine].reverse().filter(a => !a.dnf).map(a => a.score);
 
   return `
@@ -126,7 +136,8 @@ function renderChallenge() {
     <p class="about">${esc(c.story)}</p>
   </section>
 
-  ${c.variants.length > 1 ? `<div class="pad-y">${chips("data-cvariant", c.variants.map(x => [x.id, x.name]), v.id)}</div>` : ""}
+  ${c.anywhere ? anywhereBlock(c, v, any) : ""}
+  ${c.variants.length > 1 ? `<div class="pad-y">${chips("data-cvariant", c.variants.map(x => [x.id, x.name]), baseVariant(v.id))}</div>` : ""}
   <div class="pad-y">${chips("data-cdivision", DIVISIONS.map(d => [d.id, d.label]), division)}
     ${c.divisions ? `<p class="hint">${esc(DIVISIONS.find(d => d.id === division).label)} standard: <b>${esc(c.divisions[division])}</b></p>` : ""}</div>
 
@@ -143,7 +154,7 @@ function renderChallenge() {
   ${ghostBlock(c, v.id, division)}
 
   ${sectionLabel("Standard")}
-  <ol class="rules">${c.rules.map(r => `<li>${esc(r)}</li>`).join("")}</ol>
+  <ol class="rules">${c.rules.map(r => `<li>${esc(r)}</li>`).join("")}${any ? `<li>Anywhere: every run, row and ride is a timed block of the move you picked. The blocks are the same length for everyone, so your pick never changes your score.</li>` : ""}</ol>
 
   ${leaderboardBlock(c, v.id, division)}
 
@@ -156,6 +167,29 @@ function renderChallenge() {
       <i class="ti ti-chevron-right cl-go" aria-hidden="true"></i>
     </button>`).join("")}</div>` : ""}`;
 }
+
+/* Original (machines) or Anywhere (no machines), and the moves that replace each machine. */
+function anywhereBlock(c, v, any) {
+  const head = `
+  <div class="pad-y">${chips("data-cboard", [["original", "Original"], ["any", "Anywhere"]], any ? "any" : "original")}
+    <p class="hint">${any ? "No machines needed: pick a move for every run, row or ride. Own leaderboard, so it stays fair."
+      : `With ${esc(gearLabel(c))}. ${needsMachines(c) ? "You don't have all of it: try Anywhere." : "No machines? Try Anywhere."}`}</p></div>`;
+  if (!any) return head;
+  const w = c.build(variantOf(c, v.id), "open");
+  const moves = anywhereMovesFor(state.profile.equipment);
+  return head + anywhereMachines(w).map(({ machine, meters }) => {
+    const pick = anywhereMove(anywhereMoves(), machine);
+    const parts = [...new Set(meters)].map(d => `${d >= 1000 ? `${d / 1000} km` : `${d} m`} = ${fmtClock(anywhereSeconds(d, machine)).replace(/^0/, "")}`).join(" · ");
+    return `
+  <div class="any-machine">
+    <div class="cl-name">Instead of ${MACHINE_VERB[machine]}</div>
+    <div class="cl-meta">${esc(parts)} of ${esc(EXERCISES[pick].name)}</div>
+    ${chips("data-any-move", moves.map(m => [`${machine}:${m.id}`, EXERCISES[m.id].name]), `${machine}:${pick}`)}
+  </div>`;
+  }).join("");
+}
+const gearLabel = c => c.equipment.filter(q => q.split("|").some(x => MACHINE_GEAR.includes(x)))
+  .map(q => q.split("|").map(e => EQUIPMENT_LABEL[e].replace(/ \(.*\)/, "").toLowerCase()).join(" or ")).join(", ");
 
 /* ── Leaderboards ─────────────────────────────────────────────────────────── */
 const boardKey = (id, variant, division, scope, cat = "all", age = "all") => [id, variant, division, scope, cat, age, ui.boardWhere || "all"].join("|");
@@ -237,7 +271,7 @@ function leaderboardBlock(c, variant, division) {
 function startChallenge(id, variantId, division) {
   const c = challengeById(id);
   const div = division || athlete().division;
-  const workout = challengeWorkout(c, variantId, div);
+  const workout = challengeWorkout(c, variantId, div, anywhereMoves());
   const t = ui.target;
   if (t && t.challengeId === c.id && t.variant === workout.challenge.variant && t.division === div) workout.challenge.target = { name: t.name, score: t.score };
   const timeline = compile(workout, outdoorSwaps(state.profile.equipment), { warmup: state.profile.warmup, cooldown: state.profile.cooldown });
@@ -335,7 +369,7 @@ function initials(name) { return (name || "V").split(/\s+/).map(w => w[0]).join(
 function personalRecords() {
   const out = [];
   const attempts = allAttempts();
-  BENCHMARKS.forEach(c => c.variants.forEach(v => DIVISIONS.forEach(d => {
+  BENCHMARKS.forEach(c => c.variants.flatMap(v => c.anywhere ? [v, { ...v, id: `${v.id}~any`, name: variantLabel(c, `${v.id}~any`) }] : [v]).forEach(v => DIVISIONS.forEach(d => {
     const best = bestAttempt(attempts, c, v.id, d.id);
     if (best) out.push({ c, v, d, best });
   })));
@@ -441,6 +475,11 @@ function renderAthleteEdit() {
 function handleCompeteClick(d) {
   if (d.challenge) { ui.challengeId = d.challenge; ui.challengeVariant = d.variant || null; ui.challengeDivision = d.division || null; ui.screen = "challenge"; render(); return true; }
   if (d.cvariant) { ui.challengeVariant = d.cvariant; rerender(); return true; }
+  if (d.cboard) { ui.challengeBoard = { ...(ui.challengeBoard || {}), [ui.challengeId]: d.cboard }; rerender(); return true; }
+  if (d.anyMove) {
+    const [machine, move] = d.anyMove.split(":");
+    state.settings.anywhereMoves = { ...anywhereMoves(), [machine]: move }; save(); rerender(); return true;
+  }
   if (d.cdivision) { ui.challengeDivision = d.cdivision; rerender(); return true; }
   if (d.benchFilter) { ui.benchFilter = d.benchFilter; rerender(); return true; }
   if (d.boardScope) { ui.boardScope = d.boardScope; rerender(); return true; }
@@ -643,7 +682,7 @@ function renderAthleteView() {
   ${records.length ? `<div class="cl-list">${records.map(r => `
     <div class="lib-row">
       <div class="cl-row"><i class="ti ${r.c.icon} cl-ic" aria-hidden="true"></i>
-        <span class="cl-main"><span class="cl-name">${esc(r.c.name)}${r.c.variants.length > 1 ? ` · ${esc(variantOf(r.c, r.variant).name)}` : ""}</span>
+        <span class="cl-main"><span class="cl-name">${esc(r.c.name)}${variantLabel(r.c, r.variant) ? ` · ${esc(variantLabel(r.c, r.variant))}` : ""}</span>
           <span class="cl-meta">${esc(cap(r.division))} · ${esc(formatScore(r.c, Number(r.score)))}</span></span></div>
       ${p.is_me ? "" : `<button class="follow-btn" data-act="challenge-result" data-id="${r.c.id}" data-variant="${esc(r.variant)}" data-division="${esc(r.division)}" data-score="${r.score}" data-name="${esc(p.display_name)}"><i class="ti ti-swords"></i> Beat it</button>`}
     </div>`).join("")}</div>` : `<p class="empty">No public benchmark results yet.</p>`}
@@ -746,7 +785,7 @@ function monthlyMedals() {
   const seen = new Map();
   allAttempts().filter(a => !a.dnf).forEach(a => {
     const m = monthlyChallenge(new Date(a.date));
-    if (a.challengeId === m.challengeId && a.variant === m.variant && !seen.has(m.key)) {
+    if (a.challengeId === m.challengeId && baseVariant(a.variant) === m.variant && !seen.has(m.key)) {
       seen.set(m.key, { key: m.key, label: new Date(m.start).toLocaleDateString(undefined, { month: "short", year: "2-digit" }), challenge: challengeById(a.challengeId).name, start: m.start });
     }
   });

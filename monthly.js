@@ -21,9 +21,10 @@ function hallMonths(rows) {
   const byMonth = new Map();
   rows.forEach(r => {
     const key = String(r.month).slice(0, 7);
-    if (!byMonth.has(key)) byMonth.set(key, { key, month: Date.parse(`${key}-01T00:00:00Z`), challengeId: r.challenge_id, variant: r.variant, divisions: {} });
+    if (!byMonth.has(key)) byMonth.set(key, { key, month: Date.parse(`${key}-01T00:00:00Z`), challengeId: r.challenge_id, variant: baseVariant(r.variant), divisions: {} });
     const m = byMonth.get(key);
-    const d = m.divisions[r.division] || (m.divisions[r.division] = { participants: Number(r.participants) || 0, podium: [], me: null });
+    const k = `${r.division}${isAnywhere(r.variant) ? "~any" : ""}`;           // "open" or "open~any" (no machines)
+    const d = m.divisions[k] || (m.divisions[k] = { participants: Number(r.participants) || 0, podium: [], me: null });
     if (r.rank == null) return;
     const row = { rank: r.rank, name: r.display_name, handle: r.handle, score: Number(r.score), verified: r.verification === "verified", me: r.is_me };
     if (r.rank <= 3) d.podium.push(row);
@@ -49,16 +50,21 @@ function renderHall() {
     : months.map(mo => {
       const ch = challengeById(mo.challengeId);
       const d = mo.divisions[div] || { participants: 0, podium: [], me: null };
-      return `
-      <section class="hall-month">
-        <div class="hall-head"><div><div class="cl-name">${esc(monthLabel(mo.month))}</div>
-          <div class="cl-meta">${esc(ch?.name || mo.challengeId)} · ${d.participants} athlete${d.participants === 1 ? "" : "s"}</div></div></div>
+      const any = mo.divisions[`${div}~any`];
+      const podium = (d, label) => `
+        ${label ? `<div class="cl-meta hall-board">${label} · ${d.participants} athlete${d.participants === 1 ? "" : "s"}</div>` : ""}
         ${d.podium.length ? `<ol class="board podium">${d.podium.map(p => `
           <li class="${p.me ? "is-me" : ""}"><span class="b-rank"><i class="ti ${MEDAL[p.rank] || "ti-medal"}"></i></span>
             <span class="b-name">${esc(p.name)}${p.verified ? ` <i class="ti ti-circle-check" title="Verified"></i>` : ""}</span>
             <span class="b-score">${ch ? esc(formatScore(ch, p.score)) : p.score}</span></li>`).join("")}</ol>`
           : `<p class="hint">Nobody in ${esc(cap(div))} this month.</p>`}
-        ${d.me && d.me.rank > 3 ? `<div class="cl-meta hall-me">You finished <b>#${d.me.rank}</b> of ${d.participants} · ${ch ? esc(formatScore(ch, d.me.score)) : d.me.score}</div>` : ""}
+        ${d.me && d.me.rank > 3 ? `<div class="cl-meta hall-me">You finished <b>#${d.me.rank}</b> of ${d.participants} · ${ch ? esc(formatScore(ch, d.me.score)) : d.me.score}</div>` : ""}`;
+      return `
+      <section class="hall-month">
+        <div class="hall-head"><div><div class="cl-name">${esc(monthLabel(mo.month))}</div>
+          <div class="cl-meta">${esc(ch?.name || mo.challengeId)} · ${d.participants} athlete${d.participants === 1 ? "" : "s"}</div></div></div>
+        ${podium(d)}
+        ${any?.participants ? podium(any, `<i class="ti ti-home"></i> Anywhere (no machines)`) : ""}
       </section>`;
     }).join("");
 

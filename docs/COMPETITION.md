@@ -92,6 +92,18 @@ Scoring types: time (lower or higher wins), distance, reps, load, rounds, points
 - **Reminders:** two calendar alerts a month ("5 days left" and "new challenge is
   live"), via Google Calendar links or an .ics file for the next 12 months.
 
+## Anywhere (no machines)
+
+Challenges with machine distances (`anywhere: true`: Iron Mile, The Mill, The Gauntlet,
+The Clearing, The Escape) can be done without a treadmill, rower or bike. Every machine
+distance becomes a timed block of a move the athlete picks (jumping jacks, mountain
+climbers, high knees, burpees, skater jumps, air squats, jump rope, KB swings, DB thrusters).
+The block is as long as an average athlete needs for the distance (run 5:30/km, row
+2:10/500 m, bike ~30 km/h, rounded to 15 s), it can't be skipped or extended, and it is
+the same for everyone, so the move picked never changes the score. The race is decided
+by the stations that stay the same. Results use the variant id plus `~any`
+(`standard~any`), so they get their own leaderboards and their own monthly podium.
+
 ## Next
 
 - Event admin screen (today events are added with SQL; see the seed in 004)

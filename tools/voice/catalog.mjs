@@ -6,7 +6,7 @@ import vm from "vm";
 import { fileURLToPath } from "url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const src = ["workouts.js", "core.js", "challenges.js", "progress.js", "coach.js"].map(f => fs.readFileSync(path.join(root, f), "utf8")).join("\n;\n");
-const V = vm.runInContext(`${src}\n;({ TEMPLATES, BENCHMARKS, DIVISIONS, createWorkout, compile, gearPlan, challengeWorkout, challengeFromSpec, outdoorSwaps, coachCatalog, coachFile })`,
+const V = vm.runInContext(`${src}\n;({ TEMPLATES, BENCHMARKS, DIVISIONS, createWorkout, compile, gearPlan, challengeWorkout, challengeFromSpec, outdoorSwaps, ANYWHERE_MOVES, coachCatalog, coachFile })`,
   vm.createContext({ console, performance, Math, Date, JSON, URLSearchParams }));
 
 const kits = [["treadmill", "rower", "bike", "kettlebell", "dumbbell", "battle-ropes", "outdoors"], [], ["outdoors"], ["dumbbell"], ["kettlebell"], ["dumbbell", "outdoors"]];
@@ -17,6 +17,9 @@ for (const t of V.TEMPLATES) for (const kit of kits) {
 }
 for (const c of V.BENCHMARKS) for (const v of c.variants) for (const d of V.DIVISIONS)
   for (const kit of [["treadmill"], ["outdoors"]]) timelines.push(V.compile(V.challengeWorkout(c, v.id, d.id), V.outdoorSwaps(kit), { warmup: true, cooldown: true }));
+// Anywhere (no machines): every move that can replace a machine.
+for (const c of V.BENCHMARKS.filter(c => c.anywhere)) for (const m of V.ANYWHERE_MOVES)
+  timelines.push(V.compile(V.challengeWorkout(c, `${c.defaultVariant}~any`, "open", { run: m.id, row: m.id, bike: m.id }), {}, {}));
 // Event Trials seeded in the database.
 const sql = fs.readFileSync(path.join(root, "supabase", "004_events.sql"), "utf8");
 for (const m of sql.matchAll(/\('([a-z0-9-]+)', '([a-z0-9-]+)', (\d+), '([^']+)', ([\d.]+), '(\{.*?\})'\)/g)) {

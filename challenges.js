@@ -162,7 +162,7 @@ const BENCHMARKS = [
       toDistance("bike", 4000, 480, { title: "The Valley", story: "Last leg. The long valley. Ride four kilometers to the border." })])] }),
   },
   {
-    id: "iron-mile", name: "Iron Mile", tagline: "The hybrid mile", scoring: "time", icon: "ti-flame",
+    id: "iron-mile", name: "Iron Mile", anywhere: true, tagline: "The hybrid mile", scoring: "time", icon: "ti-flame",
     story: "Four laps around the old iron works, with a job waiting at every gate: ring the bell, stoke the furnace, lift the iron. Short, honest, painful.",
     finale: "That's the Iron Mile. Clock's stopped.",
     variants: [{ id: "standard", name: "Standard" }], defaultVariant: "standard", equipment: ["treadmill|outdoors", "kettlebell", "dumbbell"], level: "intermediate",
@@ -191,7 +191,7 @@ const BENCHMARKS = [
       forReps("db-row", 10, 45, firstOnly(i, { name: "Haul the Coal", cue: "Haul the coal", target: { perSide: true }, story: "Haul the coal. 10 rows each side." }))])) }),
   },
   {
-    id: "the-mill", name: "The Mill", tagline: "Ten rounds for time", scoring: "time", icon: "ti-repeat",
+    id: "the-mill", name: "The Mill", anywhere: true, tagline: "Ten rounds for time", scoring: "time", icon: "ti-repeat",
     story: "The old mill by the river still turns. Row the water to drive the wheel, swing the stone to grind the grain. Ten turns, then it's done. The mill grinds everyone down.",
     finale: "The grain is ground. The Mill is done. Clock's stopped.",
     variants: [{ id: "standard", name: "10 rounds" }], defaultVariant: "standard", equipment: ["rower", "kettlebell"], level: "intermediate",
@@ -202,7 +202,7 @@ const BENCHMARKS = [
       forReps("kb-swing", 10, 25, { name: "Grind the Stone", cue: "Grind the stone", story: i === 0 ? "Grind the stone. 10 kettlebell swings." : "" })])) }),
   },
   {
-    id: "the-gauntlet", name: "The Gauntlet", tagline: "Every modality, for time", scoring: "time", icon: "ti-shield-check",
+    id: "the-gauntlet", name: "The Gauntlet", anywhere: true, tagline: "Every modality, for time", scoring: "time", icon: "ti-shield-check",
     story: "Six trials stand between you and the gate: the trail, the current, the pass, the load, the pit and the gate itself. Nothing to hide behind.",
     partWord: "Trial", finale: "You ran the Gauntlet. Clock's stopped.",
     variants: [{ id: "standard", name: "Standard" }], defaultVariant: "standard", equipment: ["treadmill", "rower", "bike", "kettlebell", "dumbbell"], level: "advanced",
@@ -273,7 +273,7 @@ const BENCHMARKS = [
   },
   // ── No equipment: anyone, anywhere can compete ─────────────────────────
   {
-    id: "the-clearing", name: "The Clearing", tagline: "Run · burpees · run", scoring: "time", icon: "ti-trees",
+    id: "the-clearing", name: "The Clearing", anywhere: true, tagline: "Run · burpees · run", scoring: "time", icon: "ti-trees",
     story: "There's a clearing in the middle of the forest. Run out to it, fight your way through it, run back home. No gym needed, just a measured kilometre and a patch of ground.",
     finale: "Home again. Clock's stopped.",
     variants: [{ id: "standard", name: "1 km · 50 · 1 km" }], defaultVariant: "standard", equipment: ["treadmill|outdoors"], level: "intermediate",
@@ -308,7 +308,7 @@ const BENCHMARKS = [
   },
   // ── Story challenges ───────────────────────────────────────────────────
   {
-    id: "the-escape", name: "The Escape", tagline: "Ten stages out of the forest", scoring: "time", icon: "ti-trees", partWord: "Stage", finale: "escaped",
+    id: "the-escape", name: "The Escape", anywhere: true, tagline: "Ten stages out of the forest", scoring: "time", icon: "ti-trees", partWord: "Stage", finale: "escaped",
     story: "You're deep in the Iron Forest. Run through the trees, cross the river, haul your supplies, fight through the thicket and carry the wounded. Ten stages, one clock. Get out.",
     variants: [{ id: "standard", name: "Full Escape", s: 1 }, { id: "half", name: "Half Escape", s: 0.5 }], defaultVariant: "standard",
     equipment: ["treadmill|outdoors", "rower", "kettlebell", "dumbbell|kettlebell"], level: "intermediate",
@@ -338,9 +338,9 @@ BENCHMARKS.forEach(b => { b.kind = "benchmark"; b.better = b.better || SCORING[b
 
 /* Monthly challenges rotate through benchmarks people can do almost anywhere. */
 const MONTHLY_ROTATION = [
-  ["three-rivers", "standard"], ["the-storm", "20"], ["iron-mile", "standard"], ["the-burden", "5"], ["the-hunt", "5k"],
+  ["the-hundred", "standard"], ["the-storm", "20"], ["iron-mile", "standard"], ["the-burden", "5"], ["the-hunt", "5k"],
   ["the-forge", "standard"], ["the-river", "2k"], ["the-chase", "standard"], ["the-stand", "5"], ["the-mill", "standard"],
-  ["the-hundred", "standard"], ["the-clearing", "standard"],
+  ["the-escape", "standard"], ["the-clearing", "standard"],
 ];
 /* Months run in UTC, the same window everywhere in the world (and in supabase/006_monthly.sql). */
 function monthlyChallenge(now = new Date()) {
@@ -375,11 +375,58 @@ const EVENTS = [
 const EXTRA_CHALLENGES = new Map();
 const challengeById = id => BENCHMARKS.find(c => c.id === id) || EXTRA_CHALLENGES.get(id) || null;
 function registerChallenge(c) { EXTRA_CHALLENGES.set(c.id, c); return c; }
-const variantOf = (c, id) => c.variants.find(v => v.id === id) || c.variants.find(v => v.id === c.defaultVariant) || c.variants[0];
+/* "Anywhere" results live on their own leaderboard: the variant id plus "~any" (e.g. "standard~any"). */
+const isAnywhere = id => String(id || "").endsWith("~any");
+const baseVariant = id => String(id || "").replace(/~any$/, "");
+const variantOf = (c, id) => c.variants.find(v => v.id === baseVariant(id)) || c.variants.find(v => v.id === c.defaultVariant) || c.variants[0];
 
-function challengeWorkout(c, variantId, division = "open") {
+function challengeWorkout(c, variantId, division = "open", moves = {}) {
   const v = variantOf(c, variantId);
-  return { id: uid(), templateId: `challenge:${c.id}`, name: `${c.name}${c.variants.length > 1 ? ` · ${v.name}` : ""}`, params: {}, challenge: { id: c.id, variant: v.id, division }, ...c.build(v, division) };
+  const any = isAnywhere(variantId) && c.anywhere;
+  const w = c.build(v, division);
+  const used = any ? anywhereMachines(w).reduce((o, m) => ({ ...o, [m.machine]: anywhereMove(moves, m.machine) }), {}) : null;
+  return { id: uid(), templateId: `challenge:${c.id}`, name: `${c.name}${c.variants.length > 1 ? ` · ${v.name}` : ""}${any ? " · Anywhere" : ""}`, params: {},
+    challenge: { id: c.id, variant: any ? `${v.id}~any` : v.id, division, ...(any ? { moves: used } : {}) }, ...(any ? anywhereWorkout(w, used) : w) };
+}
+const variantLabel = (c, id) => `${c.variants.length > 1 ? variantOf(c, id).name : ""}${isAnywhere(id) ? `${c.variants.length > 1 ? " · " : ""}Anywhere` : ""}`;
+
+/* ── Anywhere: the same challenge without machines ─────────────────────────────
+   Every machine distance becomes a timed block of a move the athlete picks,
+   as long as an average athlete needs for that distance (800 m run → 4:30).
+   The blocks take exactly the same time for everyone, so the move you pick
+   never changes your score: the race is decided by the stations that stay.
+   Anywhere results never mix with machine results; they have their own leaderboard. */
+const MACHINE_PACE = { run: 0.33, row: 0.26, bike: 0.12 };          // seconds per meter: 5:30/km run, 2:10/500 m row, ~30 km/h bike
+const MACHINE_OF = { run: "run", "run-outside": "run", row: "row", bike: "bike" };
+const MACHINE_LABEL = { run: "Run", row: "Row", bike: "Bike" };
+const MACHINE_VERB = { run: "running", row: "rowing", bike: "riding" };
+const ANYWHERE_MOVES = [
+  { id: "jumping-jacks" }, { id: "mountain-climbers" }, { id: "high-knees" }, { id: "burpee" }, { id: "skater-jumps" },
+  { id: "air-squat" }, { id: "jump-rope", gear: "jump-rope" }, { id: "kb-swing", gear: "kettlebell" }, { id: "db-thruster", gear: "dumbbell" },
+];
+const ANYWHERE_DEFAULT = { run: "jumping-jacks", row: "burpee", bike: "mountain-climbers" };
+const anywhereMove = (moves, machine) => ANYWHERE_MOVES.some(m => m.id === moves?.[machine]) ? moves[machine] : ANYWHERE_DEFAULT[machine];
+const anywhereMovesFor = equipment => ANYWHERE_MOVES.filter(m => !m.gear || equipment.includes(m.gear));
+const metersOf = t => t?.distance ? (t.unit === "km" ? t.distance * 1000 : t.unit === "m" ? t.distance : 0) : 0;
+/* Seconds for a distance, rounded to 15. */
+const anywhereSeconds = (meters, machine) => Math.max(30, Math.round(meters * MACHINE_PACE[machine] / 15) * 15);
+/* The machine distances in a built workout: [{ machine, meters: [...] }]. */
+function anywhereMachines(w) {
+  const out = new Map();
+  w.rounds.forEach(r => r.blocks.forEach(b => {
+    const m = b.type === "cardio" && MACHINE_OF[b.id], d = metersOf(b.target);
+    if (m && d) { if (!out.has(m)) out.set(m, []); out.get(m).push(d); }
+  }));
+  return [...out].map(([machine, meters]) => ({ machine, meters }));
+}
+function anywhereWorkout(w, moves) {
+  const swap = b => {
+    const m = b.type === "cardio" && MACHINE_OF[b.id], d = metersOf(b.target);
+    if (!m || !d) return b;
+    const sec = anywhereSeconds(d, m);
+    return station([ex(moves[m])], sec, { note: `Instead of ${MACHINE_VERB[m]} ${d >= 1000 ? `${d / 1000} km` : `${d} m`}. Keep moving until the timer ends.`, fixed: true });   // fixed: no skipping, no extra time
+  };
+  return { ...w, rounds: w.rounds.map(r => ({ ...r, blocks: r.blocks.map(swap) })) };
 }
 
 /* Benchmarks keep their movements, but a run or walk may happen outdoors instead of on a treadmill. */
