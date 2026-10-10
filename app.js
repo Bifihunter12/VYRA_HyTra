@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.10.1";
+const APP_VERSION = "2026.10.10.2";
 const STORE_KEY = "vyra_v1";
 /* Beeps, the voice coach and vibration. */
 const CUES_ENABLED = true;
@@ -153,7 +153,7 @@ const COACH_COMMON = ["warmup-start", "warmup-done", "cooldown", "cooldown-done"
   "last-round", "togo-1", "togo-2", "togo-3", "tap-done", "tap-done-dist", "seg-hard", "seg-easy", "seg-work", "seg-rest"];
 
 function wireCues(engine) {
-  const coach = new CoachScript(engine.timeline, { challenge: !!session?.workout?.challenge });
+  const coach = new CoachScript(engine.timeline, { challenge: session?.workout?.challenge?.id || false });
   Voice.prepare([...timelineLines(engine.timeline), ...COACH_COMMON]);
   engine
     .on("countdown", ({ n }) => { Cues.beep(); Cues.buzz(60); Voice.play(coach.countdown(n)); })
@@ -1225,7 +1225,7 @@ function toneFor(iv, seg) {
 function counterText(iv) {
   if (iv.type === "WARM") return iv.phase === "warm" ? "Warm-up" : "Cool-down";
   if (iv.rounds > 1) return `Round ${iv.round} of ${iv.rounds}`;
-  const word = templateById(session.workout.templateId).roundWord || "Part";
+  const word = partWord();
   const part = iv.part || (engine.timeline.slice(engine.index).find(x => x.part)?.part ?? iv.parts);
   return `${word} ${part} of ${iv.parts}`;
 }
@@ -1320,6 +1320,8 @@ function renderGate() {
   </div>`;
 }
 
+const partWord = () => (session?.workout?.challenge && challengeById(session.workout.challenge.id)?.partWord)
+  || templateById(session.workout.templateId).roundWord || "Part";
 /* "2 more rounds after this" / "Last round" */
 function toGoText(iv) {
   if (iv.type === "WARM") return "";
@@ -1330,8 +1332,8 @@ function toGoText(iv) {
   }
   const part = iv.part || tl.slice(engine.index).find(x => x.part)?.part;
   if (!part || iv.parts < 2) return "";
-  const left = iv.parts - part;
-  return left === 0 ? "Last part" : `${left} more part${left === 1 ? "" : "s"} after this`;
+  const left = iv.parts - part, w = partWord().toLowerCase();
+  return left === 0 ? `Last ${w}` : `${left} more ${w}${left === 1 ? "" : "s"} after this`;
 }
 
 function renderPlayer() {

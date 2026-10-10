@@ -147,7 +147,7 @@ function compile(workout, swaps = {}, opts = {}) {
         timeline.push({ ...base, type: "CARDIO", state: e.state || "CARDIO", exId: e.id, duration: b.duration ?? null,
           estimate: open ? (b.estimate || OPEN_ENDED_ESTIMATE) : undefined, openEnded: open,
           target: b.target ? targetText(b.target) : "", hasTarget: !!b.target,
-          title: b.title || e.name, cue: b.cue || e.cue || e.name, icon: exerciseIcon(e), speed, speedUnit: "mph",
+          title: b.title || e.name, cue: b.cue || e.cue || e.name, icon: exerciseIcon(e), speed, speedUnit: "mph", story: b.story || "",
           effort: b.effort || e.effort || "", exercises: [], segments: [],
           instruction: [speed ? `Treadmill at ${fmtSpeed(speed)} MPH.` : "", b.instruction || e.instruction].filter(Boolean).join(" ") });
       } else if (b.type === "rest") {
@@ -163,7 +163,7 @@ function compile(workout, swaps = {}, opts = {}) {
         const split = splitStation(b, exs);
         const { segments, duration } = split ? resolveSegments(split, null) : resolveSegments(b.segments, b.duration ?? null);
         timeline.push({ ...base, type: "WORK", state: "WORK", duration, estimate: duration ?? b.estimate ?? OPEN_ENDED_ESTIMATE,
-          title, cue, icon: exerciseIcon(single || exs[0]), instruction, note: b.note || "",
+          title, cue, icon: exerciseIcon(single || exs[0]), instruction, note: b.note || "", story: b.story || "",
           exercises: exs, target: exs.map(e => targetText(e.target)).filter(Boolean).join(" + "),
           hasTarget: exs.some(e => e.target), openEnded: duration == null, segments, split: !!split });
       }

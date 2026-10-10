@@ -45,6 +45,106 @@
   "file": "15h46z4snlxs6.mp3"
  },
  {
+  "id": "cue:Stage eight. The climb. 20 step-ups, alternate legs.",
+  "text": "Stage eight. The climb. 20 step-ups, alternate legs.",
+  "file": "1s9ziq95pfldr.mp3"
+ },
+ {
+  "id": "cue:Stage eight. The climb. 40 step-ups, alternate legs.",
+  "text": "Stage eight. The climb. 40 step-ups, alternate legs.",
+  "file": "33ipb72208n1.mp3"
+ },
+ {
+  "id": "cue:Stage five. Clear the path. 15 kettlebell swings.",
+  "text": "Stage five. Clear the path. 15 kettlebell swings.",
+  "file": "iz15d0iij6um.mp3"
+ },
+ {
+  "id": "cue:Stage five. Clear the path. 30 kettlebell swings.",
+  "text": "Stage five. Clear the path. 30 kettlebell swings.",
+  "file": "18lje6zviu2e1.mp3"
+ },
+ {
+  "id": "cue:Stage four. The thicket. 10 burpees, down and through.",
+  "text": "Stage four. The thicket. 10 burpees, down and through.",
+  "file": "1w4focu1w2bnww.mp3"
+ },
+ {
+  "id": "cue:Stage four. The thicket. 20 burpees, down and through.",
+  "text": "Stage four. The thicket. 20 burpees, down and through.",
+  "file": "19qxu1n6b896d.mp3"
+ },
+ {
+  "id": "cue:Stage nine. Carry the wounded. Front-rack carry, 100 meters.",
+  "text": "Stage nine. Carry the wounded. Front-rack carry, 100 meters.",
+  "file": "10loozb1ij8aj5.mp3"
+ },
+ {
+  "id": "cue:Stage nine. Carry the wounded. Front-rack carry, 50 meters.",
+  "text": "Stage nine. Carry the wounded. Front-rack carry, 50 meters.",
+  "file": "hc3o7prhs2bz.mp3"
+ },
+ {
+  "id": "cue:Stage one. Into the trees. Run 400 meters, steady.",
+  "text": "Stage one. Into the trees. Run 400 meters, steady.",
+  "file": "1w6yz831vb4e5.mp3"
+ },
+ {
+  "id": "cue:Stage one. Into the trees. Run 800 meters, steady.",
+  "text": "Stage one. Into the trees. Run 800 meters, steady.",
+  "file": "2na39juj94k1.mp3"
+ },
+ {
+  "id": "cue:Stage seven. The rapids. Row 250 meters, faster this time.",
+  "text": "Stage seven. The rapids. Row 250 meters, faster this time.",
+  "file": "1okou7ajflxd4.mp3"
+ },
+ {
+  "id": "cue:Stage seven. The rapids. Row 500 meters, faster this time.",
+  "text": "Stage seven. The rapids. Row 500 meters, faster this time.",
+  "file": "1yvbqwazfjzrw.mp3"
+ },
+ {
+  "id": "cue:Stage six. Back into the trees. 400 meters. Halfway out.",
+  "text": "Stage six. Back into the trees. 400 meters. Halfway out.",
+  "file": "13aoecj1ap54fx.mp3"
+ },
+ {
+  "id": "cue:Stage six. Back into the trees. 800 meters. Halfway out.",
+  "text": "Stage six. Back into the trees. 800 meters. Halfway out.",
+  "file": "1ovawf31ytp7kx.mp3"
+ },
+ {
+  "id": "cue:Stage ten. The last sprint. 500 meters, and you're out of the forest!",
+  "text": "Stage ten. The last sprint. 500 meters, and you're out of the forest!",
+  "file": "ovoupz17n0r7h.mp3"
+ },
+ {
+  "id": "cue:Stage ten. The last sprint. One kilometer, and you're out of the forest!",
+  "text": "Stage ten. The last sprint. One kilometer, and you're out of the forest!",
+  "file": "1k6ob00trrtse.mp3"
+ },
+ {
+  "id": "cue:Stage three. Haul the supplies. Farmer carry, 100 meters.",
+  "text": "Stage three. Haul the supplies. Farmer carry, 100 meters.",
+  "file": "3oensf1o9g1h.mp3"
+ },
+ {
+  "id": "cue:Stage three. Haul the supplies. Farmer carry, 50 meters.",
+  "text": "Stage three. Haul the supplies. Farmer carry, 50 meters.",
+  "file": "19z38m51tr2h77.mp3"
+ },
+ {
+  "id": "cue:Stage two. The river. Row 250 meters to the other side.",
+  "text": "Stage two. The river. Row 250 meters to the other side.",
+  "file": "152dkqzen3s81.mp3"
+ },
+ {
+  "id": "cue:Stage two. The river. Row 500 meters to the other side.",
+  "text": "Stage two. The river. Row 500 meters to the other side.",
+  "file": "thrp3r1n8nawd.mp3"
+ },
+ {
   "id": "cue:Strength circuit",
   "text": "Strength circuit.",
   "file": "p6mjicu1dwi.mp3"
@@ -133,6 +233,11 @@
   "id": "ended",
   "text": "Workout ended. Good work today.",
   "file": "79lwzfj3qg6h.mp3"
+ },
+ {
+  "id": "escaped",
+  "text": "You made it out. You escaped the Iron Forest! Clock's stopped.",
+  "file": "m8tphi1h2zvt8.mp3"
  },
  {
   "id": "go",
@@ -1745,6 +1850,11 @@
   "file": "1tbvldj1xviy0t.mp3"
  },
  {
+  "id": "t:15 reps",
+  "text": "15 reps.",
+  "file": "1gfqbpr19h4zn9.mp3"
+ },
+ {
   "id": "t:2 km",
   "text": "2 kilometers.",
   "file": "1uhl1o9gnhvc7.mp3"
@@ -1785,6 +1895,11 @@
   "file": "4hrfu3nt9nmt.mp3"
  },
  {
+  "id": "t:40 reps",
+  "text": "40 reps.",
+  "file": "6isgxl1udexvv.mp3"
+ },
+ {
   "id": "t:400 m",
   "text": "400 meters.",
   "file": "ooma1i868gwc.mp3"
@@ -1793,6 +1908,11 @@
   "id": "t:5 km",
   "text": "5 kilometers.",
   "file": "oxtssm1tqpjag.mp3"
+ },
+ {
+  "id": "t:50 m",
+  "text": "50 meters.",
+  "file": "b19bl1134g59f.mp3"
  },
  {
   "id": "t:50 reps",
@@ -1813,6 +1933,11 @@
   "id": "t:8 reps + 8 reps + 8 reps",
   "text": "8 reps, then 8 reps, then 8 reps.",
   "file": "2bxqr11l8atzv.mp3"
+ },
+ {
+  "id": "t:800 m",
+  "text": "800 meters.",
+  "file": "ks95m18bh43s.mp3"
  },
  {
   "id": "t:~20 reps",

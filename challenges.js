@@ -240,6 +240,33 @@ const BENCHMARKS = [
     inputs: () => [{ key: "reps", label: "Push-ups", unit: "reps" }],
     build: v => ({ rounds: [round([station([ex("push-up")], v.min * 60, { name: "The Shield", cue: "Push ups" })])] }),
   },
+  // ── Story challenges ───────────────────────────────────────────────────
+  {
+    id: "the-escape", name: "The Escape", tagline: "Ten stages out of the forest", scoring: "time", icon: "ti-trees", partWord: "Stage",
+    story: "You're deep in the Iron Forest. Run through the trees, cross the river, haul your supplies, fight through the thicket and carry the wounded. Ten stages, one clock. Get out.",
+    variants: [{ id: "standard", name: "Full Escape", s: 1 }, { id: "half", name: "Half Escape", s: 0.5 }], defaultVariant: "standard",
+    equipment: ["treadmill|outdoors", "rower", "kettlebell", "dumbbell|kettlebell"], level: "intermediate",
+    divisions: { open: `KB ${loadText("open", "kb")} · DB ${loadText("open", "db")}`, competitive: `KB ${loadText("competitive", "kb")} · DB ${loadText("competitive", "db")}`, elite: `KB ${loadText("elite", "kb")} · DB ${loadText("elite", "db")}` },
+    rules: ["10 stages back to back, for time. The clock runs through every transition.",
+      "Full: 800 m run · 500 m row · 100 m farmer carry · 20 burpees · 30 KB swings · 800 m run · 500 m row · 40 step-ups · 100 m front-rack carry · 1 km run.",
+      "Half: the same stages with half the distance and reps.", "Runs outdoors on a measured route or treadmill ≥ 1%. Step-ups on a box or bench, knee height."],
+    build: v => {
+      const s = v.s || 1, n = x => Math.round(x * s);
+      const carry = (id, m, title, story) => station([ex(id, { distance: n(m), unit: "m" })], null, { estimate: n(m) * 0.9, name: title, cue: title, story });
+      return { rounds: [round([
+        toDistance("run", n(800), n(800) * 0.33, { title: "Into the Trees", story: `Stage one. Into the trees. Run ${n(800)} meters, steady.` }),
+        toDistance("row", n(500), n(500) * 0.26, { title: "The River", story: `Stage two. The river. Row ${n(500)} meters to the other side.` }),
+        carry("farmer-carry", 100, "Haul the Supplies", `Stage three. Haul the supplies. Farmer carry, ${n(100)} meters.`),
+        forReps("burpee", n(20), n(20) * 3.5, { name: "The Thicket", cue: "The Thicket", story: `Stage four. The thicket. ${n(20)} burpees, down and through.` }),
+        forReps("kb-swing", n(30), n(30) * 2.2, { name: "Clear the Path", cue: "Clear the path", story: `Stage five. Clear the path. ${n(30)} kettlebell swings.` }),
+        toDistance("run", n(800), n(800) * 0.34, { title: "Back into the Trees", story: `Stage six. Back into the trees. ${n(800)} meters. Halfway out.` }),
+        toDistance("row", n(500), n(500) * 0.27, { title: "The Rapids", story: `Stage seven. The rapids. Row ${n(500)} meters, faster this time.` }),
+        forReps("step-ups", n(40), n(40) * 1.8, { name: "The Climb", cue: "The Climb", target: { perSide: false }, story: `Stage eight. The climb. ${n(40)} step-ups, alternate legs.` }),
+        carry("front-rack-carry", 100, "Carry the Wounded", `Stage nine. Carry the wounded. Front-rack carry, ${n(100)} meters.`),
+        toDistance("run", n(1000), n(1000) * 0.33, { title: "The Last Sprint", story: `Stage ten. The last sprint. ${n(1000) >= 1000 ? "One kilometer" : `${n(1000)} meters`}, and you're out of the forest!` }),
+      ])] };
+    },
+  },
 ];
 BENCHMARKS.forEach(b => { b.kind = "benchmark"; b.better = b.better || SCORING[b.scoring].better; });
 
