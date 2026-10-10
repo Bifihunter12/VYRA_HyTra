@@ -159,7 +159,20 @@ test("The Escape: ten story stages, for time, with a half version", () => {
   const half = V.compile(V.challengeWorkout(c, "half", "open"), {}, {});
   assert.equal(half[0].target, "400 m");
   assert.match(half[3].story, /10 burpees/);
-  const coach = new V.CoachScript(full, { challenge: "the-escape" });
+  const coach = new V.CoachScript(full, { challenge: "the-escape", finale: c.finale });
   assert.deepEqual([...coach.intro(full[1], full[0])], [`cue:${full[1].story}`]);
   assert.deepEqual([...coach.finish(false)], ["escaped"]);
+});
+
+test("Every challenge tells a story: an intro, spoken stage lines and its own finish", () => {
+  for (const c of V.BENCHMARKS) {
+    assert.ok(c.story.length > 40, `${c.id} intro`);
+    assert.ok(c.finale, `${c.id} finale`);
+    for (const v of c.variants) {
+      const tl = V.compile(V.challengeWorkout(c, v.id, "open"), V.outdoorSwaps(["treadmill"]), {});
+      assert.ok(tl.some(iv => iv.story), `${c.id}/${v.id} story lines`);
+    }
+  }
+  const coach = new V.CoachScript([], { challenge: "the-hunt", finale: V.challengeById("the-hunt").finale });
+  assert.deepEqual([...coach.finish(false)], ["cue:Caught it. The hunt is over. Clock's stopped."]);
 });

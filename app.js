@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.10.2";
+const APP_VERSION = "2026.10.10.3";
 const STORE_KEY = "vyra_v1";
 /* Beeps, the voice coach and vibration. */
 const CUES_ENABLED = true;
@@ -153,7 +153,8 @@ const COACH_COMMON = ["warmup-start", "warmup-done", "cooldown", "cooldown-done"
   "last-round", "togo-1", "togo-2", "togo-3", "tap-done", "tap-done-dist", "seg-hard", "seg-easy", "seg-work", "seg-rest"];
 
 function wireCues(engine) {
-  const coach = new CoachScript(engine.timeline, { challenge: session?.workout?.challenge?.id || false });
+  const coach = new CoachScript(engine.timeline, { challenge: session?.workout?.challenge?.id || false,
+    finale: challengeById(session?.workout?.challenge?.id)?.finale || "" });
   Voice.prepare([...timelineLines(engine.timeline), ...COACH_COMMON]);
   engine
     .on("countdown", ({ n }) => { Cues.beep(); Cues.buzz(60); Voice.play(coach.countdown(n)); })
