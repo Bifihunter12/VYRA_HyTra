@@ -700,6 +700,10 @@
 "file": "5zr6yi1s3w350.mp3",
 "text": "Deadlift to front rack. Deadlift, pause, then guide the bell into the rack."
 },
+"go:devil-press": {
+"file": "wjj2llr02xv.mp3",
+"text": "Devil press. Two dumbbells."
+},
 "go:farmer-carry": {
 "file": "nhzr3ajjv178.mp3",
 "text": "Farmer carry. Heavy weights at your sides."
@@ -1460,6 +1464,10 @@
 "file": "5v639lnqt8in.mp3",
 "text": "Up next, deadlift to front rack."
 },
+"next:devil-press": {
+"file": "79bnem1iwq1wo.mp3",
+"text": "Up next, devil press."
+},
 "next:farmer-carry": {
 "file": "xqhuvb152w65.mp3",
 "text": "Up next, farmer carry."
@@ -1959,6 +1967,10 @@
 "t:800 m": {
 "file": "ks95m18bh43s.mp3",
 "text": "800 meters."
+},
+"t:~10 reps": {
+"file": "1hr959eonig70.mp3",
+"text": "About 10 reps."
 },
 "t:~20 reps": {
 "file": "1ko3enn171qv11.mp3",
