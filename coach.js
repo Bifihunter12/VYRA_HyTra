@@ -38,6 +38,7 @@ const COACH_LINES = {
   "tap-done": "Tap done, or double press your headphones, when the set is finished.",
   "tap-done-dist": "Tap done, or double press your headphones, when you hit the distance.",
   "seg-switch": "Switch. Move to the next one.",
+  "switch-sides": "Switch sides.",
   "seg-hard": "Hard! Push the pace.", "seg-easy": "Easy. Recover.", "seg-work": "Work!", "seg-rest": "Rest.",
   "preview": "Hey, I'm your Iron Forest coach. Round three. Kettlebell swings, let's go. Snap those hips!",
 };
@@ -111,6 +112,7 @@ function timelineLines(timeline) {
   const ids = new Set(["c3", "c2", "c1", "go"]);
   timeline.forEach((iv, i) => {
     if (iv.type === "REST") { const n = timeline.slice(i + 1).find(x => x.type !== "REST"); if (n) ids.add(nextKey(n)); return; }
+    if (iv.sidesAt) ids.add("switch-sides");
     ids.add(introKey(iv));
     if (iv.story) ids.add(`cue:${iv.story}`);
     if (iv.target) ids.add(`t:${iv.target}`);
@@ -154,7 +156,7 @@ class CoachScript {
     if (iv.type === "REST") {
       const next = this.tl.slice(this.tl.indexOf(iv) + 1).find(x => x.type !== "REST");
       const rest = `rest-${(this.restN++ % 4) + 1}`;
-      return [rest, next && !(next.roundStart && next.rounds > 1) ? nextKey(next) : null].filter(Boolean);
+      return [rest, next ? nextKey(next) : null].filter(Boolean);              // always say what's next, runs included
     }
     const out = [];
     if (iv.rounds > 1 && iv.roundStart) {
@@ -175,6 +177,7 @@ class CoachScript {
   }
   /* Seconds left in a timed interval. */
   second(iv, remaining, durationSec) {
+    if (iv?.sidesAt?.includes(durationSec - remaining)) return ["switch-sides"];
     if (!iv || iv.type === "WARM") return [];
     if (remaining === 10 && durationSec >= 30) return [iv.type === "REST" ? "ten-rest" : "ten-work"];
     if (iv.type === "REST") return [];

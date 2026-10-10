@@ -1171,7 +1171,7 @@
  },
  {
   "id": "go:run",
-  "text": "Run. Steady, controlled pace.",
+  "text": "Treadmill run. Steady, controlled pace.",
   "file": "13nwq2swsvhii.mp3"
  },
  {
@@ -2526,7 +2526,7 @@
  },
  {
   "id": "next:run",
-  "text": "Up next, run.",
+  "text": "Up next, treadmill run.",
   "file": "1j3t1wv14mfcix.mp3"
  },
  {
@@ -2808,6 +2808,11 @@
   "id": "seg-work",
   "text": "Work!",
   "file": "1gerhosrdzsje.mp3"
+ },
+ {
+  "id": "switch-sides",
+  "text": "Switch sides.",
+  "file": "g1ymhwu5fxt6.mp3"
  },
  {
   "id": "t:1 km",

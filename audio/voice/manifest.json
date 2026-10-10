@@ -938,7 +938,7 @@
 },
 "go:run": {
 "file": "13nwq2swsvhii.mp3",
-"text": "Run. Steady, controlled pace."
+"text": "Treadmill run. Steady, controlled pace."
 },
 "go:run-outside": {
 "file": "1h6tbyezhrymg.mp3",
@@ -2022,7 +2022,7 @@
 },
 "next:run": {
 "file": "1j3t1wv14mfcix.mp3",
-"text": "Up next, run."
+"text": "Up next, treadmill run."
 },
 "next:run-outside": {
 "file": "1blty211l7klb3.mp3",
@@ -2247,6 +2247,10 @@
 "seg-work": {
 "file": "1gerhosrdzsje.mp3",
 "text": "Work!"
+},
+"switch-sides": {
+"file": "g1ymhwu5fxt6.mp3",
+"text": "Switch sides."
 },
 "t:1 km": {
 "file": "1b8l1hm1jsz9d0.mp3",

@@ -11,7 +11,7 @@
      effort?: string  — shown under the timer for cardio }                     */
 const EXERCISES = {
   // ── Cardio ──────────────────────────────────────────────────────────────
-  "run":          { name: "Treadmill Run", cue: "Run", state: "RUN", cardio: true, speed: true, equipment: ["treadmill"],
+  "run":          { name: "Treadmill Run", cue: "Treadmill run", state: "RUN", cardio: true, speed: true, equipment: ["treadmill"],
                     subs: ["run-outside", "incline-walk", "bike", "row", "jog-in-place"], instruction: "Steady, controlled pace." },
   "row":          { name: "Row", cue: "Row", state: "ROW", cardio: true, equipment: ["rower"], effort: "Steady · 22–26 strokes/min",
                     subs: ["bike", "run", "incline-walk", "run-outside", "jog-in-place"], instruction: "Legs, then hips, then arms. Long, controlled strokes." },
@@ -486,6 +486,10 @@ Object.assign(EXERCISES, {
   "jumping-jacks":  { name: "Jumping Jacks", cue: "Jumping jacks", equipment: [], pattern: "conditioning", subs: ["march-in-place"], instruction: "Light and quick on the balls of the feet." },
 });
 EXERCISES["run-outside"].pattern = EXERCISES["walk-outside"].pattern = "cardio";
+/* One side at a time: the coach says "Switch sides" halfway through a timed set. */
+Object.entries(EXERCISES).forEach(([id, e]) => {
+  if (/switch (sides|legs) halfway/i.test(e.instruction || "") || ["db-row", "kb-row"].includes(id)) e.sides = true;
+});
 EXERCISES["jog-in-place"].pattern = EXERCISES["march-in-place"].pattern = "cardio";
 
 /* No weights? Every loaded movement falls back to a bodyweight version (listed
