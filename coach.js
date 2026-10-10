@@ -20,6 +20,7 @@ const COACH_LINES = {
   "cooldown": "Let's cool down. Slow it right down and breathe.",
   "workout-done": "That's it, workout complete. Great job today.",
   "challenge-done": "Done! Clock's stopped. That was a big effort.",
+  "escaped": "You made it out. You escaped the Iron Forest! Clock's stopped.",
   "ended": "Workout ended. Good work today.",
   "cooldown-done": "Nicely done. Drink some water, and I'll see you next time.",
   "paused": "Paused.", "resume": "And we're back.",
@@ -84,6 +85,7 @@ function timelineLines(timeline) {
   timeline.forEach((iv, i) => {
     if (iv.type === "REST") { const n = timeline.slice(i + 1).find(x => x.type !== "REST"); if (n) ids.add(nextKey(n)); return; }
     ids.add(introKey(iv));
+    if (iv.story) ids.add(`cue:${iv.story}`);
     if (iv.target) ids.add(`t:${iv.target}`);
     (iv.segments || []).forEach(sg => {
       if (sg.switch) { ids.add("seg-switch"); ids.add(`next:${sg.exId}`); }
@@ -107,7 +109,7 @@ class CoachScript {
   interval(index, reason, gate = null) {
     const iv = this.tl[index], prev = this.tl[index - 1];
     if (gate === "main") return ["warmup-done"];
-    if (gate === "cool") return [this.challenge ? "challenge-done" : "workout-done"];
+    if (gate === "cool") return [this.doneLine()];
     return this.intro(iv, prev, reason);
   }
   intro(iv, prev) {
@@ -127,10 +129,11 @@ class CoachScript {
       if (left === 0) out.push("last-round");
       else { out.push(`round:${iv.round}`); if (left <= 3 && iv.round > 1) out.push(`togo-${left}`); }
     }
-    if (iv.split && iv.segments[0]) out.push(...this.segment(iv.segments[0]));
+    if (iv.story) out.push(`cue:${iv.story}`);                  // story challenges: the stage line says it all
+    else if (iv.split && iv.segments[0]) out.push(...this.segment(iv.segments[0]));
     else { out.push(introKey(iv)); if (iv.target) out.push(`t:${iv.target}`); }
     if (iv.speed) out.push(speedKey(iv.speed));
-    if (iv.openEnded) {
+    if (iv.openEnded && !iv.story) {
       const key = iv.type === "CARDIO" ? "tap-done-dist" : "tap-done";
       if (!this.toldDone.has(key)) { this.toldDone.add(key); out.push(key); }
     }
@@ -149,7 +152,8 @@ class CoachScript {
     const k = `seg-${String(seg?.label || "").toLowerCase()}`; return COACH_LINES[k] ? [k] : [];
   }
   /* `afterGate`: the finish was already announced on the cool-down screen. */
-  finish(early, afterGate = false) { return [early ? "ended" : afterGate ? "cooldown-done" : this.challenge ? "challenge-done" : "workout-done"]; }
+  finish(early, afterGate = false) { return [early ? "ended" : afterGate ? "cooldown-done" : this.doneLine()]; }
+  doneLine() { return this.challenge === "the-escape" ? "escaped" : this.challenge ? "challenge-done" : "workout-done"; }
 }
 
 /* All lines for the recording: fixed lines, every exercise, speeds, rounds, plus whatever the given timelines use. */

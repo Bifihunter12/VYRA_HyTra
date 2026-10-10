@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const V = require("./load")();
 
 test("there are 15–20 benchmarks, each with a valid scoring type and unique id", () => {
-  assert.ok(V.BENCHMARKS.length >= 15 && V.BENCHMARKS.length <= 20, `${V.BENCHMARKS.length}`);
+  assert.ok(V.BENCHMARKS.length >= 15 && V.BENCHMARKS.length <= 24, `${V.BENCHMARKS.length}`);
   assert.equal(new Set(V.BENCHMARKS.map(b => b.id)).size, V.BENCHMARKS.length);
   V.BENCHMARKS.forEach(b => assert.ok(V.SCORING[b.scoring], b.id));
 });
@@ -145,4 +145,21 @@ test("monthly Google Calendar links repeat every month", () => {
   assert.equal(fin.searchParams.get("dates").slice(0, 15), "20261027T080000");
   assert.equal(live.searchParams.get("recur"), "RRULE:FREQ=MONTHLY;BYMONTHDAY=1;COUNT=12");
   assert.equal(live.searchParams.get("dates").slice(0, 15), "20261101T080000");
+});
+
+test("The Escape: ten story stages, for time, with a half version", () => {
+  const c = V.challengeById("the-escape");
+  const full = V.compile(V.challengeWorkout(c, "standard", "open"), V.outdoorSwaps(["outdoors"]), {});
+  assert.equal(full.length, 10);
+  assert.ok(full.every(iv => iv.openEnded && iv.story.startsWith("Stage")));
+  assert.deepEqual([...full.map(iv => iv.title)], ["Into the Trees", "The River", "Haul the Supplies", "The Thicket", "Clear the Path",
+    "Back into the Trees", "The Rapids", "The Climb", "Carry the Wounded", "The Last Sprint"]);
+  assert.equal(full[0].exId, "run-outside");
+  assert.equal(full[9].target, "1 km");
+  const half = V.compile(V.challengeWorkout(c, "half", "open"), {}, {});
+  assert.equal(half[0].target, "400 m");
+  assert.match(half[3].story, /10 burpees/);
+  const coach = new V.CoachScript(full, { challenge: "the-escape" });
+  assert.deepEqual([...coach.intro(full[1], full[0])], [`cue:${full[1].story}`]);
+  assert.deepEqual([...coach.finish(false)], ["escaped"]);
 });
