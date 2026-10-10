@@ -170,6 +170,15 @@ function compile(workout, swaps = {}, opts = {}) {
     });
   });
   if (opts.cooldown) easy(COOLDOWN, "cool");
+  // One-sided moves: the second (from the start of the interval) to switch sides, halfway through each timed set.
+  const sided = (id, iv) => !!(EXERCISES[id]?.sides || iv.exercises?.find(e => e.id === id)?.target?.perSide);
+  timeline.forEach(iv => {
+    if (!iv.duration) return;
+    const one = iv.exId || (iv.exercises?.length === 1 ? iv.exercises[0].id : null);
+    const at = iv.split ? iv.segments.filter(sg => sg.exId && !sg.switch && sided(sg.exId, iv)).map(sg => Math.round((sg.start + sg.end) / 2))
+      : one && !iv.segments?.length && sided(one, iv) ? [Math.round(iv.duration / 2)] : [];
+    if (at.length) iv.sidesAt = at;
+  });
   // Single-round workouts (mini triathlons) count parts instead of rounds.
   const parts = timeline.filter(iv => iv.type !== "REST" && iv.type !== "WARM");
   parts.forEach((iv, i) => { iv.part = i + 1; });

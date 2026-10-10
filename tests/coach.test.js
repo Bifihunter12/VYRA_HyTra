@@ -92,3 +92,17 @@ test("phone-free: lengths, minutes left, minutes in, and the final time are spok
   const ids = new Set(V.coachCatalog([]).map(l => l.id));
   for (const id of ["tmin:1", "tmin:120", "tsec:0", "tsec:59", "in:60", "left:10", "cooldown-offer", "fixed-block", "locked"]) assert.ok(ids.has(id), id);
 });
+
+test("rests always say what's next (runs too), and one-sided moves get 'switch sides' halfway", () => {
+  const tl = V.compile(V.createWorkout("vyra-8", {}), {}, {});
+  const coach = new V.CoachScript(tl);
+  const rest = tl.findIndex((iv, i) => iv.type === "REST" && tl[i + 1]?.type === "CARDIO");
+  assert.deepEqual([...coach.intro(tl[rest], tl[rest - 1])].slice(-1), ["next:run"]);
+  assert.equal(V.coachText("next:run"), "Up next, treadmill run.");
+  const suitcase = tl.find(iv => iv.title === "Suitcase Carry + Core");
+  assert.deepEqual([...suitcase.sidesAt], [30]);                                   // halfway through the 60-second carry
+  assert.deepEqual([...coach.second(suitcase, suitcase.duration - 30, suitcase.duration)], ["switch-sides"]);
+  const upper = tl.find(iv => iv.title === "Upper Body");
+  assert.deepEqual([...upper.sidesAt], [100]);                                     // halfway through the one-arm rows (70–130 s)
+  assert.ok(!tl.find(iv => iv.title === "Heavy Goblet Squats").sidesAt);
+});
