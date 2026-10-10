@@ -1,4 +1,4 @@
-const APP_VERSION = "2026.10.10.6";
+const APP_VERSION = "2026.10.10.7";
 const CACHE_NAME = `vyra-${APP_VERSION}`;
 const APP_FILES = [
   "/",

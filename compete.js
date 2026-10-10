@@ -24,6 +24,36 @@ const boardFor = c => (c.anywhere && (ui.challengeBoard?.[c.id] || (needsMachine
 const boardVariant = (c, vid) => boardFor(c) === "any" ? `${baseVariant(vid)}~any` : baseVariant(vid);
 const anywhereMoves = () => state.settings.anywhereMoves || {};
 
+/* ── Founding Embers: the first 100 accounts wear a little star ─────────────── */
+const founding = () => state.founding || { taken: null, limit: 100, mine: null, handles: [] };
+let foundingLoading = false;
+/* Refresh at most every 30 minutes, and right away when someone signs in or out. */
+async function loadFounding(force = false) {
+  const f = state.founding, me = Sync.user?.id || null;
+  if (!Sync.configured() || foundingLoading || (!force && f && f.user === me && Date.now() - f.at < 30 * 60e3)) return;
+  foundingLoading = true;
+  try {
+    const d = await Sync.founding();
+    state.founding = { taken: d.taken, limit: d.limit || 100, mine: d.mine ?? null, handles: d.handles || [], user: me, at: Date.now() };
+    founderHandles = null; save();
+    if (ui.screen !== "player") rerender();
+  } catch { /* the star is a bonus */ } finally { foundingLoading = false; }
+}
+let founderHandles = null;
+/* My own number, only while signed in as the account it belongs to. */
+const myEmber = () => (Sync.user && founding().user === Sync.user.id ? founding().mine : null);
+function emberStar(handle, isMe = false) {
+  founderHandles ||= new Set(founding().handles);
+  return (isMe && myEmber()) || (handle && founderHandles.has(handle))
+    ? `<span class="ember-star" title="Founding Ember" aria-label="Founding Ember">★</span>` : "";
+}
+/* Signed out, while spots are left: a nudge to claim one. */
+function foundingNudge() {
+  const f = founding();
+  if (Sync.user || f.taken == null || f.taken >= f.limit) return "";
+  return `<p class="ember-nudge"><span class="ember-star">★</span> <b>${f.limit - f.taken} of ${f.limit}</b> Founding Ember spots left. The first ${f.limit} accounts wear the star for good.</p>`;
+}
+
 /* ── Compete tab ──────────────────────────────────────────────────────────── */
 function renderCompete() {
   const ath = athlete();
@@ -63,6 +93,7 @@ function renderCompete() {
       <span class="pr-chip ${best ? "" : "pr-chip--empty"}">${best ? esc(formatScore(c, best.score)) : "—"}</span>
     </button>`;
   }).join("")}</div>
+  ${foundingNudge()}
   ${!Sync.user ? `<p class="hint"><i class="ti ti-trophy"></i> Sign in under Profile → Account & sync to join leaderboards. Your results and PRs work without an account.</p>` : ""}`;
 }
 
@@ -251,7 +282,7 @@ function leaderboardBlock(c, variant, division) {
     else if (!b.rows.length) body = `<p class="empty">No results yet. Be the first on the board.</p>`;
     else body = `<ol class="board">${b.rows.map(r => `
       <li class="${r.is_me ? "is-me" : ""}"><span class="b-rank">${r.rank}</span>
-        <span class="b-name">${esc(r.display_name)}${r.verification === "verified" ? ` <i class="ti ti-circle-check" title="Verified"></i>` : ""}</span>
+        <span class="b-name">${esc(r.display_name)}${emberStar(r.handle, r.is_me)}${r.verification === "verified" ? ` <i class="ti ti-circle-check" title="Verified"></i>` : ""}</span>
         <span class="b-score">${esc(formatScore(c, Number(r.score)))}</span></li>`).join("")}</ol>
       ${b.rows[0] ? `<div class="cl-meta">${b.rows[0].total} athlete${b.rows[0].total === 1 ? "" : "s"} ranked</div>` : ""}`;
   }
@@ -397,7 +428,7 @@ function renderAthlete() {
   <section class="athlete-hero">
     <div class="avatar">${esc(initials(ath.displayName))}</div>
     <div class="athlete-id">
-      <h1 class="hero-name">${esc(ath.displayName || "Your athlete profile")}</h1>
+      <h1 class="hero-name">${esc(ath.displayName || "Your athlete profile")}${emberStar(null, true)}</h1>
       <div class="cl-meta">${ath.handle ? `@${esc(ath.handle)} · ` : ""}${ath.visibility === "public" ? "Public profile" : "Private profile"}</div>
     </div>
   </section>
@@ -406,6 +437,7 @@ function renderAthlete() {
     ${ath.category !== "open" ? `<span class="tag">${esc(cap(ath.category))}</span>` : ""}
     ${ag ? `<span class="tag">${esc(AGE_LABEL[ag])}</span>` : ""}
     <span class="tag tag--equip">${ath.leaderboards ? "On leaderboards" : "Not on leaderboards"}</span>
+    ${myEmber() ? `<span class="tag tag--ember">★ Founding Ember #${myEmber()}</span>` : ""}
   </div>
   <div class="tiles">
     <div class="tile"><span class="stat-label">Workouts</span><b>${state.history.length}</b></div>
@@ -567,7 +599,7 @@ function activityCard(it, { detail = false } = {}) {
     <header class="post-head">
       <button class="post-who" ${it.is_me ? 'data-go="athlete"' : `data-athlete="${it.owner}"`}>
         <span class="avatar avatar--xs">${esc(initials(it.is_me ? athlete().displayName : it.display_name))}</span>
-        <span>${esc(it.is_me ? "You" : it.display_name)}</span></button>
+        <span>${esc(it.is_me ? "You" : it.display_name)}${emberStar(it.handle, it.is_me)}</span></button>
       <span class="cl-meta">${esc(timeAgo(Date.parse(it.performed_at)))}</span>
     </header>
     <div class="act-title">${esc(feedTitle(it))}</div>
@@ -605,7 +637,7 @@ function renderCommunity() {
   ${s.q.length >= 2 ? `<div class="cl-list">${s.status === "loading" ? `<p class="empty">Searching…</p>` : s.rows.length ? s.rows.map(a => `
     <div class="lib-row">
       <button class="cl-row" data-athlete="${a.user_id}"><span class="avatar avatar--sm">${esc(initials(a.display_name))}</span>
-        <span class="cl-main"><span class="cl-name">${esc(a.display_name)}</span><span class="cl-meta">${a.handle ? `@${esc(a.handle)} · ` : ""}${esc(cap(a.division))}</span></span></button>
+        <span class="cl-main"><span class="cl-name">${esc(a.display_name)}${emberStar(a.handle)}</span><span class="cl-meta">${a.handle ? `@${esc(a.handle)} · ` : ""}${esc(cap(a.division))}</span></span></button>
       <button class="follow-btn ${a.i_follow ? "on" : ""}" data-follow="${a.user_id}" data-on="${a.i_follow ? 1 : 0}">${a.i_follow ? "Following" : "Follow"}</button>
     </div>`).join("") : `<p class="empty">No public athletes match "${esc(s.q)}".</p>`}</div>` : ""}
 
@@ -638,7 +670,7 @@ function renderActivity() {
   ${a.comments?.status === "loading" ? `<p class="empty">Loading…</p>` : rows.length ? `<div class="comments">${rows.map(cm => `
     <div class="comment">
       <span class="avatar avatar--xs">${esc(initials(cm.display_name))}</span>
-      <div class="comment-body"><b>${esc(cm.is_me ? "You" : cm.display_name)}</b> <span class="cl-meta">${esc(timeAgo(Date.parse(cm.created_at)))}</span>
+      <div class="comment-body"><b>${esc(cm.is_me ? "You" : cm.display_name)}${emberStar(cm.handle, cm.is_me)}</b> <span class="cl-meta">${esc(timeAgo(Date.parse(cm.created_at)))}</span>
         <p>${esc(cm.body)}</p></div>
       ${cm.can_delete ? `<button class="icon-btn icon-btn--sm" data-del-comment="${cm.id}" aria-label="Delete comment"><i class="ti ti-trash"></i></button>` : ""}
     </div>`).join("")}</div>` : `<p class="empty">No comments yet. Say something encouraging.</p>`}
@@ -667,8 +699,8 @@ function renderAthleteView() {
   ${topbar("", back)}
   <section class="athlete-hero">
     <div class="avatar">${esc(initials(p.display_name))}</div>
-    <div class="athlete-id"><h1 class="hero-name">${esc(p.display_name)}</h1>
-      <div class="cl-meta">${p.handle ? `@${esc(p.handle)} · ` : ""}${esc(cap(p.division))}</div></div>
+    <div class="athlete-id"><h1 class="hero-name">${esc(p.display_name)}${emberStar(p.handle, p.is_me)}</h1>
+      <div class="cl-meta">${p.handle ? `@${esc(p.handle)} · ` : ""}${esc(cap(p.division))}${emberStar(p.handle, p.is_me) ? " · Founding Ember" : ""}</div></div>
   </section>
   <div class="tiles">
     <div class="tile"><span class="stat-label">Followers</span><b>${p.followers}</b></div>

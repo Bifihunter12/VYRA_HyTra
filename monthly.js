@@ -55,7 +55,7 @@ function renderHall() {
         ${label ? `<div class="cl-meta hall-board">${label} · ${d.participants} athlete${d.participants === 1 ? "" : "s"}</div>` : ""}
         ${d.podium.length ? `<ol class="board podium">${d.podium.map(p => `
           <li class="${p.me ? "is-me" : ""}"><span class="b-rank"><i class="ti ${MEDAL[p.rank] || "ti-medal"}"></i></span>
-            <span class="b-name">${esc(p.name)}${p.verified ? ` <i class="ti ti-circle-check" title="Verified"></i>` : ""}</span>
+            <span class="b-name">${esc(p.name)}${emberStar(p.handle, p.me)}${p.verified ? ` <i class="ti ti-circle-check" title="Verified"></i>` : ""}</span>
             <span class="b-score">${ch ? esc(formatScore(ch, p.score)) : p.score}</span></li>`).join("")}</ol>`
           : `<p class="hint">Nobody in ${esc(cap(div))} this month.</p>`}
         ${d.me && d.me.rank > 3 ? `<div class="cl-meta hall-me">You finished <b>#${d.me.rank}</b> of ${d.participants} · ${ch ? esc(formatScore(ch, d.me.score)) : d.me.score}</div>` : ""}`;

@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.10.6";
+const APP_VERSION = "2026.10.10.7";
 const STORE_KEY = "vyra_v1";
 /* Beeps, the voice coach and vibration. */
 const CUES_ENABLED = true;
@@ -1096,6 +1096,7 @@ function renderAccount() {
         <i class="ti ${Sync.status === "error" ? "ti-cloud-off" : "ti-cloud-check"} set-ic" aria-hidden="true"></i>
         <span class="set-label">${esc(Sync.user.email || "Signed in")}<span class="set-unit" data-bind="sync-status">${esc(syncStatusText())}</span></span>
       </div>
+      ${myEmber() ? `<div class="set-row"><span class="ember-star set-ic">★</span><span class="set-label">Founding Ember #${myEmber()}<span class="set-unit">One of the first ${founding().limit} athletes in Iron Forest</span></span></div>` : ""}
       <button class="set-row" data-act="sync-now" ${Sync.status === "syncing" ? "disabled" : ""}><i class="ti ti-refresh set-ic"></i><span class="set-label">Sync now</span></button>
       <button class="set-row" data-act="sync-signout"><i class="ti ti-logout set-ic"></i><span class="set-label">Sign out<span class="set-unit">Workouts stay on this device</span></span></button>
       <button class="set-row set-row--danger" data-act="sync-delete"><i class="ti ti-user-x set-ic"></i>
@@ -1106,6 +1107,7 @@ function renderAccount() {
   ${sectionLabel("Account & sync")}
   <div class="account">
     <p class="account-lead"><i class="ti ti-cloud"></i> Optional. Back up your workouts and use Iron Forest on more than one device. Without an account, everything stays on this device.</p>
+    ${foundingNudge()}
     <button class="btn-secondary" data-act="sync-google" ${a.busy ? "disabled" : ""}><i class="ti ti-brand-google"></i> Continue with Google</button>
     <div class="or"><span>or</span></div>
     ${a.sent ? `
@@ -1919,6 +1921,7 @@ window.__IRONFOREST__ = { TEMPLATES, EXERCISES, IntervalEngine, compile, createW
 restoreEventChallenges();
 render();
 Sync.init(changed => {
+  loadFounding();
   if (ui.screen === "player" || document.activeElement?.matches?.("input")) return;
   if (Sync.user && ui.isStaff === undefined) { ui.isStaff = false; Sync.isStaff().then(v => { ui.isStaff = v; if (v && ui.screen === "profile") rerender(); }); }
   if (changed || ui.screen === "profile") rerender();

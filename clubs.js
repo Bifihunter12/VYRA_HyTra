@@ -122,13 +122,13 @@ function renderClub() {
   ${c.my_role ? `
   ${sectionLabel(`${esc(m.monthName)} · ${esc(mc.name)}`, `<span class="cl-cat-count">Club leaderboard</span>`)}
   ${!board || board.status === "loading" ? `<p class="empty">Loading…</p>` : !board.rows.length ? `<p class="empty">No member results this month yet. Be the first.</p>`
-    : `<ol class="board">${board.rows.map(r => `<li class="${r.is_me ? "is-me" : ""}"><span class="b-rank">${r.rank}</span><span class="b-name">${esc(r.display_name)}</span><span class="b-score">${esc(formatScore(mc, Number(r.score)))}</span></li>`).join("")}</ol>`}
+    : `<ol class="board">${board.rows.map(r => `<li class="${r.is_me ? "is-me" : ""}"><span class="b-rank">${r.rank}</span><span class="b-name">${esc(r.display_name)}${emberStar(r.handle, r.is_me)}</span><span class="b-score">${esc(formatScore(mc, Number(r.score)))}</span></li>`).join("")}</ol>`}
   <button class="btn-secondary btn-inline-start" data-act="challenge-start" data-id="${mc.id}" data-variant="${m.variant}"><i class="ti ti-player-play"></i> Take the ${esc(m.monthName)} challenge</button>` : ""}
 
   ${sectionLabel("Members")}
   ${(c.roster || []).length ? `<div class="cl-list">${c.roster.map(p => `
     <button class="cl-row" ${p.public ? `data-athlete="${p.user_id}"` : "disabled"}><span class="avatar avatar--sm">${esc(initials(p.display_name))}</span>
-      <span class="cl-main"><span class="cl-name">${esc(p.display_name)}</span><span class="cl-meta">${p.handle ? `@${esc(p.handle)} · ` : ""}${esc(p.role)}</span></span></button>`).join("")}</div>`
+      <span class="cl-main"><span class="cl-name">${esc(p.display_name)}${emberStar(p.handle, p.is_me)}</span><span class="cl-meta">${p.handle ? `@${esc(p.handle)} · ` : ""}${esc(p.role)}</span></span></button>`).join("")}</div>`
     : `<p class="empty">Join to see who's in.</p>`}`;
 }
 

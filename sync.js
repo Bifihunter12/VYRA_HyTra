@@ -233,6 +233,13 @@ const Sync = {
     if (error) throw error;
     return data;
   },
+  /* Founding Embers: spots taken, my number, founders' public handles. Works signed out too. */
+  async founding() {
+    if (!this.client) throw new Error("Not connected");
+    const { data, error } = await this.client.rpc("founding_embers");
+    if (error) throw error;
+    return data;
+  },
   feed(before = null) { return this.call("feed", { p_limit: 30, p_before: before }); },
   comments(owner, id) { return this.call("activity_comments", { p_owner: owner, p_id: id }); },
   search(q) { return this.call("search_athletes", { p_query: q }); },
