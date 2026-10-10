@@ -1,6 +1,6 @@
 "use strict";
 /* ════════════════════════════════════════════════════════════════════════════
-   VYRA — Exercise library + workout templates
+   Iron Forest — Exercise library + workout templates
    Exercises are defined once and referenced by id. Substitutions live on the
    exercise (`subs`), so one template covers every equipment variation.
    ════════════════════════════════════════════════════════════════════════════ */
@@ -126,9 +126,9 @@ const withGaps = (items, gap) => items.flatMap((it, i) => (i < items.length - 1 
      roundWord?, params: [], build(p) → { rounds } }                        */
 const TEMPLATES = [
   {
-    id: "vyra-8", name: "VYRA 8", tagline: "Run + full-body hybrid", category: "hybrid",
+    id: "vyra-8", name: "The 8", tagline: "Run + full-body hybrid", category: "hybrid",
     level: "intermediate", focus: [], equipment: ["treadmill", "dumbbell", "battle-ropes"],
-    about: "Eight rounds of treadmill running and full-body strength. The original VYRA session.",
+    about: "Eight rounds of treadmill running and full-body strength. The original Iron Forest session.",
     params: [P.time("runSec", "Run", 60, "ti-run"), P.speed(7.0), P.time("restSec", "Rest / transition", 30, "ti-clock-pause", 5),
              P.time("stationSec", "Strength station", 60, "ti-barbell")],
     build(p) {
@@ -313,7 +313,7 @@ const TEMPLATES = [
     },
   },
   {
-    id: "gauntlet", name: "VYRA Gauntlet", tagline: "Full hybrid challenge", category: "hybrid",
+    id: "gauntlet", name: "Forest Gauntlet", tagline: "Full hybrid challenge", category: "hybrid",
     level: "advanced", focus: ["cardio-heavy"], equipment: ["treadmill", "rower", "bike", "kettlebell", "dumbbell"],
     about: "The flagship. Eight stations, each after 90 seconds of cardio that rotates run, row and bike, with 30 seconds between everything.",
     params: [P.time("cardioSec", "Cardio", 90, "ti-run"), P.time("stationSec", "Station", 60, "ti-barbell"),
@@ -348,7 +348,7 @@ const TEMPLATES = [
   {
     id: "park-hybrid", name: "Park Hybrid", tagline: "Outdoor run + bodyweight", category: "bodyweight",
     level: "intermediate", focus: ["bodyweight", "outdoor"], equipment: ["outdoors"],
-    about: "VYRA 8 without a gym. Run a loop, stop, do one bodyweight station, run again. Pick a flat path or a quiet corner of a park.",
+    about: "The 8 without a gym. Run a loop, stop, do one bodyweight station, run again. Pick a flat path or a quiet corner of a park.",
     params: [P.rounds(8, 4, 10), P.time("runSec", "Run", 90, "ti-run"), P.time("restSec", "Rest / transition", 15, "ti-clock-pause", 5),
              P.time("stationSec", "Bodyweight station", 60, "ti-bolt")],
     build(p) {

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VYRA</string>
+    <string name="app_name">Iron Forest</string>
     <string name="launch_url" translatable="false">https://animated-babka-e7f528.netlify.app/</string>
     <string name="provider_authority" translatable="false">com.vyra.myapp.fileprovider</string>
     <string name="asset_statements" translatable="false">

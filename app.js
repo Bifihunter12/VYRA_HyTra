@@ -1,7 +1,7 @@
 "use strict";
 /* ════════════════════════════════════════════════════════════════════════════
-   VYRA — Hybrid workout player
-   The workout and the timer are one experience: press START and VYRA tells the
+   Iron Forest — Hybrid workout player
+   The workout and the timer are one experience: press START and Iron Forest tells the
    athlete what to do, for how long, when to rest and what is coming next.
 
    Layers (top to bottom):
@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.08.3";
+const APP_VERSION = "2026.10.10.1";
 const STORE_KEY = "vyra_v1";
 /* Beeps, the voice coach and vibration. */
 const CUES_ENABLED = true;
@@ -339,7 +339,7 @@ function renderNav() {
 function topbar(right = "", left = "") {
   return `
   <header class="topbar">
-    ${left || `<div class="brand"><span class="brand-mark">VYRA</span><span class="brand-sub">Hybrid Training</span></div>`}
+    ${left || `<div class="brand"><span class="brand-mark">Iron Forest</span><span class="brand-sub">Hybrid Training</span></div>`}
     <div class="topbar-actions">${right}</div>
   </header>`;
 }
@@ -413,7 +413,7 @@ function renderOnboarding() {
       ${chips("data-ob-equip", ALL_EQUIPMENT.map(e => [e, EQUIPMENT_LABEL[e]]), o.equipment, true)}
       <button class="text-btn" data-act="ob-no-equipment"><i class="ti ti-stretching"></i> I have no equipment</button>
       <p class="hint">${nothing ? "No problem. Every workout switches to bodyweight moves, and there's a full set of no-equipment sessions."
-        : noWeights ? "No weights? VYRA swaps in bodyweight versions of every loaded move." : "Missing something? VYRA swaps in an alternative automatically."}</p>
+        : noWeights ? "No weights? Iron Forest swaps in bodyweight versions of every loaded move." : "Missing something? Iron Forest swaps in an alternative automatically."}</p>
     </div>
     <div class="ob-q">
       <div class="ob-label"><span>04</span> Before you start</div>
@@ -519,7 +519,7 @@ function renderToday() {
 }
 
 /* ── Health & safety ──────────────────────────────────────────────────────── */
-const HEALTH_NOTE = "VYRA is a workout guide, not medical advice or physical therapy. I'm healthy enough to exercise, or a doctor has cleared me, and I'll scale or stop anything that doesn't feel right.";
+const HEALTH_NOTE = "Iron Forest is a workout guide, not medical advice or physical therapy. I'm healthy enough to exercise, or a doctor has cleared me, and I'll scale or stop anything that doesn't feel right.";
 const FAST_SPEED_MPH = 9;
 
 /* Warnings shown on a workout before it starts. */
@@ -1062,11 +1062,11 @@ function renderProfile() {
   </div>
   ${renderAccount()}
 
-  ${ui.isStaff ? `${sectionLabel("VYRA staff")}<div class="set-list"><button class="set-row" data-go="review"><i class="ti ti-video set-ic"></i><span class="set-label">Review queue<span class="set-unit">Approve or reject video verifications</span></span></button></div>` : ""}
+  ${ui.isStaff ? `${sectionLabel("Iron Forest staff")}<div class="set-list"><button class="set-row" data-go="review"><i class="ti ti-video set-ic"></i><span class="set-label">Review queue<span class="set-unit">Approve or reject video verifications</span></span></button></div>` : ""}
 
   ${sectionLabel("Health & safety")}
   <p class="hint hint--block">${HEALTH_NOTE} Stop if you feel chest pain, dizziness, or sharp or worsening pain.</p>
-  <p class="hint"><a href="privacy.html">Privacy & safety</a> · ${Sync.user ? "Synced to your account" : "Everything stays on this device"}. VYRA ${APP_VERSION}</p>`;
+  <p class="hint"><a href="privacy.html">Privacy & safety</a> · ${Sync.user ? "Synced to your account" : "Everything stays on this device"}. Iron Forest ${APP_VERSION}</p>`;
 }
 
 /* ── Account & cloud sync ─────────────────────────────────────────────────── */
@@ -1104,7 +1104,7 @@ function renderAccount() {
   return `
   ${sectionLabel("Account & sync")}
   <div class="account">
-    <p class="account-lead"><i class="ti ti-cloud"></i> Optional. Back up your workouts and use VYRA on more than one device. Without an account, everything stays on this device.</p>
+    <p class="account-lead"><i class="ti ti-cloud"></i> Optional. Back up your workouts and use Iron Forest on more than one device. Without an account, everything stays on this device.</p>
     <button class="btn-secondary" data-act="sync-google" ${a.busy ? "disabled" : ""}><i class="ti ti-brand-google"></i> Continue with Google</button>
     <div class="or"><span>or</span></div>
     ${a.sent ? `
@@ -1911,7 +1911,7 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
 }
 
 // Exposed for testing and future workouts.
-window.VYRA = { TEMPLATES, EXERCISES, IntervalEngine, compile, createWorkout, resolveSegments, swappableIds, planTotals, planFor, recommend, version: APP_VERSION };
+window.__IRONFOREST__ = { TEMPLATES, EXERCISES, IntervalEngine, compile, createWorkout, resolveSegments, swappableIds, planTotals, planFor, recommend, version: APP_VERSION };
 
 restoreEventChallenges();
 render();

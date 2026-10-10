@@ -1,4 +1,4 @@
-/* VYRA cloud sync settings.
+/* Iron Forest cloud sync settings.
    Leave both empty to run fully offline (sign-in is then hidden).
    Values come from Supabase → Project Settings → API. The anon key is meant
    to be public: row-level security in supabase/schema.sql protects the data.

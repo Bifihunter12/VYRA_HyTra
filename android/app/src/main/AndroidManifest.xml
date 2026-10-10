@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- VYRA for Android: a Trusted Web Activity that opens the live PWA full screen in Chrome. -->
+<!-- Iron Forest for Android: a Trusted Web Activity that opens the live PWA full screen in Chrome. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <queries>

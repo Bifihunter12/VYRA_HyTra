@@ -1,9 +1,9 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- VYRA — Clubs, gyms, teams, local leaderboards (Phase 4)
+-- Iron Forest — Clubs, gyms, teams, local leaderboards (Phase 4)
 -- Run once in the Supabase SQL editor AFTER 004_events.sql. Safe to re-run.
 --
 --   clubs          kind club | gym | team; open (anyone joins) or closed (invite code)
---                  partner gyms are flagged by VYRA staff only
+--                  partner gyms are flagged by Iron Forest staff only
 --   club_members   owner | admin | member; teams hold at most 6 athletes
 --   athletes.country / city   optional, for local leaderboards
 --   leaderboard()  now also filters by country, city or club
@@ -120,7 +120,7 @@ $$;
 drop trigger if exists club_members_guard on public.club_members;
 create trigger club_members_guard before insert on public.club_members for each row execute function public.club_members_guard();
 
--- When the owner leaves VYRA (account deleted), hand the club to its longest-standing
+-- When the owner leaves Iron Forest (account deleted), hand the club to its longest-standing
 -- admin, else its longest-standing member, so a gym doesn't vanish for everyone.
 create or replace function public.club_owner_handover()
 returns trigger language plpgsql security definer set search_path = '' as $$

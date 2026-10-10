@@ -1,6 +1,6 @@
 "use strict";
 /* ════════════════════════════════════════════════════════════════════════════
-   VYRA — Monthly challenge winners and reminders. A new challenge starts on
+   Iron Forest — Monthly challenge winners and reminders. A new challenge starts on
    the 1st of every month (MONTHLY_ROTATION in challenges.js); results are
    frozen by supabase/006_monthly.sql a day after the month ends.
    Loaded before app.js.
@@ -95,7 +95,7 @@ function monthlyReminders() {
   return `
   <div id="hall-reminders">${sectionLabel("Reminders", `<span class="cl-cat-count">${esc(time)}</span>`)}</div>
   <div class="pad-y">${chips("data-month-time", MONTHLY_REMINDER_TIMES.map(x => [x, x]), time)}
-    <p class="hint">Your phone's calendar alerts you every month, even when VYRA is closed.</p></div>
+    <p class="hint">Your phone's calendar alerts you every month, even when Iron Forest is closed.</p></div>
   <div class="cl-list">
     ${row("final", "5 days left", "Log your best before the month ends · Google Calendar")}
     ${row("live", "New challenge is live", "On the 1st of every month · Google Calendar")}
@@ -123,7 +123,7 @@ function handleMonthlyClick(d) {
       const time = state.monthlyReminders?.time || "18:00";
       const ics = icsCalendar(monthlyReminderEvents(time), { url: `${location.origin}/` });
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar" })); a.download = "VYRA monthly challenges.ics";
+      a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar" })); a.download = "Iron Forest monthly challenges.ics";
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
       const r = state.monthlyReminders || {};

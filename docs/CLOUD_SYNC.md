@@ -1,6 +1,6 @@
 # Cloud sync setup (Supabase)
 
-VYRA works fully offline. Accounts are optional: when someone signs in, their
+Iron Forest works fully offline. Accounts are optional: when someone signs in, their
 workouts, settings and plan progress sync across devices. Until `config.js` has
 values, sign-in is hidden and nothing leaves the device.
 
@@ -21,7 +21,7 @@ values, sign-in is hidden and nothing leaves the device.
    `supabase/002_competition.sql`, and press **Run**. It adds athlete profiles,
    benchmark results and the leaderboard. Safe to run again. Supabase may warn
    about "destructive operations": that's the `drop policy if exists` /
-   `drop trigger if exists` lines, which only replace VYRA's own rules.
+   `drop trigger if exists` lines, which only replace Iron Forest's own rules.
 
 4. **Community (following, feed, comments):** one more **New query** with
    `supabase/003_community.sql`, then **Run**. Run it after `002_competition.sql`.
@@ -69,7 +69,7 @@ using the installed app on iPhone can type it (links open in Safari, outside the
 app). Replace the body with:
 
 ```html
-<h2>Sign in to VYRA</h2>
+<h2>Sign in to Iron Forest</h2>
 <p><a href="{{ .ConfirmationURL }}">Tap here to sign in</a></p>
 <p>Or enter this code in the app: <strong>{{ .Token }}</strong></p>
 ```
@@ -81,7 +81,7 @@ Before launch, add your own SMTP under **Authentication → Emails → SMTP Sett
 ## 4. Google sign-in
 
 1. In <https://console.cloud.google.com>, create a project, then
-   **APIs & Services → OAuth consent screen**: External, app name "VYRA", your
+   **APIs & Services → OAuth consent screen**: External, app name "Iron Forest", your
    support email, and your domain.
 2. **Credentials → Create credentials → OAuth client ID → Web application.**
    - Authorized JavaScript origins: your live address (and `http://localhost:8777`)
@@ -137,5 +137,5 @@ Staff see **Profile → Review queue** and can verify or reject submitted videos
 
 1. Supabase → **Authentication → Users**, find your email, copy the **User UID**.
 2. **Table Editor → staff → Insert row**, paste the UID into `user_id`, **Save**.
-3. Reload VYRA. Staff can also mark a club as a partner gym:
+3. Reload Iron Forest. Staff can also mark a club as a partner gym:
    **SQL Editor** → `select set_partner('<club id>', true);`

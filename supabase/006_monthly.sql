@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- VYRA — Monthly challenge results: who won each month
+-- Iron Forest — Monthly challenge results: who won each month
 --
 -- Every month has one featured challenge from a fixed 12-month rotation (the
 -- same list as MONTHLY_ROTATION in challenges.js; a test keeps them in sync).

@@ -1,6 +1,6 @@
 "use strict";
 /* ════════════════════════════════════════════════════════════════════════════
-   VYRA — Voice coach: what the coach says, and when.
+   Iron Forest — Voice coach: what the coach says, and when.
    Every line has a stable id. The lines are recorded once with a natural
    neural voice (tools/voice, female and male) and shipped as audio/voice/*;
    the player plays the recording, or falls back to the device voice for a
@@ -33,7 +33,7 @@ const COACH_LINES = {
   "tap-done": "Tap done when the set is finished.", "tap-done-dist": "Tap done when you hit the distance.",
   "seg-switch": "Switch. Move to the next one.",
   "seg-hard": "Hard! Push the pace.", "seg-easy": "Easy. Recover.", "seg-work": "Work!", "seg-rest": "Rest.",
-  "preview": "Hey, I'm your VYRA coach. Round three. Kettlebell swings, let's go. Snap those hips!",
+  "preview": "Hey, I'm your Iron Forest coach. Round three. Kettlebell swings, let's go. Snap those hips!",
 };
 const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
   "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"];

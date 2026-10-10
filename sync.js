@@ -1,6 +1,6 @@
 "use strict";
 /* ════════════════════════════════════════════════════════════════════════════
-   VYRA — Cloud sync (optional, local-first)
+   Iron Forest — Cloud sync (optional, local-first)
    The app always works from localStorage. When the athlete signs in, workouts
    and settings sync to Supabase in the background and merge across devices.
    Merge rules live in core.js (mergeRemoteWorkouts, pendingWorkoutRows).
@@ -299,7 +299,7 @@ const Sync = {
   fail(e) {
     this.status = navigator.onLine ? "error" : "offline";
     this.error = e?.message || String(e);
-    console.warn("VYRA sync:", this.error);
+    console.warn("Iron Forest sync:", this.error);
     this.onChange();
   },
 };

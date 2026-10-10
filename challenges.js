@@ -1,9 +1,9 @@
 "use strict";
 /* ════════════════════════════════════════════════════════════════════════════
-   VYRA — Challenge engine
+   Iron Forest — Challenge engine
    TRAIN ALONE. COMPETE TOGETHER.
 
-   Nothing here is hard-coded to one workout. Every competitive thing in VYRA is
+   Nothing here is hard-coded to one workout. Every competitive thing in Iron Forest is
    a Challenge built from the same parts:
 
    Movement     EXERCISES (workouts.js) — run, row, carry, swing…
@@ -39,7 +39,7 @@ const ATHLETE_CATEGORIES = [{ id: "women", label: "Women" }, { id: "men", label:
 const VERIFICATION = {
   training:  { label: "Training",  desc: "Just for you. Not on leaderboards." },
   community: { label: "Community", desc: "On leaderboards. Honour system." },
-  verified:  { label: "Verified",  desc: "Video checked by VYRA." },
+  verified:  { label: "Verified",  desc: "Video checked by Iron Forest." },
 };
 
 /* Age groups for comparison. */
@@ -208,7 +208,7 @@ const BENCHMARKS = [
   },
   {
     id: "iron-hour", name: "Iron Hour", tagline: "60 minutes for distance", scoring: "distance", icon: "ti-hourglass",
-    story: "One hour. Run, row and ride twice through. The longest day in VYRA.",
+    story: "One hour. Run, row and ride twice through. The longest day in Iron Forest.",
     variants: [{ id: "standard", name: "60 min" }], defaultVariant: "standard", equipment: ["treadmill", "rower", "bike"], level: "advanced",
     rules: ["10 min each: run, row, bike, run, row, bike.", "Switches are on your own time.", "Score is total distance."],
     inputs: () => [{ key: "run", label: "Run (both legs)", unit: "km" }, { key: "row", label: "Row (both legs)", unit: "m" }, { key: "bike", label: "Bike (both legs)", unit: "km" }],

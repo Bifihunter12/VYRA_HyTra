@@ -1,6 +1,6 @@
 "use strict";
 /* ════════════════════════════════════════════════════════════════════════════
-   VYRA — Compete: benchmarks, results, PRs, leaderboards, athlete profile.
+   Iron Forest — Compete: benchmarks, results, PRs, leaderboards, athlete profile.
    Screens only; the rules live in challenges.js. Uses app.js globals at call
    time (state, ui, save, render…), so it is loaded before app.js.
    ════════════════════════════════════════════════════════════════════════════ */
@@ -276,7 +276,7 @@ function challengeResultBlock(rec) {
   ${banner}
   ${c.scoring === "time" ? `
     <div class="set-list"><div class="set-row"><i class="ti ti-stopwatch set-ic"></i>
-      <span class="set-label">${c.better === "higher" ? "Time lasted" : "Finish time"}<span class="set-unit">${finished ? "Measured by VYRA, warm-up excluded" : "Ended before the finish: recorded as DNF"}</span></span>
+      <span class="set-label">${c.better === "higher" ? "Time lasted" : "Finish time"}<span class="set-unit">${finished ? "Measured by Iron Forest, warm-up excluded" : "Ended before the finish: recorded as DNF"}</span></span>
       <span class="bench-sum">${fmtShort(timeSec)}</span></div></div>` : `
     <div class="set-list">${fields.map(f => `
       <div class="set-row">

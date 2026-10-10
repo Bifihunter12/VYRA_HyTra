@@ -1,6 +1,6 @@
 "use strict";
 /* ════════════════════════════════════════════════════════════════════════════
-   VYRA — Phase 4 screens: clubs, gyms, teams, gym-vs-gym and local boards.
+   Iron Forest — Phase 4 screens: clubs, gyms, teams, gym-vs-gym and local boards.
    Server rules in supabase/005_clubs.sql. Loaded before app.js.
    ════════════════════════════════════════════════════════════════════════════ */
 
@@ -111,7 +111,7 @@ function renderClub() {
     <div class="athlete-id"><h1 class="hero-name">${esc(c.name)}</h1>
       <div class="cl-meta">${k.label}${c.city ? ` · ${esc(c.city)}` : ""}${c.country ? ` ${esc(c.country)}` : ""} · ${c.members} member${c.members === 1 ? "" : "s"}${c.open ? "" : " · invite only"}</div></div>
   </section>
-  ${c.partner ? `<div class="gear-note"><i class="ti ti-rosette-discount-check"></i> VYRA partner gym</div>` : ""}
+  ${c.partner ? `<div class="gear-note"><i class="ti ti-rosette-discount-check"></i> Iron Forest partner gym</div>` : ""}
   ${c.description ? `<p class="about">${esc(c.description)}</p>` : ""}
   ${c.my_role ? (c.my_role === "owner" ? "" : `<button class="text-btn" data-act="club-leave">${ui.confirm === "leave-club" ? "Tap again to leave" : "Leave club"}</button>`)
     : c.open ? `<button class="btn-primary btn-inline-start" data-club-join="${c.id}"><i class="ti ti-user-plus"></i> Join ${esc(k.label.toLowerCase())}</button>`
@@ -149,7 +149,7 @@ function renderClubNew() {
   ${topbar("", backButton("compete", "Clubs"))}
   <section class="hero"><div class="hero-daycount">Club, gym or team</div><div class="hero-titlebar"><h1 class="hero-name">Create a club</h1></div></section>
   <div class="pad-y">${chips("data-club-kind", Object.entries(CLUB_KIND).map(([id, k]) => [id, k.label]), d.kind)}
-    <p class="hint">${{ club: "A running club, training group or friends.", gym: "A gym or box. VYRA can mark official partners.", team: "A small team of up to 6 athletes." }[d.kind]}</p></div>
+    <p class="hint">${{ club: "A running club, training group or friends.", gym: "A gym or box. Iron Forest can mark official partners.", team: "A small team of up to 6 athletes." }[d.kind]}</p></div>
   <div class="account">
     <label class="field"><span>Name</span><input class="text-input" id="club-name" maxlength="60" value="${esc(d.name)}" placeholder="Iron Works Berlin"></label>
     <label class="field"><span>City <small>(optional)</small></span><input class="text-input" id="club-city" maxlength="60" value="${esc(d.city)}" placeholder="Berlin"></label>
