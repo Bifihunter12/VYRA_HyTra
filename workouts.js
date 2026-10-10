@@ -69,6 +69,7 @@ const EXERCISES = {
   "db-squat":      { name: "DB Squats", cue: "Dumbbell squats", equipment: ["dumbbell"], instruction: "Dumbbells at your sides or shoulders. Full depth, stand tall." },
   "db-row":        { name: "One-arm DB Rows", cue: "Dumbbell rows", equipment: ["dumbbell"], instruction: "Support on a bench or knee. Pull to the hip, control down." },
   "bent-over-row": { name: "Bent-over DB Rows", cue: "Bent over rows", equipment: ["dumbbell"], instruction: "Hinge to 45 degrees, flat back, row both dumbbells to the ribs." },
+  "devil-press":   { name: "Devil Press", cue: "Devil press", equipment: ["dumbbell"], subs: ["burpee"], instruction: "Two dumbbells. Burpee with your chest between them, then swing both from the floor to overhead in one move. Step back instead of jumping to go easier." },
   "db-rdl":        { name: "DB RDLs", cue: "Romanian deadlifts", equipment: ["dumbbell"], instruction: "Soft knees, push the hips back, weights close to the legs." },
   "db-floor-press":{ name: "DB Floor Press", cue: "Floor press", equipment: ["dumbbell"], instruction: "Lie on the floor, elbows at 45 degrees, press to lockout." },
   "shoulder-press":{ name: "DB Shoulder Press", cue: "Shoulder press", equipment: ["dumbbell"], instruction: "Brace, ribs down, press straight overhead." },
@@ -126,9 +127,9 @@ const withGaps = (items, gap) => items.flatMap((it, i) => (i < items.length - 1 
      roundWord?, params: [], build(p) → { rounds } }                        */
 const TEMPLATES = [
   {
-    id: "vyra-8", name: "The 8", tagline: "Run + full-body hybrid", category: "hybrid",
+    id: "vyra-8", name: "The 9", tagline: "Run + full-body hybrid", category: "hybrid",
     level: "intermediate", focus: [], equipment: ["treadmill", "dumbbell", "battle-ropes"],
-    about: "Eight rounds of treadmill running and full-body strength. The original Iron Forest session.",
+    about: "Nine rounds of treadmill running and full-body strength, with the Devil Press as the ninth. The original Iron Forest session.",
     params: [P.time("runSec", "Run", 60, "ti-run"), P.speed(7.0), P.time("restSec", "Rest / transition", 30, "ti-clock-pause", 5),
              P.time("stationSec", "Strength station", 60, "ti-barbell")],
     build(p) {
@@ -145,6 +146,8 @@ const TEMPLATES = [
           { name: "RDL + Shoulder Press", cue: "R D L and shoulder press", instruction: "Romanian deadlifts first, then strict shoulder presses." }),
         station([ex("suitcase-carry"), ex("core-finish")], p.stationSec,
           { name: "Suitcase Carry + Core", cue: "Suitcase carry and core", instruction: "Alternate sides on the carry, then transition into knee drives or dead bugs." }),
+        station([ex("devil-press", reps(10, { approx: true }))], p.stationSec,
+          { note: "The ninth station. Smooth and steady beats fast and messy." }),
         station([ex("goblet-squat"), ex("db-row"), ex("push-press"), ex("battle-ropes")], p.stationSec,
           { name: "Final Full-Body Station", cue: "Final full body station", note: "Each move gets its own timer, with a short switch in between." }),
       ];
@@ -348,7 +351,7 @@ const TEMPLATES = [
   {
     id: "park-hybrid", name: "Park Hybrid", tagline: "Outdoor run + bodyweight", category: "bodyweight",
     level: "intermediate", focus: ["bodyweight", "outdoor"], equipment: ["outdoors"],
-    about: "The 8 without a gym. Run a loop, stop, do one bodyweight station, run again. Pick a flat path or a quiet corner of a park.",
+    about: "The 9 without a gym. Run a loop, stop, do one bodyweight station, run again. Pick a flat path or a quiet corner of a park.",
     params: [P.rounds(8, 4, 10), P.time("runSec", "Run", 90, "ti-run"), P.time("restSec", "Rest / transition", 15, "ti-clock-pause", 5),
              P.time("stationSec", "Bodyweight station", 60, "ti-bolt")],
     build(p) {

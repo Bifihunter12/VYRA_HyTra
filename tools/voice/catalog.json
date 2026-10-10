@@ -875,6 +875,11 @@
   "file": "5zr6yi1s3w350.mp3"
  },
  {
+  "id": "go:devil-press",
+  "text": "Devil press. Two dumbbells.",
+  "file": "wjj2llr02xv.mp3"
+ },
+ {
   "id": "go:farmer-carry",
   "text": "Farmer carry. Heavy weights at your sides.",
   "file": "nhzr3ajjv178.mp3"
@@ -1825,6 +1830,11 @@
   "file": "5v639lnqt8in.mp3"
  },
  {
+  "id": "next:devil-press",
+  "text": "Up next, devil press.",
+  "file": "79bnem1iwq1wo.mp3"
+ },
+ {
   "id": "next:farmer-carry",
   "text": "Up next, farmer carry.",
   "file": "xqhuvb152w65.mp3"
@@ -2448,6 +2458,11 @@
   "id": "t:800 m",
   "text": "800 meters.",
   "file": "ks95m18bh43s.mp3"
+ },
+ {
+  "id": "t:~10 reps",
+  "text": "About 10 reps.",
+  "file": "1hr959eonig70.mp3"
  },
  {
   "id": "t:~20 reps",

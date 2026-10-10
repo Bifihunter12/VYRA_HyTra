@@ -64,10 +64,10 @@ test("catches up through many intervals after a long throttle", () => {
   advance(1e9);
   assert.equal(e.phase, "complete");
   const st = e.stats();
-  assert.equal(st.rounds, 8);
-  assert.equal(st.stations, 8);
-  assert.equal(st.runSec, 480);
-  assert.equal(st.distance, 0.93);
+  assert.equal(st.rounds, 9);
+  assert.equal(st.stations, 9);
+  assert.equal(st.runSec, 540);
+  assert.equal(st.distance, 1.05);
 });
 
 test("open-ended rep stations wait for DONE", () => {

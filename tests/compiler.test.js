@@ -27,15 +27,16 @@ test("all templates compile into well-formed timelines", () => {
   }
 });
 
-test("VYRA 8 matches the original spec", () => {
+test("The 9 matches its spec", () => {
   const tl = V.compile(V.createWorkout("vyra-8", {}), {});
-  assert.equal(tl.length, 31);                       // 8 × 4 minus the final rest
-  assert.equal(V.planTotals(tl).total, 1830);         // 30:30: multi-move stations give each move its own minute
+  assert.equal(tl.length, 35);                       // 9 × 4 minus the final rest
+  assert.equal(V.planTotals(tl).total, 2010);         // 33:30: multi-move stations give each move its own minute
   assert.equal(tl[0].type, "CARDIO");
   assert.equal(tl[0].speed, 7);
   assert.equal(tl.at(-1).type, "WORK");
   const ropes = tl[2];
   assert.deepEqual(plain(ropes.segments.map(s => [s.label, s.start, s.end])), [["HARD", 0, 20], ["EASY", 20, 40], ["HARD", 40, 60]]);
+  assert.equal(tl.filter(iv => iv.type === "WORK").at(-2).title, "Devil Press");   // the ninth station, right before the finisher
 });
 
 test("a timed station with several moves gives each move its own timer and a switch", () => {
