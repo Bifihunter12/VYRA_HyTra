@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- VYRA — Competition: athlete profiles, attempts, leaderboards
+-- Iron Forest — Competition: athlete profiles, attempts, leaderboards
 -- Run once in the Supabase SQL editor AFTER schema.sql. Safe to re-run.
 --
 -- Privacy model
@@ -54,7 +54,7 @@ drop policy if exists "own attempts" on public.attempts;
 create policy "own attempts" on public.attempts
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
--- Athletes can't mark their own results as verified; only VYRA staff (service role) can.
+-- Athletes can't mark their own results as verified; only Iron Forest staff (service role) can.
 create or replace function public.attempts_guard()
 returns trigger language plpgsql set search_path = '' as $$
 begin

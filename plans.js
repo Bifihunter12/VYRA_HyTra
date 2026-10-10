@@ -1,6 +1,6 @@
 "use strict";
 /* ════════════════════════════════════════════════════════════════════════════
-   VYRA — the athlete's own plans ("Make my plan") and saved workouts ("My
+   Iron Forest — the athlete's own plans ("Make my plan") and saved workouts ("My
    workouts"). Plan logic lives in progress.js (makePlan, planProgram); a plan
    runs through the same program engine as the built-in 4-week programs.
    Loaded before app.js.
@@ -31,7 +31,7 @@ function makePlanCard() {
     <button class="cl-row" data-go="plan-make">
       <i class="ti ti-wand cl-ic" aria-hidden="true"></i>
       <span class="cl-main"><span class="cl-name">Make my own plan</span>
-        <span class="cl-sub">Pick your days, goal and time. VYRA builds 4 weeks around them.</span></span>
+        <span class="cl-sub">Pick your days, goal and time. Iron Forest builds 4 weeks around them.</span></span>
       <i class="ti ti-chevron-right cl-go" aria-hidden="true"></i>
     </button>`;
 }
@@ -50,7 +50,7 @@ function renderPlanMake() {
   ${sectionLabel("Which days do you train?", `<span class="cl-cat-count">${d.days.length} × week</span>`)}
   <div class="pad-y">${chips("data-pd-day", DAY_ORDER.map(n => [n, WEEKDAYS[n]]), d.days, true)}
     <p class="hint">${d.days.length >= 6 ? "Six days is a lot. Keep at least one full rest day; that's when you get fitter."
-      : d.days.length < 2 ? "Pick at least two days." : "VYRA keeps hard sessions off back-to-back days."}</p></div>
+      : d.days.length < 2 ? "Pick at least two days." : "Iron Forest keeps hard sessions off back-to-back days."}</p></div>
 
   ${sectionLabel("Your goal")}
   <div class="pad-y">${chips("data-pd-goal", PLAN_GOALS.map(g => [g.id, g.label]), d.goal)}
@@ -99,7 +99,7 @@ function planReminders(plan) {
   ${sectionLabel("Reminders", `<span class="cl-cat-count">${esc(time)}</span>`)}
   <div class="pad-y">${chips("data-remind-at", [...REMINDER_TIMES.map(x => [x, x]), ["other", "Other"]], other ? "other" : time)}
     ${other ? `<div class="field-row"><input class="text-input remind-time" id="remind-time" type="time" value="${esc(time)}" aria-label="Reminder time"></div>` : ""}
-    <p class="hint">Your phone's calendar alerts you at this time on every plan day, for all four weeks, even when VYRA is closed.</p></div>
+    <p class="hint">Your phone's calendar alerts you at this time on every plan day, for all four weeks, even when Iron Forest is closed.</p></div>
   ${stale ? `<div class="gear-note gear-note--warn"><i class="ti ti-alert-triangle"></i> You changed the plan or the time since adding reminders. Add them again and delete the old ones in your calendar.</div>` : ""}
   <div class="cl-list">${reminderItems(plan).map(it => `
     <a class="cl-row" href="${esc(googleCalendarUrl(plan, it, { url: APP_URL(), timeZone: tz }))}" target="_blank" rel="noopener" data-remind-day="${it.day}">
@@ -285,7 +285,7 @@ function handlePlansClick(d) {
       const plan = customPlanById(ui.programId);
       const blob = new Blob([planIcs(plan, reminderItems(plan), { url: APP_URL() })], { type: "text/calendar" });
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob); a.download = `${plan.name.replace(/[^\w -]+/g, "").trim() || "VYRA plan"}.ics`;
+      a.href = URL.createObjectURL(blob); a.download = `${plan.name.replace(/[^\w -]+/g, "").trim() || "Iron Forest plan"}.ics`;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
       updatePlan(plan.id, p => ({ ...p, reminders: { sig: reminderSig(p), days: p.slots.map(x => x.day) } }));

@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- VYRA — Community: follows, activity feed, reactions, comments
+-- Iron Forest — Community: follows, activity feed, reactions, comments
 -- Run once in the Supabase SQL editor AFTER 002_competition.sql. Safe to re-run.
 --
 -- Privacy model

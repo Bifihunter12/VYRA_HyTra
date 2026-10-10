@@ -64,7 +64,7 @@ body[data-screen="player"] .app-shell {
 /* ── Topbar ────────────────────────────────────────────────────────────────── */
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 26px; }
 .brand { display: flex; align-items: baseline; gap: 10px; }
-.brand-mark { font-size: 18px; font-weight: 600; letter-spacing: 5px; color: var(--text); }
+.brand-mark { font-size: 16px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; white-space: nowrap; color: var(--text); }
 .brand-sub { font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-faint); }
 .topbar-actions { display: flex; gap: 6px; }
 .icon-btn {

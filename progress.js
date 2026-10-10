@@ -1,6 +1,6 @@
 "use strict";
 /* ════════════════════════════════════════════════════════════════════════════
-   VYRA — Progress: weeks, streaks, movement balance, badges, recommendations,
+   Iron Forest — Progress: weeks, streaks, movement balance, badges, recommendations,
    progression advice and the small SVG visuals (rings, bars, stars, sparklines).
    Reads the saved history only; it never changes it.
    ════════════════════════════════════════════════════════════════════════════ */
@@ -430,7 +430,7 @@ function planProgram(plan) {
 }
 
 /* ── Plan reminders: calendar events with an alert on every plan day ─────────
-   Works with the phone's own calendar, so reminders arrive even when VYRA is
+   Works with the phone's own calendar, so reminders arrive even when Iron Forest is
    closed. One weekly event per plan day, repeating for the four plan weeks.  */
 
 const REMINDER_TIMES = ["07:00", "12:00", "17:30", "19:00"];
@@ -463,12 +463,12 @@ function icsCalendar(events, { url = "", now = Date.now() } = {}) {
     `DURATION:PT${Math.max(10, Math.round(ev.minutes || 30))}M`,
     ...(ev.rrule ? [`RRULE:${ev.rrule}`] : []),
     `SUMMARY:${icsText(ev.title)}`,
-    `DESCRIPTION:${icsText(`${ev.desc}${url ? ` Open VYRA: ${url}` : ""}`)}`,
+    `DESCRIPTION:${icsText(`${ev.desc}${url ? ` Open Iron Forest: ${url}` : ""}`)}`,
     ...(url ? [`URL:${url}`] : []),
     "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${icsText(ev.alarm || ev.title)}`, "TRIGGER:PT0M", "END:VALARM",
     "END:VEVENT",
   ]);
-  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//VYRA//Training//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", ...lines, "END:VCALENDAR"]
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Iron Forest//Training//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", ...lines, "END:VCALENDAR"]
     .map(icsFold).join("\r\n") + "\r\n";
 }
 
@@ -476,7 +476,7 @@ function icsCalendar(events, { url = "", now = Date.now() } = {}) {
 function planIcs(plan, items, { url = "", weeks = PLAN_WEEKS, now = Date.now() } = {}) {
   return icsCalendar(items.map(it => ({
     uid: `${plan.id}-${it.day}@vyra`, start: it.start, minutes: it.minutes, rrule: `FREQ=WEEKLY;COUNT=${weeks}`,
-    title: `VYRA · ${it.name}`, desc: `${plan.name}: ${it.name}, about ${Math.round(it.minutes || 30)} min.`, alarm: `Time to train: ${it.name}`,
+    title: `Iron Forest · ${it.name}`, desc: `${plan.name}: ${it.name}, about ${Math.round(it.minutes || 30)} min.`, alarm: `Time to train: ${it.name}`,
   })), { url, now });
 }
 
@@ -490,8 +490,8 @@ function googleEventUrl({ title, start, minutes = 30, details = "", recur = "", 
 
 /* "Add to Google Calendar" link for one plan day, repeating weekly for the plan. */
 function googleCalendarUrl(plan, it, { url = "", weeks = PLAN_WEEKS, timeZone = "" } = {}) {
-  return googleEventUrl({ title: `VYRA · ${it.name}`, start: it.start, minutes: it.minutes || 30, timeZone,
-    details: `${plan.name}: ${it.name}, about ${Math.round(it.minutes || 30)} min.${url ? `\nOpen VYRA: ${url}` : ""}`,
+  return googleEventUrl({ title: `Iron Forest · ${it.name}`, start: it.start, minutes: it.minutes || 30, timeZone,
+    details: `${plan.name}: ${it.name}, about ${Math.round(it.minutes || 30)} min.${url ? `\nOpen Iron Forest: ${url}` : ""}`,
     recur: `RRULE:FREQ=WEEKLY;COUNT=${weeks}` });
 }
 
@@ -510,10 +510,10 @@ function monthlyReminderEvents(time = "18:00", { from = Date.now(), months = 12 
     const finalAt = at(m.end - MONTHLY_FINAL_DAYS * DAY_MS);
     const liveAt = at(m.start);
     if (i > 0 || liveAt.getTime() > from) out.push({ kind: "live", key: m.key, uid: `vyra-month-${m.key}-live@vyra`, start: liveAt, minutes: 15,
-      title: `VYRA · ${m.monthName} challenge is live: ${c.name}`, desc: `The ${m.monthName} challenge is ${c.name} (${c.tagline}). You have all month to log your best.`,
-      alarm: `New VYRA challenge: ${c.name}` });
+      title: `Iron Forest · ${m.monthName} challenge is live: ${c.name}`, desc: `The ${m.monthName} challenge is ${c.name} (${c.tagline}). You have all month to log your best.`,
+      alarm: `New Iron Forest challenge: ${c.name}` });
     if (finalAt.getTime() > from) out.push({ kind: "final", key: m.key, uid: `vyra-month-${m.key}-final@vyra`, start: finalAt, minutes: 15,
-      title: `VYRA · 5 days left: ${c.name}`, desc: `5 days left to log your best ${c.name} for ${m.monthName}. Next up on the 1st: ${n.name}.`,
+      title: `Iron Forest · 5 days left: ${c.name}`, desc: `5 days left to log your best ${c.name} for ${m.monthName}. Next up on the 1st: ${n.name}.`,
       alarm: `5 days left in the ${m.monthName} challenge` });
   }
   return out;
@@ -524,11 +524,11 @@ function monthlyGoogleUrls(time = "18:00", { from = Date.now(), url = "", timeZo
   const evs = monthlyReminderEvents(time, { from, months: 2 });
   const first = kind => evs.find(e => e.kind === kind);
   return {
-    final: googleEventUrl({ title: "VYRA · 5 days left in this month's challenge", start: first("final").start, minutes: 15, timeZone,
-      details: `Log your best result before the month ends. A new challenge starts on the 1st.${url ? `\nOpen VYRA: ${url}` : ""}`,
+    final: googleEventUrl({ title: "Iron Forest · 5 days left in this month's challenge", start: first("final").start, minutes: 15, timeZone,
+      details: `Log your best result before the month ends. A new challenge starts on the 1st.${url ? `\nOpen Iron Forest: ${url}` : ""}`,
       recur: "RRULE:FREQ=MONTHLY;BYMONTHDAY=-5;COUNT=12" }),
-    live: googleEventUrl({ title: "VYRA · New monthly challenge is live", start: first("live").start, minutes: 15, timeZone,
-      details: `A new VYRA challenge starts today. You have all month to log your best.${url ? `\nOpen VYRA: ${url}` : ""}`,
+    live: googleEventUrl({ title: "Iron Forest · New monthly challenge is live", start: first("live").start, minutes: 15, timeZone,
+      details: `A new Iron Forest challenge starts today. You have all month to log your best.${url ? `\nOpen Iron Forest: ${url}` : ""}`,
       recur: "RRULE:FREQ=MONTHLY;BYMONTHDAY=1;COUNT=12" }),
   };
 }

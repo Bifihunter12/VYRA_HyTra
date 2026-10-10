@@ -1,8 +1,8 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- VYRA — Events & verification (Phase 3)
+-- Iron Forest — Events & verification (Phase 3)
 -- Run once in the Supabase SQL editor AFTER 003_community.sql. Safe to re-run.
 --
---   staff                VYRA reviewers (add rows by hand in the Table Editor)
+--   staff                Iron Forest reviewers (add rows by hand in the Table Editor)
 --   verification_requests  athletes submit a video link for a result; staff review
 --   events               online or in-person competitions (Iron Forest, Wild Hunt…)
 --   event_trials         each event's Trials, defined as data; SECRET until reveal_at
@@ -260,7 +260,7 @@ grant execute on function public.event_standings(text, text, text) to anon, auth
 -- ── Seed: Iron Forest and Wild Hunt ──────────────────────────────────────────
 insert into public.events (id, name, kind, tagline, pitch, tests, registration_opens, starts_at, ends_at, final_at, reveal_at, verify_top)
 values
-  ('iron-forest-2027', 'Iron Forest', 'online', 'VYRA''s flagship hybrid competition',
+  ('iron-forest-2027', 'Iron Forest', 'online', 'The flagship hybrid competition',
    'Don''t train for one memorized race. Build a body ready for whatever the Forest asks of you.',
    '{Run,Carry,Climb,Lift,Pull,Endure}', '2027-02-01T00:00:00Z', '2027-03-01T00:00:00Z', '2027-03-08T00:00:00Z', '2027-03-10T00:00:00Z', '2027-03-01T00:00:00Z', 3),
   ('wild-hunt-2026', 'Wild Hunt', 'online', 'A week of running and chasing',

@@ -1,4 +1,4 @@
-# VYRA Competition System
+# Iron Forest Competition System
 
 **Train alone. Compete together.** TRAIN → RECORD → IMPROVE → CHALLENGE → COMPETE → RETURN
 

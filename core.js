@@ -1,6 +1,6 @@
 "use strict";
 /* ════════════════════════════════════════════════════════════════════════════
-   VYRA — Core: workout model, compiler, interval engine, equipment swaps and
+   Iron Forest — Core: workout model, compiler, interval engine, equipment swaps and
    formatting. No DOM and no storage, so it runs (and is tested) in Node too.
    Depends on workouts.js.
    ════════════════════════════════════════════════════════════════════════════ */

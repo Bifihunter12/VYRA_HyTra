@@ -1,6 +1,6 @@
 "use strict";
 /* ════════════════════════════════════════════════════════════════════════════
-   VYRA — Phase 3 screens: special events (Iron Forest, Wild Hunt), ghost racing,
+   Iron Forest — Phase 3 screens: special events (Iron Forest, Wild Hunt), ghost racing,
    video verification and the staff review queue. Rules live in challenges.js;
    server rules in supabase/004_events.sql. Loaded before app.js.
    ════════════════════════════════════════════════════════════════════════════ */
@@ -190,7 +190,7 @@ function ghostBlock(c, variant, division) {
   ${sectionLabel("Race a ghost")}
   <div class="pad-y">${chips("data-ghost", opts, mode)}
     ${mode === "target" ? `<div class="field-row ghost-target"><input class="text-input" id="ghost-target" inputmode="numeric" placeholder="mm:ss" value="${esc(g.target || "")}" aria-label="Target time"></div>` : ""}
-    <p class="hint">During the workout VYRA shows whether you're ahead or behind at every split.</p></div>`;
+    <p class="hint">During the workout Iron Forest shows whether you're ahead or behind at every split.</p></div>`;
 }
 
 function parseClock(str) {
@@ -247,7 +247,7 @@ function renderVerify() {
   ${topbar("", back)}
   <section class="hero"><div class="hero-daycount">${esc(c?.name || "")} · ${esc(formatScore(c, a.score))} · ${fmtDate(h.date)}</div>
     <div class="hero-titlebar"><h1 class="hero-name">Verify with video</h1></div>
-    <p class="about">Film the whole attempt in one take with the screen or monitor visible, upload it (YouTube unlisted, Google Drive, Dropbox…) and paste the link. VYRA staff review it, usually within a few days. Top results in events and prize challenges need this.</p></section>
+    <p class="about">Film the whole attempt in one take with the screen or monitor visible, upload it (YouTube unlisted, Google Drive, Dropbox…) and paste the link. Iron Forest staff review it, usually within a few days. Top results in events and prize challenges need this.</p></section>
   ${a.verifyStatus ? `<div class="gear-note ${a.verifyStatus === "rejected" ? "gear-note--warn" : ""}"><i class="ti ti-video"></i> ${VERIFY_LABEL[a.verifyStatus]}${a.verifyNote ? `: ${esc(a.verifyNote)}` : ""}</div>` : ""}
   <div class="account">
     <label class="field"><span>Video link</span><input class="text-input" id="verify-url" type="url" inputmode="url" placeholder="https://youtu.be/…" value="${esc(ui.verifyDraft?.url || "")}"></label>
@@ -268,7 +268,7 @@ function renderReview() {
   if (!q) loadQueue();
   return `
   ${topbar("", backButton("profile", "Profile"))}
-  <section class="hero"><div class="hero-daycount">VYRA staff</div><div class="hero-titlebar"><h1 class="hero-name">Review queue</h1></div></section>
+  <section class="hero"><div class="hero-daycount">Iron Forest staff</div><div class="hero-titlebar"><h1 class="hero-name">Review queue</h1></div></section>
   ${!q || q.status === "loading" ? `<p class="empty">Loading…</p>` : q.status !== "ok" ? `<p class="empty">Couldn't load the queue.</p>`
     : !q.rows.length ? `<p class="empty">Nothing to review. Nice.</p>`
     : `<div class="feed">${q.rows.map(r => { const c = challengeById(r.challenge_id); return `

@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- VYRA — cloud sync schema (Supabase / Postgres)
+-- Iron Forest — cloud sync schema (Supabase / Postgres)
 -- Run once in the Supabase SQL editor. Safe to re-run.
 --
 -- The app is local-first: every device keeps its own copy and syncs changes.
