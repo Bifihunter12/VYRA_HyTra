@@ -10,7 +10,7 @@ const ROOT = path.join(__dirname, "..");
 test("every coach line has text that reads like speech", () => {
   for (const { id, text } of V.coachCatalog([])) {
     assert.ok(text && text.length < 160, id);
-    assert.match(text, /[.!?]$/, `${id}: "${text}"`);
+    assert.match(text, /^(tmin:|your-time)/.test(id) ? /[,:]$/ : /[.!?]$/, `${id}: "${text}"`);   // time parts run into the next clip
     assert.ok(!/\b(KB|DB|RDLs?|undefined|null)\b/.test(text), `${id}: "${text}"`);
   }
   assert.equal(V.coachText("t:~20 reps"), "About 20 reps.");
@@ -67,4 +67,28 @@ test("every built-in workout, benchmark and event Trial is fully recorded in bot
     const tl = V.compile(V.createWorkout(t.id, {}), {}, { warmup: true, cooldown: true });
     V.timelineLines(tl).forEach(id => assert.ok(ids.has(id), `${t.id}: ${id}`));
   }
+});
+
+test("phone-free: lengths, minutes left, minutes in, and the final time are spoken", () => {
+  const tl = V.compile(V.createWorkout("vyra-8", {}), {}, {});
+  const coach = new V.CoachScript(tl, { timeSec: () => 2011 });
+  assert.ok([...coach.intro(tl[0])].includes("dur:60"), "a timed run says how long");
+  assert.equal(V.coachText("dur:270"), "Four minutes thirty.");
+  assert.equal(V.coachText("dur:45"), "Forty-five seconds.");
+  // Long blocks count down by the minute; short ones get one encouragement.
+  assert.deepEqual([...coach.second({ type: "WORK" }, 180, 330)], ["left:3"]);
+  assert.deepEqual([...coach.second({ type: "WORK" }, 300, 330)], []);                       // not right after it starts
+  assert.deepEqual([...coach.second({ type: "WORK" }, 60, 90)], []);
+  // Open-ended: a marker every minute for the first ten, then every five.
+  const run = { type: "CARDIO", openEnded: true };
+  assert.deepEqual([...coach.elapsed(run, 120)], ["in:2"]);
+  assert.deepEqual([...coach.elapsed(run, 90)], []);
+  assert.deepEqual([...coach.elapsed(run, 660)], []);
+  assert.deepEqual([...coach.elapsed(run, 900)], ["in:15"]);
+  // The finish says the time: 33 minutes 31 seconds.
+  assert.deepEqual([...coach.finish(false)], ["workout-done", "your-time", "tmin:33", "tsec:31"]);
+  assert.equal(`${V.coachText("your-time")} ${V.coachText("tmin:33")} ${V.coachText("tsec:31")}`, "Your time: Thirty-three minutes, thirty-one seconds.");
+  // Every line those can produce is in the recording catalog.
+  const ids = new Set(V.coachCatalog([]).map(l => l.id));
+  for (const id of ["tmin:1", "tmin:120", "tsec:0", "tsec:59", "in:60", "left:10", "cooldown-offer", "fixed-block", "locked"]) assert.ok(ids.has(id), id);
 });

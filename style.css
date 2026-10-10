@@ -1129,3 +1129,13 @@ a.cl-row .day-tag { flex: none; }
 .tag--ember { background: rgb(var(--secondary-rgb) / .14); color: var(--secondary); }
 .ember-nudge { margin: 12px 16px; padding: 10px 12px; border-radius: 10px; background: rgb(var(--secondary-rgb) / .08); color: var(--text); font-size: 13px; line-height: 1.45; }
 .ember-nudge .ember-star { margin: 0 2px 0 0; }
+
+/* Pocket lock: nothing on the player can be tapped by accident */
+.pocket-lock { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 32px 24px; text-align: center; touch-action: none; user-select: none; -webkit-user-select: none; }
+.pocket-ic { font-size: 44px; color: var(--primary); }
+.pocket-title { font-size: 28px; font-weight: 800; letter-spacing: 1px; }
+.pocket-text { color: var(--text-dim); font-size: 14px; line-height: 1.5; max-width: 300px; }
+.pocket-hold { position: relative; overflow: hidden; margin-top: 18px; padding: 16px 28px; border-radius: 999px; border: 1px solid var(--border-active); color: var(--text); font-weight: 600; }
+.pocket-fill { position: absolute; inset: 0; width: 0; background: rgb(var(--primary-rgb) / .35); z-index: -1; }
+.pocket-lock.is-holding .pocket-fill { width: 100%; transition: width 1s linear; }

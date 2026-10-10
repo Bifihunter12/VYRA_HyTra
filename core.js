@@ -315,6 +315,9 @@ class IntervalEngine {
       if (dur != null) {
         const rem = Math.ceil((dur - el) / 1000);
         if (rem !== this.lastSecond) { this.lastSecond = rem; this.emit("second", { remaining: rem }); }
+      } else {
+        const sec = Math.floor(el / 1000);                 // open-ended: how long it's been going
+        if (sec !== this.lastSecond) { this.lastSecond = sec; this.emit("second", { elapsed: sec }); }
       }
       break;
     }

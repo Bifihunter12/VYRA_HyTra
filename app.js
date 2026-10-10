@@ -11,7 +11,7 @@
      app.js (this) — cues, state, and the UI: tabs, setup, player, summary
    ════════════════════════════════════════════════════════════════════════════ */
 
-const APP_VERSION = "2026.10.10.7";
+const APP_VERSION = "2026.10.10.8";
 const STORE_KEY = "vyra_v1";
 /* Beeps, the voice coach and vibration. */
 const CUES_ENABLED = true;
@@ -154,7 +154,7 @@ const COACH_COMMON = ["warmup-start", "warmup-done", "cooldown", "cooldown-done"
 
 function wireCues(engine) {
   const coach = new CoachScript(engine.timeline, { challenge: session?.workout?.challenge?.id || false,
-    finale: challengeById(session?.workout?.challenge?.id)?.finale || "" });
+    finale: challengeById(session?.workout?.challenge?.id)?.finale || "", timeSec: () => (engine ? mainSecSoFar() : 0) });
   Voice.prepare([...timelineLines(engine.timeline), ...COACH_COMMON]);
   engine
     .on("countdown", ({ n }) => { Cues.beep(); Cues.buzz(60); Voice.play(coach.countdown(n)); })
@@ -165,7 +165,8 @@ function wireCues(engine) {
       const lines = coach.interval(index, reason, gate);
       Voice.play(reason === "start" ? ["go", ...lines] : lines);
     })
-    .on("second", ({ remaining }, e) => {
+    .on("second", ({ remaining, elapsed }, e) => {
+      if (elapsed != null) { const lines = coach.elapsed(e.current, elapsed); if (lines.length) Voice.play(lines, { interrupt: false }); return; }
       const d = e.durationMs() / 1000;
       if (remaining <= 3 && remaining >= 1 && d > 4) { Cues.beep(); Cues.buzz(50); }
       const lines = coach.second(e.current, remaining, d);
@@ -193,6 +194,65 @@ const WakeLock = {
     catch { this.lock = null; }
   },
   release() { try { this.lock?.release(); } catch { /* ignore */ } this.lock = null; },
+};
+
+/* ── Phone-free: headphone buttons, lock-screen controls, screen-off audio ─────
+   A quiet keep-alive track (a 25 Hz hum far below what earbuds play) keeps the
+   workout running and talking with the screen off, and gives the headphones
+   something to control: one press = pause / play (and Start at the warm-up
+   and cool-down screens), double press = Done / next, triple press = back. */
+const HandsFree = {
+  el: null, url: null,
+  keepAlive() {
+    if (this.url) return this.url;
+    const rate = 8000, n = rate * 2, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    const str = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    str(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); str(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, "data"); v.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.round(Math.sin(2 * Math.PI * 25 * i / rate) * 40), true);
+    return (this.url = URL.createObjectURL(new Blob([buf], { type: "audio/wav" })));
+  },
+  start() {
+    try { this.el ||= Object.assign(new Audio(this.keepAlive()), { loop: true }); this.el.play().catch(() => {}); } catch { /* no audio element */ }
+    const ms = navigator.mediaSession;
+    if (!ms) return;
+    const set = (a, f) => { try { ms.setActionHandler(a, f); } catch { /* not supported here */ } };
+    set("play", () => this.press()); set("pause", () => this.press());
+    set("nexttrack", () => this.next()); set("previoustrack", () => { this.keep(); engine?.prev(); });
+    this.update();
+  },
+  keep() { if (this.el?.paused && engine) this.el.play().catch(() => {}); },
+  /* One press: start at a transition screen, otherwise pause / resume. */
+  press() {
+    this.keep();
+    if (!engine || ui.gateCount != null || ui.go) return;
+    if (ui.gate) return gateGo();
+    if (engine.phase === "running") engine.toggle();
+  },
+  /* Double press: Done (or on to the next block). */
+  next() {
+    this.keep();
+    if (!engine || ui.gate || engine.phase !== "running" || engine.paused) return;
+    if (engine.current.fixed) return Voice.play(["fixed-block"]);
+    engine.done();
+  },
+  update() {
+    const ms = navigator.mediaSession;
+    if (!ms || !engine || !session) return;
+    const iv = engine.current;
+    try {
+      ms.metadata = new MediaMetadata({ title: iv ? `${iv.title}${iv.target ? ` · ${iv.target}` : ""}` : session.workout.name,
+        artist: "Iron Forest", album: session.workout.name, artwork: [{ src: "icons/icon-512.svg", sizes: "512x512", type: "image/svg+xml" }] });
+      ms.playbackState = engine.paused || ui.gate ? "paused" : "playing";
+    } catch { /* ignore */ }
+  },
+  stop() {
+    try { this.el?.pause(); } catch { /* ignore */ }
+    const ms = navigator.mediaSession;
+    if (!ms) return;
+    ["play", "pause", "nexttrack", "previoustrack"].forEach(a => { try { ms.setActionHandler(a, null); } catch { /* ignore */ } });
+    try { ms.metadata = null; ms.playbackState = "none"; } catch { /* ignore */ }
+  },
 };
 
 /* ── State & persistence ───────────────────────────────────────────────────── */
@@ -1049,6 +1109,7 @@ function renderProfile() {
       <span class="set-label">Coach voice<span class="set-unit">Talks you through every interval, like a coach in the room</span></span></div>
     <div class="pad-y coach-pick">${chips("data-coach", [["female", "Female"], ["male", "Male"], ["off", "Off"]], coachVoice())}
       ${coachVoice() !== "off" ? `<button class="text-btn" data-act="voice-preview"><i class="ti ti-player-play"></i> Hear ${esc(COACH_VOICES[coachVoice()].name)}</button>` : ""}</div>
+    <p class="hint"><i class="ti ti-headphones"></i> Phone-free: the coach says every move, target and time. With headphones, press once to pause or start, twice for Done, three times to go back. It keeps going with the screen off; tap <b>Lock</b> in the player before it goes in your pocket.</p>
     <div class="set-row set-row--stack"><i class="ti ti-volume set-ic"></i><span class="set-label">Volume<span class="set-unit">Above 100% boosts the coach for loud gyms</span></span></div>
     <div class="pad-y">${volumeControl("vol-slider-profile")}</div>
     ${switchRow('data-setting="sound"', state.settings.sound, "Beeps", "ti-bell-ringing")}
@@ -1153,7 +1214,9 @@ function startWorkout(templateId = ui.templateId, custom = null, programKey = nu
   session = { workout, timeline, swaps, startedAt: Date.now(), programKey: inPlan ? inPlan.key : null, ghost: custom?.ghost || null, mineId: mine?.id || null };
   engine = new IntervalEngine(timeline, { countdown: 3 });
   wireCues(engine);
+  HandsFree.start();
   engine
+    .on("interval", () => HandsFree.update()).on("pause", () => HandsFree.update()).on("resume", () => HandsFree.update())
     .on("countdown", () => updatePlayer())
     .on("go", () => { ui.go = true; setTimeout(() => { ui.go = false; if (ui.screen === "player") renderPlayer(); }, 700); })
     .on("interval", ({ reason, index }) => { gateCheck(index, reason); renderPlayer(); })
@@ -1181,7 +1244,7 @@ function recoveryWorkout() {
 
 function finishWorkout(early) {
   clearInterval(driver); driver = null;
-  WakeLock.release();
+  WakeLock.release(); HandsFree.stop(); ui.pocketLock = false;
   const stats = engine.stats();
   // Cancelled before anything happened: go back to where the athlete started.
   if (early && stats.totalSec < 5) { engine = null; session = null; return go(ui.returnTo || "library"); }
@@ -1339,11 +1402,37 @@ function toGoText(iv) {
   return left === 0 ? `Last ${w}` : `${left} more ${w}${left === 1 ? "" : "s"} after this`;
 }
 
+/* Pocket lock: covers the player so nothing gets tapped by accident. Hold for a second to unlock. */
+function pocketLockHtml() {
+  return `<div class="pocket-lock" data-pocket-lock role="dialog" aria-label="Screen locked. Press and hold to unlock.">
+    <i class="ti ti-lock pocket-ic" aria-hidden="true"></i>
+    <div class="pocket-title">Locked</div>
+    <div class="pocket-text">Headphones: press once to pause or start · twice for Done · three times to go back</div>
+    <div class="pocket-hold"><span class="pocket-fill"></span>Press and hold to unlock</div>
+  </div>`;
+}
+let pocketTimer = null;
+document.addEventListener("pointerdown", ev => {
+  const lock = ev.target.closest?.("[data-pocket-lock]");
+  if (!lock) return;
+  ev.preventDefault();
+  lock.classList.add("is-holding");
+  clearTimeout(pocketTimer);
+  pocketTimer = setTimeout(() => { ui.pocketLock = false; Cues.beep(); renderPlayer(); }, 1000);
+});
+["pointerup", "pointercancel", "pointerleave"].forEach(t => document.addEventListener(t, () => {
+  clearTimeout(pocketTimer); document.querySelector(".pocket-lock")?.classList.remove("is-holding");
+}));
+
 function renderPlayer() {
   if (!engine) return;
   const e = engine;
   const tl = e.timeline;
-  if (ui.gate || ui.gateCount != null || (ui.go && e.phase === "running" && e.paused)) return renderGate();
+  if (ui.gate || ui.gateCount != null || (ui.go && e.phase === "running" && e.paused)) {
+    renderGate();
+    if (ui.pocketLock) app.insertAdjacentHTML("beforeend", pocketLockHtml());
+    return;
+  }
 
   if (e.phase === "countdown" || ui.go) {
     const first = tl[0];
@@ -1469,8 +1558,10 @@ function renderPlayer() {
     <div class="pl-controls pl-controls--sub">
       ${iv.duration != null && !iv.fixed ? `<button class="ctl ctl-wide ${iv.type === "REST" ? "ctl-hot" : ""}" data-act="extend"><i class="ti ti-clock-plus"></i><span>+10 sec</span></button>` : ""}
       ${showDone && !iv.openEnded && !iv.fixed ? `<button class="ctl ctl-wide" data-act="done"><i class="ti ti-check"></i><span>Reps done</span></button>` : ""}
+      <button class="ctl ctl-wide ctl-ghost" data-act="pocket-lock" aria-label="Lock the screen for your pocket"><i class="ti ti-lock"></i><span>Lock</span></button>
       <button class="ctl ctl-wide ctl-ghost" data-act="end"><i class="ti ti-square"></i><span>End</span></button>
     </div>
+    ${ui.pocketLock ? pocketLockHtml() : ""}
     ${ui.confirmEnd ? `
     <div class="sheet-backdrop" data-act="end-cancel"></div>
     <div class="sheet" role="dialog" aria-modal="true" aria-label="End workout">
@@ -1797,6 +1888,7 @@ app.addEventListener("click", async ev => {
     case "extend": return engine?.extend(10);
     case "done": return engine?.done();
     case "gate-go": return gateGo();
+    case "pocket-lock": ui.pocketLock = true; renderPlayer(); return Voice.play(["locked"]);
     case "gate-skip-cool": return skipCooldown();
     case "end":
       if (engine?.phase === "countdown") { engine.end(); return; }
