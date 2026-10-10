@@ -147,7 +147,7 @@ function renderEvent() {
     : `<ol class="board">${st.rows.map(r => `
       <li class="${r.is_me ? "is-me" : ""}" title="${esc((r.trials || []).map(t => `${t.name}: ${t.points} pts (#${t.rank})`).join(" · "))}">
         <span class="b-rank">${r.rank}</span>
-        <span class="b-name">${esc(r.display_name)}<span class="b-sub">${(r.trials || []).map(t => `${esc(t.name.replace(/^The /, ""))} ${t.points}${t.verified ? "✓" : ""}`).join(" · ")}</span></span>
+        <span class="b-name">${esc(r.display_name)}${emberStar(r.handle, r.is_me)}<span class="b-sub">${(r.trials || []).map(t => `${esc(t.name.replace(/^The /, ""))} ${t.points}${t.verified ? "✓" : ""}`).join(" · ")}</span></span>
         <span class="b-score">${r.forest_score}</span></li>`).join("")}</ol>`}` : ""}`;
 }
 

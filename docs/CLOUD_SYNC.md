@@ -38,6 +38,10 @@ values, sign-in is hidden and nothing leaves the device.
    after a month ends (the first time anyone opens Monthly winners); no scheduled
    job is needed.
 
+8. **Founding Embers:** **New query** with `supabase/007_founders.sql`, then **Run**.
+   The first 100 accounts (existing ones first, by sign-up date) get a numbered
+   Founding Ember star. Spots are never reused, and claiming one can't block a sign-up.
+
 Always run the files in this order (schema, 002, 003, 004, 005, 006). Every file is safe
 to run again. All of them are tested against a real Postgres database on every push
 (`npm run test:sql`, see `tests/sql/`).
